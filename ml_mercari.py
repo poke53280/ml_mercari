@@ -1,6 +1,6 @@
 
-
 import pandas as pd
+
 
 train = pd.read_table('train.tsv', engine='c')
 
@@ -37,12 +37,61 @@ def bucket_prices(l, price_buckets):
         index = index + 1
 
 
+import nltk
+
+def get_nouns(in_str):
+    tokens = nltk.word_tokenize(in_str)
+    is_noun = lambda pos: pos[:2] == 'NN'
+    tagged = nltk.pos_tag(tokens)
+
+    nouns = [word for (word, pos) in tagged if is_noun(pos)] 
+
+    if len(nouns) > 0:
+        return " ".join(str(x) for x in nouns)
+    else:
+        return "none"
+
+
+def nounify(series):
+    l = series.values
+    n2 = []
+
+    for x in l:
+        q = get_nouns(x)
+        n2.append(q)
+
+    return pd.Series(n2)
 
 
 
-"""accept and return numpy array"""
+print("Nouning train name...")
+
+q = nounify(train.name)
+train.name = q
+
+print("Nouning test name...")
+
+q = nounify(test.name)
+test.name = q
 
 
+print("Nouning train item description...")
+
+q = nounify(train.item_description)
+train.item_description = q
+
+print("Nouning test item description...")
+
+q = nounify(test.item_description)
+test.item_description = q
+
+del q
+
+
+
+
+q[991]
+train_short.item_description[991]
 
 train = pd.read_table('train.tsv', engine='c')
 
