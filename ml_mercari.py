@@ -1,18 +1,71 @@
 
-# Based on Bojan's -> https://www.kaggle.com/tunguz/more-effective-ridge-lgbm-script-lb-0-44944
-# Changes:
-# 1. Split category_name into sub-categories
-# 2. Parallelize LGBM to 4 cores
-# 3. Increase the number of rounds in 1st LGBM
-# 4. Another LGBM with different seed for model and training split, slightly different hyper-parametes.
-# 5. Weights on ensemble
-# 6. SGDRegressor doesn't improve the result, going with only 1 Ridge and 2 LGBM
+
+import pandas as pd
+
+train = pd.read_table('train.tsv', engine='c')
+
+"""INIT"""
+q, base = init_bucket(train.price)
+base = np.sort(base)
+mid_base = base[1:] + base[:-1]
+mid_base = mid_base / 2
+
+
+
+my_nums =  np.array([885.1, 165.5])
+
+"""RUN"""
+
+closest_index = np.digitize(my_nums, mid_base)
+my_nums = base[closest_index]
+
+print(my_nums)
+
+
+def init_bucket(price_series):
+    l = p.value_counts()
+    a = zip(l, l.index)
+    q, w = zip(*a)
+
+    return q,w
+
+
+def bucket_prices(l, price_buckets):
+    index = 0
+    for x in l:
+        l[index] = min(price_buckets, key=lambda x:abs(x-l[index]))
+        index = index + 1
+
+
+
+
+
+"""accept and return numpy array"""
+
+
+
+train = pd.read_table('train.tsv', engine='c')
+
+print ("Init price buckets begin")
+
+q, price_buckets = init_bucket(train.price)
+
+price_buckets = price_buckets[:490]
+
+print ("Init price buckets end")
+
+
+
+l = train.price.values
+
+bucket_prices(l, price_buckets)
+
+
 
 import pyximport; pyximport.install()
 import gc
 import time
 import numpy as np
-import pandas as pd
 from joblib import Parallel, delayed
 from scipy.sparse import csr_matrix, hstack
 from sklearn.linear_model import Ridge
@@ -35,7 +88,6 @@ NAME_MIN_DF = 10
 MAX_FEATURES_ITEM_DESCRIPTION = 50000
 
 def rmsle(y, y0):
-     assert len(y) == len(y0)
      return np.sqrt(np.mean(np.power(np.log1p(y)-np.log1p(y0), 2)))
 
 
@@ -68,7 +120,7 @@ def to_categorical(dataset):
     dataset['item_condition_id'] = dataset['item_condition_id'].astype('category')
 
 
-DATA_DIR = "C:\\Users\\T149900\\mercari\\"
+DATA_DIR = "C:\\Users\\T149900\\ml_mercari\\"
 
 TEXT_DIR = "C:\\Users\\T149900\\Documents\\Visual Studio 2017\\Projects\\ml_mercari\\"
 
@@ -360,8 +412,7 @@ def main():
         'max_bin' : 8192
     }
 
-    model = lgb.train(params, train_set=d_train, num_boost_round=8000, valid_sets=watchlist, \
-    early_stopping_rounds=250, verbose_eval=1000) 
+    model = lgb.train(params, train_set=d_train, num_boost_round=10000, valid_sets=watchlist, verbose_eval=1000) 
     predsL = model.predict(X_test)
 
     print('[{}] lgb 1 timing'.format(time.time() - start_lgb1_time))
@@ -391,14 +442,14 @@ def main():
     start_lgb2_time = time.time()
 
     model = lgb.train(params2, train_set=d_train2, num_boost_round=8000, valid_sets=watchlist2, \
-    early_stopping_rounds=150, verbose_eval=1000) 
+    early_stopping_rounds=100, verbose_eval=1000) 
     predsL2 = model.predict(X_test)
 
     print('[{}] lgb 2 timing.'.format(time.time() - start_lgb2_time))
 
     print('[{}] Predict lgb 2 completed.'.format(time.time() - start_time))
 
-    preds = predsR*0.3 + predsL*0.35 + predsL2*0.35
+    preds = predsR*0.25 + predsL*0.50 + predsL2*0.25
 
     submission['price'] = np.expm1(preds)
     submission.to_csv(DATA_DIR + "submission" + start_time + ".csv", index=False)
