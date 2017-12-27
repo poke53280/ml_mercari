@@ -10,15 +10,14 @@ from sklearn.linear_model import Ridge
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import GridSearchCV
+
 from sklearn.linear_model import SGDRegressor
 import lightgbm as lgb
 import multiprocessing as mp
 
-from collections import Counter
-import matplotlib.pyplot as plt
 
-
-num_threads = mp.cpu_count()
+num_threads = 4
 
 NUM_BRANDS = 1000
 NUM_CATEGORIES = 1000
@@ -65,6 +64,9 @@ def main():
 
     start_time = time.time()
 
+    train = pd.read_table('../input/train.tsv', engine='c')
+    test = pd.read_table('../input/test.tsv', engine='c')
+
     train = pd.read_table(DATA_DIR + "train.tsv");
     test = pd.read_csv(DATA_DIR + "test.tsv", sep = "\t", encoding="utf-8", engine = "python");
 
@@ -82,36 +84,28 @@ def main():
     del train
     del test
     gc.collect()
+     
+    merge['category_name'].fillna(value='missing', inplace=True)
+    merge['brand_name'].fillna(value='missing', inplace=True)
+    merge['item_description'].fillna(value='missing', inplace=True)
+   
     
-    merge['general_cat'], merge['subcat_1'], merge['subcat_2'] = \
-    zip(*merge['category_name'].apply(lambda x: split_cat(x)))
-    merge.drop('category_name', axis=1, inplace=True)
-    print('[{}] Split categories completed.'.format(time.time() - start_time))
+    tv0 = TfidfVectorizer(max_features=MAX_FEATURES_ITEM_DESCRIPTION,
+                         ngram_range=(1, 3),
+                         stop_words='english')
 
-    handle_missing_inplace(merge)
-    print('[{}] Handle missing completed.'.format(time.time() - start_time))
+    X_name = tv0.fit_transform(merge['name'])
 
-    cutting(merge)
-    print('[{}] Cut completed.'.format(time.time() - start_time))
+    lb0 = LabelBinarizer(sparse_output=True)
 
-    to_categorical(merge)
-    print('[{}] Convert categorical completed'.format(time.time() - start_time))
-
-    cv = CountVectorizer(min_df=NAME_MIN_DF)
-    X_name = cv.fit_transform(merge['name'])
-    print('[{}] Count vectorize `name` completed.'.format(time.time() - start_time))
-
-    cv = CountVectorizer()
-    X_category1 = cv.fit_transform(merge['general_cat'])
-    X_category2 = cv.fit_transform(merge['subcat_1'])
-    X_category3 = cv.fit_transform(merge['subcat_2'])
-    print('[{}] Count vectorize `categories` completed.'.format(time.time() - start_time))
-
+    X_category = lb0.fit_transform(merge['category_name'])
+   
     tv = TfidfVectorizer(max_features=MAX_FEATURES_ITEM_DESCRIPTION,
                          ngram_range=(1, 3),
                          stop_words='english')
+
     X_description = tv.fit_transform(merge['item_description'])
-    print('[{}] TFIDF vectorize `item_description` completed.'.format(time.time() - start_time))
+
 
     lb = LabelBinarizer(sparse_output=True)
     X_brand = lb.fit_transform(merge['brand_name'])
@@ -121,7 +115,7 @@ def main():
                                           sparse=True).values)
     print('[{}] Get dummies on `item_condition_id` and `shipping` completed.'.format(time.time() - start_time))
 
-    sparse_merge = hstack((X_dummies, X_description, X_brand, X_category1, X_category2, X_category3, X_name)).tocsr()
+    sparse_merge = hstack((X_dummies, X_description, X_brand, X_category, X_name)).tocsr()
     print('[{}] Create sparse merge completed'.format(time.time() - start_time))
 
     X = sparse_merge[:nrow_train]
@@ -135,88 +129,68 @@ def main():
     print('[{}] Predict ridge completed'.format(time.time() - start_time))
 
     train_X, valid_X, train_y, valid_y = train_test_split(X, y, test_size = 0.15, random_state = 144) 
-    d_train = lgb.Dataset(train_X, label=train_y)
-    d_valid = lgb.Dataset(valid_X, label=valid_y)
+    d_train = lgb.Dataset(train_X, label=train_y, max_bin = 8192)
+    d_valid = lgb.Dataset(valid_X, label=valid_y, max_bin = 8192)
     watchlist = [d_train, d_valid]
     
+    """
+    http://lightgbm.readthedocs.io/en/latest/Python-Intro.html
+    Specific feature names and categorical features:
+    LightGBM can use categorical features as input directly. It doesn’t need to covert to one-hot coding, and is much faster than one-hot coding (about 8x speed-up).
+
+    Note: You should convert your categorical features to int type before you construct Dataset.
+    """
+
     print("Training LGB1")
 
     start_lgb1_time = time.time()
 
     params = {
-        'learning_rate': 0.65,
+        'learning_rate': 0.78,
         'application': 'regression',
-        'max_depth': 3,
-        'num_leaves': 60,
-        'verbosity': -1,
+        'num_leaves': 131,
+        'verbosity': 0,
         'metric': 'RMSE',
         'data_random_seed': 1,
+        'feature_fraction': 0.9,
         'bagging_fraction': 0.5,
+        'bagging_freq': 5,
         'nthread': num_threads,
-        'max_bin' : 8192
+        'silent' : False
     }
 
-    model = lgb.train(params, train_set=d_train, num_boost_round=10000, valid_sets=watchlist, verbose_eval=1000) 
-    predsL = model.predict(X_test)
+    gridParams = {
+        'learning_rate': [0.3, 0.5, 0.7],
+        'num_leaves': [20, 31, 140],
+        'boosting_type': ['gbdt', 'rf'],
+        }
 
-    print('[{}] lgb 1 timing'.format(time.time() - start_lgb1_time))
-    
-    print('[{}] Predict lgb 1 completed.'.format(time.time() - start_time))
 
-    print("Training LGB2")
+    clf = lgb.LGBMRegressor()
 
-    params2 = {
-        'learning_rate': 0.85,
-        'application': 'regression',
-        'max_depth': 3,
-        'num_leaves': 140,
-        'verbosity': -1,
-        'metric': 'RMSE',
-        'data_random_seed': 2,
-        'bagging_fraction': 1,
-        'nthread': num_threads,
-        'max_bin' : 8192
-    }
-    
-    train_X2, valid_X2, train_y2, valid_y2 = train_test_split(X, y, test_size = 0.1, random_state = 101) 
-    d_train2 = lgb.Dataset(train_X2, label=train_y2)
-    d_valid2 = lgb.Dataset(valid_X2, label=valid_y2)
-    watchlist2 = [d_train2, d_valid2]
+    clf.set_params(**params)
 
-    start_lgb2_time = time.time()
+    clf.fit(train_X, train_y)
 
-    model = lgb.train(params2, train_set=d_train2, num_boost_round=8000, valid_sets=watchlist2, \
-    early_stopping_rounds=100, verbose_eval=1000) 
-    predsL2 = model.predict(X_test)
+    y_out = clf.predict(valid_X)
 
-    print('[{}] lgb 2 timing.'.format(time.time() - start_lgb2_time))
+    valid2 = np.expm1(valid_y)
+    y_out2 = np.expm1(y_out)
 
-    print('[{}] Predict lgb 2 completed.'.format(time.time() - start_time))
+    o = rmsle(y_out2, valid2)
 
-    preds = predsR*0.25 + predsL*0.50 + predsL2*0.25
+    print("RMSLE: " + str(o))
+        
+   
+
+    preds = clf.predict(X_test)
 
     submission['price'] = np.expm1(preds)
     submission.to_csv(DATA_DIR + "submission" + start_time + ".csv", index=False)
 
 if __name__ == '__main__':
     main()
-
-def find_name(counter, text):
-    sumx = sum(counter.values())
-
-    words = text.split()
-
-    words = [x.lower()[:5] for x in words]
-
-
-
-    freq = []
-
-    for x in words:
-        f = counter[x]/ sumx
-        freq.append(f)
-
-    return freq     
+ 
 v = 90
 
     
