@@ -18,9 +18,42 @@ import multiprocessing as mp
 import random
 
 
+"""
+
+In Dataframe q, my_cat category, find element closest to having -input- value in brand_name
+
+"""
+
+def get_cutoff(series, count_threshold):
+    q = series.value_counts()
+    q = q.reset_index()
+
+    cut_index = q.ix[ (q[q.columns[1]] - count_threshold).abs().argsort()[:1]]
+    actual_cut_index = cut_index.index[0]
+    num_categories = actual_cut_index
+
+    return num_categories
+
+
+
+
+
 num_threads = 4
 
-NUM_BRANDS = 1000
+"""
+
+In train: brand freq
+
+ 500 => 122 items
+1000 =>  33 items
+1500 =>  14 items
+2000 =>   7 items
+3000 =>   3 items
+
+"""
+
+
+NUM_BRANDS = 1500
 NUM_CATEGORIES = 1000
 NAME_MIN_DF = 10
 MAX_FEATURES_ITEM_DESCRIPTION = 50000
