@@ -8,6 +8,8 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split, cross_val_score
 
+import time
+
 
 """Add to below: Find and return a category name with close to desired elements."""
 
@@ -136,7 +138,7 @@ DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\"
 
 DATA_DIR_BASEMENT = "D:\\mercari\\"
 
-DATA_DIR = DATA_DIR_PORTABLE
+DATA_DIR = DATA_DIR_BASEMENT
 
 
 def analyze_run_data():
@@ -149,44 +151,19 @@ def analyze_run_data():
         print(x)
 
 
+test_full = test      
 
-def main():
-
-    
-    train = pd.read_table(DATA_DIR + "train.tsv");
-    test = pd.read_csv(DATA_DIR + "test.tsv", sep = "\t", encoding="utf-8", engine = "python");
-
-    """
-    Women/Athletic Apparel/Pants, Tights, Leggings                 60177
-    Women/Tops & Blouses/T-Shirts                                  46380
-    Beauty/Makeup/Face                                             34335
-    Beauty/Makeup/Lips                                             29910
-    Electronics/Video Games & Consoles/Games                       26557
-    Beauty/Makeup/Eyes                                             25215
-    """
-
-    mil_cat = 'Men/Coats & Jackets/Military'
-    pump_cat = 'Women/Shoes/Pumps'
-    
-
-    single_cat = 'Women/Athletic Apparel/Pants, Tights, Leggings'
+train_full = train
 
 
-    test = test.loc[test.category_name == single_cat]
-    train = train.loc[train.category_name == single_cat]
 
-    print('Train shape: ', train.shape)
-    print('Test shape: ', test.shape)
-    
+def train_single_category(train, test):
+   
     nrow_train = train.shape[0]
 
     y = np.log1p(train["price"])
     merge: pd.DataFrame = pd.concat([train, test])
-    submission: pd.DataFrame = test[['test_id']]
-
-    del train
-    del test
-    gc.collect()
+    
      
     merge['brand_name'].fillna(value='missing', inplace=True)
     merge['item_description'].fillna(value='missing', inplace=True)
@@ -238,17 +215,83 @@ def main():
 
     print("RMSLE: " + str(o))
 
-
     model.fit(X, y)
 
     y_test = model.predict(X_test)
     y_test = np.expm1(y_test)
+
+    price_series = pd.Series(y_test)
+    index_series = pd.Series(test.test_id)
+
+    index_series = index_series.reset_index()
+
+    df = pd.concat([index_series, price_series], axis=1)
  
-    submission['price'] = y_test
+    df = df.drop(['test_id'], axis = 1)
+   
+    df.columns = ['test_id', 'price']
 
-    p = submission.loc[submission.index == 638315].price.values[0]
+    return df
 
-    print(p)
+  
+
+
+
+i = 9032
+
+
+def main():
+    
+    start_time = time.time()
+
+    train = pd.read_table(DATA_DIR + "train.tsv");
+    test = pd.read_csv(DATA_DIR + "test.tsv", sep = "\t", encoding="utf-8", engine = "python");
+
+    """Remember fill no category when missing"""
+
+    p = train.category_name.value_counts()
+    dfCat = pd.DataFrame(p)
+
+    dfCat = dfCat.reset_index()
+
+    dfCat.columns = ['name', 'counter']
+
+    cat_max = 200
+    cat_counter = 0
+
+    df_acc = pd.DataFrame()
+
+    train_acc = 0
+    test_acc = 0
+
+    l = ['Women/Suits & Blazers/Blazer']
+    t2 = train[~train.category_name.isin(l)]
+
+
+    while cat_counter < cat_max:
+        single_cat = dfCat.name[cat_counter]
+
+        test_single = test.loc[test_full.category_name == single_cat]
+        train_single = train.loc[train_full.category_name == single_cat]
+
+        print("'" + single_cat + "'..." + str(len(train_single)) + " item(s)...")
+
+        df = train_single_category(train_single, test_single)
+        df_acc = pd.concat([df, df_acc], axis = 0)
+
+        test_acc = test_acc + len(test_single)
+        train_acc = train_acc + len (train_single)
+
+        cat_counter = cat_counter + 1
+
+        print('[{}] Finished processing a category'.format(time.time() - start_time))
+
+        print("test_acc = " + str(test_acc) + ", train_acc = " + str(train_acc))
+
+
+    v = 90
+
+
     
 
 if __name__ == '__main__':
