@@ -7,9 +7,12 @@ DATA_DIR = "C:\\Users\\T149900\\ml_mercari\\"
 
 train = pd.read_table(DATA_DIR + "train.tsv");
 
-
+test = pd.read_table(DATA_DIR + "test.tsv");
 
 train['item_description'].fillna(value='missing', inplace=True)
+test['item_description'].fillna(value='missing', inplace=True)
+
+
 
 
 import nltk
@@ -90,6 +93,9 @@ def get_nouns_spacy(str):
             l.append(token.lemma_)
 
     return l
+
+
+df = 324
 
 
 def get_nouns_timed(list):
@@ -189,6 +195,47 @@ text_files = [TEXT_DIR + "xeno.txt",
 
 
 j = 90
+
+from difflib import SequenceMatcher
+
+def similar(a,b):
+    return SequenceMatcher(None, a, b).ratio()
+
+j = 90
+
+print (similar("Anders", "Andres"))
+
+
+"""Find similarly named items"""
+
+all = pd.concat([train, test])
+
+shoes = all.loc[all.category_name == 'Women/Shoes/Athletic']
+
+all_items = all.name
+
+l = all_items.tolist()
+
+score = []
+
+
+test_string = "Superman #17 Nov 92"
+
+test_string = "Sea wees size 0"
+
+for x in l:
+    this_score = similar(test_string, x)
+    score.append(this_score)
+
+i = sorted(range(len(score)),key=lambda x:-score[x])
+
+i = i[0:5]
+
+for x in i:
+    print(l[x])
+
+
+u = 90
 
 def last_word_in_name(df, cat):
     list = []
@@ -389,4 +436,21 @@ def find_name(counter, text):
     return freq     
 v = 90
 
-    
+"""
+list of strings l.
+count words
+"""
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+
+
+def count_words(list) :
+
+    cv = CountVectorizer()
+
+    cv.fit(list)
+
+
+    return 0
+
+
+v = 90
