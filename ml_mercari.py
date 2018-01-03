@@ -104,7 +104,7 @@ def split_cat(text):
     try: return text.split("/")
     except: return ("No Label", "No Label", "No Label")
 
-
+df_train = df_train[df_train.price != 0].reset_index(drop=True)
 q = 323
 
 def handle_missing_inplace(dataset):
