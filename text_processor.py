@@ -1,11 +1,18 @@
 
 import pandas as pd
-
+import time
 
 DATA_DIR = "C:\\Users\\T149900\\ml_mercari\\"
 
 
 train = pd.read_table(DATA_DIR + "train.tsv");
+
+test = pd.read_table(DATA_DIR + "test.tsv");
+
+train['item_description'].fillna(value='missing', inplace=True)
+test['item_description'].fillna(value='missing', inplace=True)
+
+
 
 
 import nltk
@@ -34,8 +41,129 @@ def nounify(series):
     return pd.Series(n2)
 
 
+import spacy
 
-print("Nouning train name...")
+nlp = spacy.load('en', disable=['parser', 'ner'])
+
+nlp = spacy.load("en")
+
+def nounify(series):
+    l = series.values
+    n2 = []
+
+    for x in l:
+        q = get_nouns(x)
+        n2.append(q)
+
+    return pd.Series(n2)
+
+
+from spacy.pipeline import Tagger
+
+
+texts = [u'One doc', u'...', u'Lots of docs']
+tagger = Tagger(nlp.vocab)
+for doc in tagger.pipe(texts, batch_size=50):
+    pass
+
+
+
+doc = nlp(u'Apple is looking at buying U.K. startup for $1 billion')
+
+nouns = []
+
+
+
+ nlp.remove_pipe('ner')
+ nlp.remove_pipe('parser')
+
+ nlp.pipe_names
+
+
+
+
+
+def get_nouns_spacy(str):
+    doc = nlp(str)
+
+    l = []
+
+    for token in doc:
+        if ( (token.pos_ == 'PROPN') | (token.pos_ == 'NOUN')):
+            l.append(token.lemma_)
+
+    return l
+
+
+df = 324
+
+
+def get_nouns_timed(list):
+    s = ".".join((str(x) for x in list))
+
+    start_time = time.time()
+
+    q = get_nouns_spacy(s)
+
+    print("get_nouns_timed [{:5.1f}] s".format( time.time() - start_time))
+
+    return q
+
+
+print("XXX")
+
+
+
+def nounify_spacy(list):
+    
+    n2 = []
+
+    nRows = len(list)
+
+    nCurrentRow = 0
+
+    start_time = time.time()
+
+    for x in list:
+        q = get_nouns_spacy(x)
+        n2.extend(q)
+
+        if (round(100 * nCurrentRow/ nRows) != round (100 * (nCurrentRow +1)/ nRows)):
+            print('{:5.1f}  [{:5.1f}] s '.format(100 * nCurrentRow/ nRows, time.time() - start_time))
+
+        nCurrentRow = nCurrentRow + 1
+
+    return n2
+
+
+
+print("XXX")
+
+
+
+def list_from_series(series):
+    out = []
+    l = series.values
+
+    for x in l:
+        out.append(x)
+
+    return out
+
+
+
+
+print("XXX")
+
+"""From list to string"""
+
+s = ".".join((str(x) for x in q))
+
+
+q = get_nouns_spacy(s)
+
+
+
 
 q = nounify(train.name)
 train.name = q
@@ -67,6 +195,47 @@ text_files = [TEXT_DIR + "xeno.txt",
 
 
 j = 90
+
+from difflib import SequenceMatcher
+
+def similar(a,b):
+    return SequenceMatcher(None, a, b).ratio()
+
+j = 90
+
+print (similar("Anders", "Andres"))
+
+
+"""Find similarly named items"""
+
+all = pd.concat([train, test])
+
+shoes = all.loc[all.category_name == 'Women/Shoes/Athletic']
+
+all_items = all.name
+
+l = all_items.tolist()
+
+score = []
+
+
+test_string = "Superman #17 Nov 92"
+
+test_string = "Sea wees size 0"
+
+for x in l:
+    this_score = similar(test_string, x)
+    score.append(this_score)
+
+i = sorted(range(len(score)),key=lambda x:-score[x])
+
+i = i[0:5]
+
+for x in i:
+    print(l[x])
+
+
+u = 90
 
 def last_word_in_name(df, cat):
     list = []
@@ -267,4 +436,21 @@ def find_name(counter, text):
     return freq     
 v = 90
 
-    
+"""
+list of strings l.
+count words
+"""
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+
+
+def count_words(list) :
+
+    cv = CountVectorizer()
+
+    cv.fit(list)
+
+
+    return 0
+
+
+v = 90
