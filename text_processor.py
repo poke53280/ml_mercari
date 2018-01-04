@@ -12,6 +12,16 @@ test = pd.read_table(DATA_DIR + "test.tsv");
 train['item_description'].fillna(value='missing', inplace=True)
 test['item_description'].fillna(value='missing', inplace=True)
 
+def analyze_run_data():
+    f = open(DATA_DIR + "rundata.txt")
+    s = f.read()
+    f.close()
+    l = s.split('\n')
+    
+    for x in l:
+        print(x)
+
+
 
 
 
