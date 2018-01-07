@@ -54,7 +54,17 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.linear_model import SGDRegressor
 import lightgbm as lgb
 
+def mem_usage(pandas_obj):
+    if isinstance(pandas_obj,pd.DataFrame):
+        usage_b = pandas_obj.memory_usage(deep=True).sum()
+    elif isinstance(pandas_obj,pd.Series):
+        usage_b = pandas_obj.memory_usage(deep=True)
+    else:
+        assert(0)
+    usage_mb = usage_b / 1024 ** 2 # convert bytes to megabytes
+    return "{:03.2f} MB".format(usage_mb)
 
+q = 90
 
 def rmsle(y, y0):
      assert len(y) == len(y0)
@@ -193,6 +203,8 @@ def train_single_category(train, test):
     return dict
 
 
+"""sort all categories. Find start and stop for all categories. work on slices into arrays"""
+
 
 
 x = pd.Categorical(['apple', 'bread', 'beer', 'cheese', 'milk' ])
@@ -223,6 +235,49 @@ def preprocess(merge, start_time):
 
 
 
+def all_sorted_print(all_sorted, l_first_index):
+
+    iCategory = 0
+
+    nCategories = len(l_first_index)
+
+    while iCategory < nCategories:
+        start = l_first_index[iCategory]
+
+        if iCategory == nCategories -1 :
+            passed_end = len(all_sorted)
+        else:
+            passed_end = l_first_index[iCategory +1]
+
+        c = all_sorted.category_name.cat.categories[iCategory]
+
+        print(c + " start_index = " + str(start) + ", passed end = " + str(passed_end))
+
+        iCategory = iCategory + 1
+
+q = 90
+
+def get_cat_slice(all_sorted, l_first_index, iCategory):
+    nCategories = len(l_first_index)
+    
+    assert (iCategory < nCategories)
+
+    start = l_first_index[iCategory]
+    
+    if iCategory == nCategories -1 :
+        passed_end = len(all_sorted)
+    else:
+        passed_end = l_first_index[iCategory +1]
+
+    slice = all_sorted[start:passed_end]
+
+    return slice
+
+q = 90
+
+
+
+
 
 
 def main():
@@ -240,7 +295,7 @@ def main():
     else:
         DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\"
         DATA_DIR_BASEMENT = "D:\\mercari\\"
-        DATA_DIR = DATA_DIR_PORTABLE
+        DATA_DIR = DATA_DIR_BASEMENT
         full_train = pd.read_table(DATA_DIR + "train.tsv");
         full_test = pd.read_csv(DATA_DIR + "test.tsv", sep = "\t", encoding="utf-8", engine = "python");
 
@@ -256,11 +311,74 @@ def main():
     full_train = full_train.rename(columns={'train_id': 'id'})
     full_test =  full_test.rename(columns={'test_id': 'id'})
 
-    merge: pd.DataFrame = pd.concat([full_train, full_test])
+    all: pd.DataFrame = pd.concat([full_train, full_test])
 
     del full_train
     del full_test
     gc.collect()
+
+   
+
+    all.info(memory_usage='deep')
+    
+    all_int = all.select_dtypes(include=['int64'])
+
+    all_int.info(memory_usage='deep')
+
+
+    """Categories to uint8"""
+    all.item_condition_id = pd.to_numeric(all.item_condition_id, downcast='unsigned')
+    all.shipping          = pd.to_numeric(all.shipping, downcast='unsigned')
+
+
+    """Category name to categorical"""
+    all['category_name'].fillna(value='missing', inplace=True)
+
+    all.category_name    = all.category_name.astype('category')
+
+    """sort by category. retrieve start index for each category"""
+
+    all_sorted = all.sort_values(by = 'category_name')
+
+    del all
+    gc.collect()
+
+    all_sorted.reset_index(inplace = True)
+
+
+    all_sorted.category_name = all_sorted.category_name.cat.as_ordered()
+
+
+    """ordered category list"""
+    c = all_sorted.category_name.cat.categories
+
+    l_first_index = []
+
+    for c_value in c:
+        x = all_sorted.category_name.searchsorted(c_value)
+        l_first_index.append(x[0])
+
+    q = 90
+
+
+    first_index = l_first_index[1]
+
+
+    """shows category change:"""
+    all_sorted['category_name'][first_index -1 : first_index + 1]
+
+    all_sorted_print(all_sorted, l_first_index)
+
+    cats = all_sorted.category_name.cat.categories
+
+    i = get_cat_slice(all_sorted, l_first_index, 9)
+
+    """Can drop category column now"""
+    all_sorted = all_sorted.drop(['category_name'], axis = 1)
+
+    all_sorted.info(memory_usage='deep')
+
+
 
 
     preprocess(merge, start_time)
