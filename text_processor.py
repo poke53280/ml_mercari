@@ -40,6 +40,9 @@ def get_nouns(in_str):
         return "none"
 
 
+
+w = 90
+
 def nounify(series):
     l = series.values
     n2 = []
