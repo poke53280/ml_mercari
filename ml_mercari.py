@@ -239,19 +239,19 @@ def all_sorted_print(all_sorted, l_first_index):
 
 q = 90
 
-def get_cat_slice(all_sorted, l_first_index, iCategory):
-    nCategories = len(l_first_index)
+def get_cat_slice(df, c, iCategory):
+    nCategories = len(c)
     
     assert (iCategory < nCategories)
 
-    start = l_first_index[iCategory]
+    start = c[iCategory]
     
     if iCategory == nCategories -1 :
-        passed_end = len(all_sorted)
+        passed_end = len(df)
     else:
-        passed_end = l_first_index[iCategory +1]
+        passed_end = c[iCategory +1]
 
-    slice = all_sorted[start:passed_end]
+    slice = df[start:passed_end]
 
     return slice
 
@@ -293,62 +293,62 @@ def main():
     full_test =  full_test.rename(columns={'test_id': 'id'})
 
 
-    all: pd.DataFrame = pd.concat([full_train, full_test])
+    data: pd.DataFrame = pd.concat([full_train, full_test])
 
     del full_train
     del full_test
     gc.collect()
 
 
-    data['category_name'].fillna(value='missing', inplace=True)
+    df['category_name'].fillna(value='missing', inplace=True)
 
-    data.category_name = data.category_name.astype('category')
+    df.category_name = df.category_name.astype('category')
 
-    data.sort_values(by=['category_name'], inplace=True)
+    df.sort_values(by=['category_name'], inplace=True)
 
-    data[['name', 'category_name']]
+    df[['name', 'category_name']]
 
-    data.reset_index(inplace=True)
+    df.reset_index(inplace=True)
 
    
 
-    all.info(memory_usage='deep')
+    df.info(memory_usage='deep')
     
-    all_int = all.select_dtypes(include=['int64'])
+    df = df.select_dtypes(include=['int64'])
 
-    all_int.info(memory_usage='deep')
+    df.info(memory_usage='deep')
 
 
     """Categories to uint8"""
-    all.item_condition_id = pd.to_numeric(all.item_condition_id, downcast='unsigned')
-    all.shipping          = pd.to_numeric(all.shipping, downcast='unsigned')
+    df.item_condition_id = pd.to_numeric(df.item_condition_id, downcast='unsigned')
+    df.shipping          = pd.to_numeric(df.shipping, downcast='unsigned')
 
 
     """Category name to categorical"""
-    all['category_name'].fillna(value='missing', inplace=True)
+    df['category_name'].fillna(value='missing', inplace=True)
 
-    all.category_name    = all.category_name.astype('category')
+    df.category_name    = df.category_name.astype('category')
 
     """sort by category. retrieve start index for each category"""
 
-    all_sorted = all.sort_values(by = 'category_name')
+    df = df.sort_values(by = 'category_name')
 
     del all
     gc.collect()
 
-    all_sorted.reset_index(inplace = True)
+    df.reset_index(inplace = True)
 
 
-    all_sorted.category_name = all_sorted.category_name.cat.as_ordered()
+    df.category_name = df.category_name.cat.as_ordered()
 
 
     """ordered category list"""
-    c = all_sorted.category_name.cat.categories
+    c = df.category_name.cat.categories
 
     l_first_index = []
 
     for c_value in c:
-        x = all_sorted.category_name.searchsorted(c_value)
+        x = df.category_name.searchsorted(c_value)
         l_first_index.append(x[0])
 
     q = 90
@@ -364,7 +364,7 @@ def main():
 
     cats = all_sorted.category_name.cat.categories
 
-    i = get_cat_slice(all_sorted, l_first_index, 9)
+    i = get_cat_slice(df, l_first_index, 9)
 
     """Can drop category column now"""
     all_sorted = all_sorted.drop(['category_name'], axis = 1)
