@@ -1,20 +1,4 @@
 
-import pandas as pd
-import pyximport; pyximport.install()
-import numpy as np
-from scipy.sparse import csr_matrix, hstack
-from sklearn.linear_model import Ridge
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.preprocessing import LabelBinarizer
-from sklearn.model_selection import train_test_split, cross_val_score
-
-import scipy
-
-import time
-import datetime
-
-import gc
-
 
 """  
 Text processing read:
@@ -121,41 +105,37 @@ w = 99
 
 
 
-def train_single_category(train, test):
+def get_XY(df):
+  y = np.log1p(df["price"])
+  cv0 = TfidfVectorizer(ngram_range=(1,5))
+  X_name = cv0.fit_transform(df['name'])
+
+  lb0 = LabelBinarizer(sparse_output=True)
+   
+  tv = TfidfVectorizer(ngram_range=(1, 7))
+
+  X_description = tv.fit_transform(df['item_description'])
+
+  lb = LabelBinarizer(sparse_output=True)
+    
+  X_brand = lb.fit_transform(df['brand_name'])
+
+  X_dummies = csr_matrix(pd.get_dummies(df[['item_condition_id', 'shipping']], sparse=True).values)
+
+  X = hstack((X_dummies, X_description, X_brand, X_name)).tocsr()
+
+  return {'X': X, 'y':y}
+
+
+w = 90
+
+
+
+def train_single_category(X, y, random):
    
     start_time = time.time()
 
-    print('[{0:4.0f}] Start single'.format(time.time() - start_time))
-
-    nrow_train = train.shape[0]
-
-    y = np.log1p(train["price"])
-    merge: pd.DataFrame = pd.concat([train, test])
-
-   
-    
-    cv0 = TfidfVectorizer(ngram_range=(1,5))
-
-    X_name = cv0.fit_transform(merge['name'])
-
-    lb0 = LabelBinarizer(sparse_output=True)
-   
-    tv = TfidfVectorizer(ngram_range=(1, 5))
-
-    X_description = tv.fit_transform(merge['item_description'])
-
-    lb = LabelBinarizer(sparse_output=True)
-    
-    X_brand = lb.fit_transform(merge['brand_name'])
-
-    X_dummies = csr_matrix(pd.get_dummies(merge[['item_condition_id', 'shipping']], sparse=True).values)
-
-    sparse_merge = hstack((X_dummies, X_description, X_brand, X_name)).tocsr()
-
-    X = sparse_merge[:nrow_train]
-    X_test = sparse_merge[nrow_train:]
-    
-    train_X, valid_X, train_y, valid_y = train_test_split(X, y, test_size = 0.31, random_state = 144)
+    train_X, valid_X, train_y, valid_y = train_test_split(X, y, test_size = 0.11, random_state = random)
 
     print('[{0:4.0f}] Start GBM'.format(time.time() - start_time))
 
@@ -164,17 +144,7 @@ def train_single_category(train, test):
         
     watchlist = [d_train, d_valid]
     
-    params = {
-        'learning_rate': 0.1,
-        'application': 'regression',
-        'num_leaves': 255,
-        'verbosity': -1,
-        'metric': 'RMSE',
-        'data_random_seed': 1,
-        'bagging_fraction': 0.5,
-        'nthread': 4,
-        'max_bin': 8192
-    }
+    params = { 'learning_rate': 0.1, 'application': 'regression', 'num_leaves': 255, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1, 'bagging_fraction': 0.5, 'nthread': 4, 'max_bin': 8192 }
    
     model = lgb.train(params, train_set=d_train, num_boost_round=5000, valid_sets=watchlist, early_stopping_rounds=250, verbose_eval=500) 
     valid_y_pred = model.predict(valid_X)
@@ -183,24 +153,11 @@ def train_single_category(train, test):
     o = rmsle_func(valid_y_pred, valid_y)
 
     print('[{0:4.0f}] Model run complete'.format(time.time() - start_time))
-    y_test = model.predict(X_test)
-
-    y_test = np.expm1(y_test)
-
-    price_series = pd.Series(y_test)
-    index_series = pd.Series(test.test_id)
-
-    index_series = index_series.reset_index()
-
-    df = pd.concat([index_series, price_series], axis=1)
- 
-    df = df.drop(['test_id'], axis = 1)
    
-    df.columns = ['test_id', 'price']
+    print(o)
 
-    dict = {'df':df, 'rmsle':o }
+    return o
 
-    return dict
 
 
 """sort all categories. Find start and stop for all categories. work on slices into arrays"""
@@ -274,8 +231,66 @@ def get_cat_slice(all_sorted, l_first_index, iCategory):
     return slice
 
 q = 90
+df = full_train
+
+def generate_category_slices(df):
+
+    df['category_name'].fillna(value='missing', inplace=True)
+
+    df.category_name    = df.category_name.astype('category')
+
+    """sort by category. retrieve start index for each category"""
+
+    df = df.sort_values(by = 'category_name')
+
+    df.reset_index(inplace = True)
+
+    df.category_name = df.category_name.cat.as_ordered()
+
+    """ordered category list"""
+    c = df.category_name.cat.categories
+
+    l_first_index = []
+
+    for c_value in c:
+        x = df.category_name.searchsorted(c_value)
+        l_first_index.append(x[0])
+
+    df = df.drop(['category_name'], axis = 1)
+
+    iCategory = 0
+
+    iProcessed = 0
+
+    nCategories = len(l_first_index)
+
+    while (iCategory < nCategories) & (iProcessed < 1):
+        print("Category: " + c[iCategory])
+        i = get_cat_slice(df, l_first_index, iCategory)
+
+        if len(i) > 2000:
+            d = get_XY(i)
+            y = d['y']
+            X = d['X']
+
+            rmsleA = train_single_category(X,y, 144)
+            print("   ===> RMSLEA = " + str(rmsleA))
+
+            rmsleB = train_single_category(X,y, 202)
+            print("   ===> RMSLEB = " + str(rmsleB))
+
+            rmsleC = train_single_category(X,y, 90)
+            print("   ===> RMSLEC = " + str(rmsleC))
 
 
+
+            iProcessed = iProcessed +1
+           
+
+        iCategory = iCategory + 1
+
+
+q = 900
 
 
 
@@ -299,17 +314,29 @@ def main():
         full_train = pd.read_table(DATA_DIR + "train.tsv");
         full_test = pd.read_csv(DATA_DIR + "test.tsv", sep = "\t", encoding="utf-8", engine = "python");
 
+    full_train['brand_name'].fillna(value='missing', inplace=True)
+
+    full_train['item_description'].fillna(value='missing', inplace=True)
+
+
     full_train = full_train.drop(full_train[(full_train.price < 1.0)].index)
+
+    generate_category_slices(full_train)
+
+    
+  
     nrow_train = full_train.shape[0] 
 
-    y = np.log1p(full_train["price"])
+  
 
-    full_train.drop(["price"], inplace = True, axis = 1)
 
     len_train = len(full_train)
 
     full_train = full_train.rename(columns={'train_id': 'id'})
     full_test =  full_test.rename(columns={'test_id': 'id'})
+
+
+   
 
     all: pd.DataFrame = pd.concat([full_train, full_test])
 
@@ -325,58 +352,9 @@ def main():
 
     all_int.info(memory_usage='deep')
 
-
     """Categories to uint8"""
     all.item_condition_id = pd.to_numeric(all.item_condition_id, downcast='unsigned')
     all.shipping          = pd.to_numeric(all.shipping, downcast='unsigned')
-
-
-    """Category name to categorical"""
-    all['category_name'].fillna(value='missing', inplace=True)
-
-    all.category_name    = all.category_name.astype('category')
-
-    """sort by category. retrieve start index for each category"""
-
-    all_sorted = all.sort_values(by = 'category_name')
-
-    del all
-    gc.collect()
-
-    all_sorted.reset_index(inplace = True)
-
-
-    all_sorted.category_name = all_sorted.category_name.cat.as_ordered()
-
-
-    """ordered category list"""
-    c = all_sorted.category_name.cat.categories
-
-    l_first_index = []
-
-    for c_value in c:
-        x = all_sorted.category_name.searchsorted(c_value)
-        l_first_index.append(x[0])
-
-    q = 90
-
-
-    first_index = l_first_index[1]
-
-
-    """shows category change:"""
-    all_sorted['category_name'][first_index -1 : first_index + 1]
-
-    all_sorted_print(all_sorted, l_first_index)
-
-    cats = all_sorted.category_name.cat.categories
-
-    i = get_cat_slice(all_sorted, l_first_index, 9)
-
-    """Can drop category column now"""
-    all_sorted = all_sorted.drop(['category_name'], axis = 1)
-
-    all_sorted.info(memory_usage='deep')
 
 
 
