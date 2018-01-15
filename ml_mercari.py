@@ -14,7 +14,7 @@ import time
 import datetime
 
 import gc
-
+import lightgbm as lgb
 
 """  
 Text processing read:
@@ -30,29 +30,7 @@ Categorical:
 
 
 """--------------------------------------------------------------------------------------"""
-# Based on Bojan's -> https://www.kaggle.com/tunguz/more-effective-ridge-lgbm-script-lb-0-44944
-# Changes:
-# 1. Split category_name into sub-categories
-# 2. Parallelize LGBM to 4 cores
-# 3. Increase the number of rounds in 1st LGBM
-# 4. Another LGBM with different seed for model and training split, slightly different hyper-parametes.
-# 5. Weights on ensemble
-# 6. SGDRegressor doesn't improve the result, going with only 1 Ridge and 2 LGBM
 
-import pyximport; pyximport.install()
-import gc
-import time
-import numpy as np
-import pandas as pd
-
-from scipy.sparse import csr_matrix, hstack
-
-from sklearn.linear_model import Ridge
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.preprocessing import LabelBinarizer
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.linear_model import SGDRegressor
-import lightgbm as lgb
 
 
 
@@ -222,13 +200,14 @@ def preprocess(merge, start_time):
     print('[{}] Convert categorical completed'.format(time.time() - start_time))
 
 
-
+#secure multiparty communication. a/b.
+#brukerreise- NN
 
 
 def main():
-
+    
     start_time = time.time()
-
+        
     print('[{}] Go'.format(time.time() - start_time))
 
     isOnline = False
@@ -256,14 +235,26 @@ def main():
     full_train = full_train.rename(columns={'train_id': 'id'})
     full_test =  full_test.rename(columns={'test_id': 'id'})
 
-    merge: pd.DataFrame = pd.concat([full_train, full_test])
+    data: pd.DataFrame = pd.concat([full_train, full_test])
 
     del full_train
     del full_test
     gc.collect()
 
+    data['category_name'].fillna(value='missing', inplace=True)
 
-    preprocess(merge, start_time)
+    data.category_name = data.category_name.astype('category')
+
+    data.sort_values(by=['category_name'], inplace=True)
+
+    data[['name', 'category_name']]
+
+    data.reset_index(inplace=True)
+
+
+
+
+    preprocess(data, start_time)
    
 
     p = merge.category_name.value_counts()
