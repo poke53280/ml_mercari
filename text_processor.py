@@ -12,6 +12,109 @@ test = pd.read_table(DATA_DIR + "test.tsv");
 train['item_description'].fillna(value='missing', inplace=True)
 test['item_description'].fillna(value='missing', inplace=True)
 
+
+l = ['must watch. Good acting', 'average movie. Bad acting', 'good movie. Good acting', 'pathetic. Avoid', 'avoid']
+ 
+df = pd.DataFrame(l, columns=['description'])
+ 
+ 
+from sklearn.feature_extraction.text import CountVectorizer    
+word_vectorizer = CountVectorizer(ngram_range=(1,2), analyzer='word')
+ 
+v = word_vectorizer.fit(df['description'])
+ 
+import re
+line = " I am having a very nice day."
+count = len(re.findall(r'\w+', line))
+ 
+f = v.get_feature_names()
+ 
+q = []
+ 
+for line in f:
+    count = len(re.findall(r'\w+', line))
+    q.append(count)
+ 
+w = 90
+ 
+test = "movie bad acting good"
+ 
+t_l = test.split()
+ 
+idx = 0
+max_gram = 2
+ 
+while idx < len(t_l):
+ 
+    this_l = t_l[idx:idx + max_gram]
+ 
+    str = " ".join(this_l)
+ 
+    print("Testing: " + str)
+ 
+ 
+    hit1 = " ".join(this_l[:1]) in f
+ 
+    if (idx < len(t_l) -1):
+        hit2 = " ".join(this_l[:2]) in f
+    else:
+        hit2 = False
+ 
+    if hit2:
+        print("Found 2-gram")
+        idx = idx + 2
+    elif hit1:
+        print("Found 1-gram")
+        idx = idx + 1
+    else:
+        print("Nothing found")
+        idx = idx + 1
+ 
+w = 90
+ 
+l = ["my", "very", "big", "dictionary", "is", "right", "here"]
+ 
+dict = {}
+ 
+ 
+#1-gram
+for x in l:
+    key = x
+ 
+    if key in dict and not (dict[key] is None):
+        dict[key]= dict[key] + 1
+    else:
+        dict[key] = 1
+ 
+    d.append(key)
+ 
+ 
+w = 90
+ 
+for i, j in zip(l, l[1:]):
+    key = i + " " + j
+ 
+    if key in dict and not (dict[key] is None):
+        dict[key]= dict[key] + 1
+    else:
+        dict[key] = 1
+ 
+ 
+w = 90
+ 
+for i, j, k in zip(l, l[1:], l[2:]):
+    key = i + " " + j + " " + k
+ 
+    if key in dict and not (dict[key] is None):
+        dict[key]= dict[key] + 1
+    else:
+        dict[key] = 1
+ 
+w = 90
+
+
+
+
 def analyze_run_data():
     f = open(DATA_DIR + "rundata.txt")
     s = f.read()
