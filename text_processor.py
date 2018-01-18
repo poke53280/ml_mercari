@@ -2,6 +2,11 @@
 import pandas as pd
 import time
 
+
+
+
+
+
 DATA_DIR = "C:\\Users\\T149900\\ml_mercari\\"
 
 
@@ -254,6 +259,16 @@ def nounify_spacy(list):
 
 
 print("XXX")
+
+
+def get_list_of_words(series):
+    cv = CountVectorizer(ngram_range=(1, 2))
+    cv.fit(corpus_data)
+    l = cv.get_feature_names()
+
+w = 99
+#len train mercari 162032
+
 
 
 
