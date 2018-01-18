@@ -61,8 +61,7 @@ def handle_missing_inplace(dataset):
 
 
 def cutting(dataset):
-
-   
+  
 
     pop_category1 = dataset['general_cat'].value_counts().loc[lambda x: x.index != 'missing'].index[:NUM_CATEGORIES]
     pop_category2 = dataset['subcat_1'].value_counts().loc[lambda x: x.index != 'missing'].index[:NUM_CATEGORIES]
@@ -91,11 +90,11 @@ def rmsle_func(y, y0):
      return np.sqrt(mean)
 
 
- 
+q = 90 
 
 
 
-def get_XY(df):
+def get_XY_Basic(df):
   y = np.log1p(df["price"])
 
   cv0 = TfidfVectorizer(ngram_range=(1,14))
@@ -114,6 +113,44 @@ def get_XY(df):
   X_dummies = csr_matrix(pd.get_dummies(df[['item_condition_id', 'shipping']], sparse=True).values)
 
   X = hstack((X_dummies, X_description, X_brand, X_name)).tocsr()
+
+  return {'X': X, 'y':y}
+
+
+w = 90
+
+def get_XY_Advanced(df):
+
+  y = np.log1p(df["price"])
+
+  cv0 = TfidfVectorizer(ngram_range=(1,14))
+  X_name = cv0.fit_transform(df['name'])
+
+  lb0 = LabelBinarizer(sparse_output=True)
+
+  s_CD = noun_ify(df['item_description'], ['CD'])
+  s_JJ = noun_ify(df['item_description'], ['JJ'])
+  s_NN = noun_ify(df['item_description'], ['NN'])
+  s_VB = noun_ify(df['item_description'], ['VB'])
+
+  cv = CountVectorizer(stop_words='english')
+   
+  X_description_CD = cv.fit_transform(s_CD)
+  X_description_JJ = cv.fit_transform(s_JJ)
+  X_description_NN = cv.fit_transform(s_NN)
+  X_description_VB = cv.fit_transform(s_VB)
+
+  tv = TfidfVectorizer(ngram_range=(2, 5), stop_words='english')
+
+  X_descriptionFULL = tv.fit_transform(df['item_description'])
+
+  lb = LabelBinarizer(sparse_output=True)
+    
+  X_brand = lb.fit_transform(df['brand_name'])
+
+  X_dummies = csr_matrix(pd.get_dummies(df[['item_condition_id', 'shipping']], sparse=True).values)
+
+  X = hstack((X_dummies, X_descriptionFULL, X_description_CD, X_description_JJ, X_description_NN, X_description_VB, X_brand, X_name)).tocsr()
 
   return {'X': X, 'y':y}
 
@@ -143,7 +180,7 @@ def train2(train_X, valid_X, train_y, valid_y):
 w = 90
 
 
-def train(train_X, valid_X, train_y, valid_y):
+def train1(train_X, valid_X, train_y, valid_y):
    
 
     d_train = lgb.Dataset(train_X, label=train_y)
@@ -151,9 +188,12 @@ def train(train_X, valid_X, train_y, valid_y):
         
     watchlist = [d_train, d_valid]
     
-    params = { 'learning_rate': 0.1, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1, 'bagging_fraction': 0.5, 'nthread': 4, 'max_bin': 255 }
+    params = { 'learning_rate': 0.01, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
+                    'bagging_fraction': 0.6, 'bagging_freq': 0, 'nthread': 4, 'max_bin': 255 }
    
-    model = lgb.train(params, train_set=d_train, num_boost_round=110, valid_sets=watchlist, verbose_eval=25) 
+    model = lgb.train(params, train_set=d_train, num_boost_round=5310, valid_sets=watchlist, verbose_eval=15,early_stopping_rounds=200) 
+
+    
 
 
 w = 90
@@ -163,9 +203,9 @@ def train_single_category(X, y, random):
    
     start_time = time.time()
 
-    train_X, valid_X, train_y, valid_y = train_test_split(X, y, test_size = 0.11, random_state = random)
+    train_X, valid_X, train_y, valid_y = train_test_split(X, y, test_size = 0.21, random_state = random)
 
-    train(train_X, valid_X, train_y, valid_y)
+    train1(train_X, valid_X, train_y, valid_y)
 
     valid_y_pred = model.predict(valid_X)
     valid_y_pred = np.expm1(valid_y_pred)
@@ -276,12 +316,12 @@ def main():
 
     nCategories = len(l_first_index)
 
-    while (iCategory < nCategories) & (iProcessed < 1):
+    while (iCategory < nCategories) & (iProcessed < 20):
         print("Category: " + c[iCategory])
         i = get_cat_slice(df, l_first_index, iCategory)
 
         if len(i) > 2000:
-            d = get_XY(i)
+            d = get_XY_Advanced(i)
             y = d['y']
             X = d['X']
 
@@ -299,6 +339,8 @@ def main():
 
         iCategory = iCategory + 1
 
+    q = 90
+    
 
 if __name__ == '__main__':
     main()

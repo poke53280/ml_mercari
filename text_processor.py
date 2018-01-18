@@ -135,9 +135,11 @@ def analyze_run_data():
 
 import nltk
 
-def get_nouns(in_str):
+def get_nouns(in_str, type_list):
     tokens = nltk.word_tokenize(in_str)
-    is_noun = lambda pos: pos[:2] == 'NN'
+# https://stackoverflow.com/questions/15388831/what-are-all-possible-pos-tags-of-nltk
+    is_noun = lambda pos: pos[:2] in type_list 
+    
     tagged = nltk.pos_tag(tokens)
 
     nouns = [word for (word, pos) in tagged if is_noun(pos)] 
@@ -149,17 +151,23 @@ def get_nouns(in_str):
 
 
 
+print(nltk.pos_tag(nltk.word_tokenize(df.item_description.values[200])))
+
 w = 90
 
-def nounify(series):
+type_list = ['CD', 'JJ', 'LS', 'NN','RB', 'VB']
+
+def noun_ify(series, type_list):
     l = series.values
     n2 = []
 
     for x in l:
-        q = get_nouns(x)
+        q = get_nouns(x, type_list)
         n2.append(q)
 
     return pd.Series(n2)
+
+w = 90
 
 
 import spacy
