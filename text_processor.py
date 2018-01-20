@@ -1,25 +1,16 @@
 
 import pandas as pd
 import time
+import spacy
+
+import nltk
 
 
 
-
-
-
-DATA_DIR = "C:\\Users\\T149900\\ml_mercari\\"
-
-
-train = pd.read_table(DATA_DIR + "train.tsv");
-
-test = pd.read_table(DATA_DIR + "test.tsv");
-
-train['item_description'].fillna(value='missing', inplace=True)
-test['item_description'].fillna(value='missing', inplace=True)
 
 
 l = ['must watch. Good acting', 'average movie. Bad acting', 'good movie. Good acting', 'pathetic. Avoid', 'avoid']
- 
+
 df = pd.DataFrame(l, columns=['description'])
  
  
@@ -133,9 +124,8 @@ def analyze_run_data():
 
 
 
-import nltk
 
-def get_nouns(in_str, type_list):
+def get_pos_words_nltk(in_str, type_list):
     tokens = nltk.word_tokenize(in_str)
 # https://stackoverflow.com/questions/15388831/what-are-all-possible-pos-tags-of-nltk
     is_noun = lambda pos: pos[:2] in type_list 
@@ -157,12 +147,12 @@ w = 90
 
 type_list = ['CD', 'JJ', 'LS', 'NN','RB', 'VB']
 
-def noun_ify(series, type_list):
+def noun_ify_nltk(series, type_list):
     l = series.values
     n2 = []
 
     for x in l:
-        q = get_nouns(x, type_list)
+        q = get_pos_words_nltk(x, type_list)
         n2.append(q)
 
     return pd.Series(n2)
@@ -170,7 +160,6 @@ def noun_ify(series, type_list):
 w = 90
 
 
-import spacy
 
 nlp = spacy.load('en', disable=['parser', 'ner'])
 
@@ -181,7 +170,7 @@ def nounify(series):
     n2 = []
 
     for x in l:
-        q = get_nouns(x)
+        q = get_nouns_nltk(x)
         n2.append(q)
 
     return pd.Series(n2)
@@ -201,31 +190,52 @@ doc = nlp(u'Apple is looking at buying U.K. startup for $1 billion')
 
 nouns = []
 
+nlp.remove_pipe('ner')
+nlp.remove_pipe('parser')
 
+nlp.pipe_names;
 
- nlp.remove_pipe('ner')
- nlp.remove_pipe('parser')
+q = 90
 
- nlp.pipe_names
-
-
-
-
-
-def get_nouns_spacy(str):
+def pos_tag_spacy(str):
     doc = nlp(str)
+
+    for token in doc:
+        print(token.pos_  + ", " + token.lemma_ + ", dep=" + token.dep_)
+
+
+q = 90
+
+def get_pos_words_spacy(txt, type_list):
+    doc = nlp(txt)
 
     l = []
 
     for token in doc:
-        if ( (token.pos_ == 'PROPN') | (token.pos_ == 'NOUN')):
+        if token.pos_ in type_list:
             l.append(token.lemma_)
 
-    return l
+
+    if len(l) > 0:
+        return " ".join(str(x) for x in l)
+    else:
+        return "none"
+
 
 
 df = 324
 
+def noun_ify_spacy(series, type_list):
+    l = series.values
+    n2 = []
+
+    for x in l:
+        q = get_pos_words_spacy(x, type_list)
+        n2.append(q)
+
+    return pd.Series(n2)
+
+df = 324
 
 def get_nouns_timed(list):
     s = ".".join((str(x) for x in list))

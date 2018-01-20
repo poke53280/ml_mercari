@@ -31,6 +31,20 @@ Categorical:
 
 """--------------------------------------------------------------------------------------"""
 
+def is_stop():
+    f = open(DATA_DIR + "stopfile.txt")
+    s = f.read()
+    f.close()
+
+    isStop = s[:4] == 'stop'
+
+    return isStop
+
+w = 90
+   
+
+    
+
 
 def mem_usage(pandas_obj):
     if isinstance(pandas_obj,pd.DataFrame):
@@ -73,6 +87,10 @@ def cutting(dataset):
 
 
 def rmsle_func(y, y0):
+    return np.sqrt(np.mean(np.power(np.log1p(y)-np.log1p(y0), 2)))
+
+q = 90
+
 
 
      d = np.power(np.log1p(y)-np.log1p(y0), 2)
@@ -101,8 +119,20 @@ def get_XY_Basic(df):
   X_name = cv0.fit_transform(df['name'])
 
   lb0 = LabelBinarizer(sparse_output=True)
+
+  print("NOUN...")
+  s_NN = noun_ify_spacy(df['item_description'], ['NOUN'])
+
+  print("PROPN...")
+  s_PN = noun_ify_spacy(df['item_description'], ['PROPN'])
+
+  cv = CountVectorizer(stop_words='english')
+
+  X_description_NN = cv.fit_transform(s_NN)
+  X_description_PN = cv.fit_transform(s_PN)
+
    
-  tv = TfidfVectorizer(ngram_range=(2, 17))
+  tv = TfidfVectorizer(ngram_range=(1, 5))
 
   X_description = tv.fit_transform(df['item_description'])
 
@@ -112,7 +142,7 @@ def get_XY_Basic(df):
 
   X_dummies = csr_matrix(pd.get_dummies(df[['item_condition_id', 'shipping']], sparse=True).values)
 
-  X = hstack((X_dummies, X_description, X_brand, X_name)).tocsr()
+  X = hstack((X_dummies, X_description, X_description_NN, X_description_PN, X_brand, X_name)).tocsr()
 
   return {'X': X, 'y':y}
 
@@ -128,19 +158,36 @@ def get_XY_Advanced(df):
 
   lb0 = LabelBinarizer(sparse_output=True)
 
-  s_CD = noun_ify(df['item_description'], ['CD'])
-  s_JJ = noun_ify(df['item_description'], ['JJ'])
-  s_NN = noun_ify(df['item_description'], ['NN'])
-  s_VB = noun_ify(df['item_description'], ['VB'])
+  print("NUM...")
+  s_NUM = noun_ify_spacy(df['item_description'], ['NUM'])
 
-  cv = CountVectorizer(stop_words='english')
+  print("SYM...")
+  s_SYM = noun_ify_spacy(df['item_description'], ['SYM'])
+
+  print("NOUN...")
+  s_NN = noun_ify_spacy(df['item_description'], ['NOUN'])
+
+  print("PROPN...")
+  s_PN = noun_ify_spacy(df['item_description'], ['PROPN'])
+
+  print("VERB...")
+  s_VB = noun_ify_spacy(df['item_description'], ['VERB'])
+
+  print("ADJ...")
+  s_JJ = noun_ify_spacy(df['item_description'], ['ADJ'])
+
+  tv = TfidfVectorizer(stop_words='english')
    
-  X_description_CD = cv.fit_transform(s_CD)
-  X_description_JJ = cv.fit_transform(s_JJ)
-  X_description_NN = cv.fit_transform(s_NN)
-  X_description_VB = cv.fit_transform(s_VB)
+  X_description_NUM = tv.fit_transform(s_NUM)
+  X_description_SYM = tv.fit_transform(s_SYM)
+  X_description_NN = tv.fit_transform(s_NN)
+  X_description_PN = tv.fit_transform(s_PN)
+  X_description_VB  = tv.fit_transform(s_VB )
+  X_description_JJ = tv.fit_transform(s_JJ)
 
-  tv = TfidfVectorizer(ngram_range=(2, 5), stop_words='english')
+
+
+  tv = TfidfVectorizer(ngram_range=(1, 17), stop_words='english')
 
   X_descriptionFULL = tv.fit_transform(df['item_description'])
 
@@ -150,34 +197,14 @@ def get_XY_Advanced(df):
 
   X_dummies = csr_matrix(pd.get_dummies(df[['item_condition_id', 'shipping']], sparse=True).values)
 
-  X = hstack((X_dummies, X_descriptionFULL, X_description_CD, X_description_JJ, X_description_NN, X_description_VB, X_brand, X_name)).tocsr()
+  X = hstack((X_dummies, X_descriptionFULL, X_description_NUM,
+              X_description_SYM, X_description_NN, X_description_PN, X_description_VB, X_description_JJ, X_brand, X_name)).tocsr()
 
   return {'X': X, 'y':y}
 
 
 w = 90
 
-
-
-def train2(train_X, valid_X, train_y, valid_y):
-  
-    clf = lgb.LGBMRegressor(objective='regression', num_leaves=31, learning_rate=0.05, n_estimators=410, max_bin=255, bagging_fraction= 0.8, nthreads = 4, min_child_samples=10)
-
-    clf.fit(train_X, train_y, early_stopping_rounds = 30, eval_set = [(valid_X, valid_y)], eval_metric = 'rmse')
-
-    #Check prediciton on validation set
-
-    y = clf.predict(valid_X)
-
-    y = np.expm1(y)
-    valid_y_pred = np.expm1(valid_y)
-
-    o = rmsle_func(y, valid_y_pred)
-
-    print(o)
-
-
-w = 90
 
 
 def train1(train_X, valid_X, train_y, valid_y):
@@ -191,32 +218,24 @@ def train1(train_X, valid_X, train_y, valid_y):
     params = { 'learning_rate': 0.01, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
                     'bagging_fraction': 0.6, 'bagging_freq': 0, 'nthread': 4, 'max_bin': 255 }
    
-    model = lgb.train(params, train_set=d_train, num_boost_round=5310, valid_sets=watchlist, verbose_eval=15,early_stopping_rounds=200) 
+    model = lgb.train(params, train_set=d_train, num_boost_round=9310, valid_sets=watchlist, verbose_eval=15,early_stopping_rounds=400) 
 
     
+    valid_y_pred = model.predict(valid_X)
+   
+   
+    epred = np.expm1(valid_y_pred)
+    evalid = np.expm1(valid_y)
+
+    o = rmsle_func(epred, evalid)
+
+    y2 = np.power(np.log1p(epred)-np.log1p(evalid), 2)
+
+    return o
 
 
 w = 90
 
-
-def train_single_category(X, y, random):
-   
-    start_time = time.time()
-
-    train_X, valid_X, train_y, valid_y = train_test_split(X, y, test_size = 0.21, random_state = random)
-
-    train1(train_X, valid_X, train_y, valid_y)
-
-    valid_y_pred = model.predict(valid_X)
-    valid_y_pred = np.expm1(valid_y_pred)
-    valid_y =  np.expm1(valid_y)
-    o = rmsle_func(valid_y_pred, valid_y)
-
-    print('[{0:4.0f}] Model run complete'.format(time.time() - start_time))
-   
-    print(o)
-
-    return o
 
 
 
@@ -316,24 +335,46 @@ def main():
 
     nCategories = len(l_first_index)
 
-    while (iCategory < nCategories) & (iProcessed < 20):
-        print("Category: " + c[iCategory])
+    while (iCategory < nCategories) & (iProcessed < 200):
+       
         i = get_cat_slice(df, l_first_index, iCategory)
+
+        print("Category: " + c[iCategory]+ " size = " + str(len(i)))
 
         if len(i) > 2000:
             d = get_XY_Advanced(i)
             y = d['y']
             X = d['X']
 
-            rmsleA = train_single_category(X,y, 144)
-            print("   ===> RMSLEA = " + str(rmsleA))
+            d2 = get_XY_Basic(i)
+            y2 = d2['y']
+            X2 = d2['X']
 
-            rmsleB = train_single_category(X,y, 202)
-            print("   ===> RMSLEB = " + str(rmsleB))
 
-            rmsleC = train_single_category(X,y, 90)
-            print("   ===> RMSLEC = " + str(rmsleC))
 
+            basic_run = 0
+
+            l_rmsle = []
+
+            while (basic_run < 3) :
+                train_X, valid_X, train_y, valid_y = train_test_split(X2, y2, test_size = 0.1, random_state = 117 + basic_run)
+                rmsle = train1(train_X, valid_X, train_y, valid_y)
+                print("   ===> RMSLE basic = " + str(rmsle))
+                l_rmsle.append(rmsle)
+                basic_run = basic_run + 1
+
+            advanced_run = 0
+
+            while (advanced_run < 3) :
+                train_X, valid_X, train_y, valid_y = train_test_split(X, y, test_size = 0.1, random_state = 117 + advanced_run)
+                rmsle = train1(train_X, valid_X, train_y, valid_y)
+                print("   ===> RMSLE adv = " + str(rmsle))
+                l_rmsle.append(rmsle)
+                advanced_run = advanced_run + 1
+
+            b = 90
+
+            print(l_rmsle)
             iProcessed = iProcessed +1
            
 
