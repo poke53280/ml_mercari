@@ -45,7 +45,9 @@ import hashlib
 def hash_function(s, salt):
     return hash(s + salt)% 1023
 
-candidates = [23234, 8878, 8868]
+w = 90
+
+SSN = [23234, 8878, 8868]
 
 def crack_code(u, salt, candidates):
 
@@ -73,22 +75,76 @@ def crack_code_and_salt(u, candidates):
     print("Could not find code")
     return False
 
+# Find 5 digit personal code given birth code by brute forcing
 
-w = 90
+def find_SN(u, salt):
+    candidate_start = 8878
 
-s = 23234
+    attempts = 100
 
-secret_salt = 3
+    while attempts > 0:
 
-u = hash_function(s, secret_salt)
+        candidate = candidate_start + attempts
+
+        u_c = hash_function(candidate, salt)
+
+        if (u_c == u):
+            print("Found candidate " + str(candidate))
+            return True
+
+        attempts = attempts -1
+
+    return False
+
+w = 90        
+
+
+
+#With day of birth, find full SN by brute force until hash found:
+
+p0 = 8901
+
+s0 = 3
+u0 = hash_function(p0, s0)
+
+d0 = { 'hash': u0, 'salt': s0 }
+
+
+#Store hash and salt for person ID.
+
+p1 = 9903
+
+s1 = 7
+u1 = hash_function(p1, s1)
+
+d1 =  { 'hash': u1, 'salt': s1 }
+
+
+l = [d0, d1]
+
+# Got list of hash and salt. Test to see if a group of people resolve
+
+p = [8901, 9021, 1312]
+
+for id in p:
+    for d in l:
+        _hash = d['hash']
+        _salt = d['salt']
+
+        hash_attempt = hash_function(id, _salt)
+
+        if _hash == hash_attempt:
+            print("Found given person " + str(id) + " in list")
+
+
+
+
+
+
 
 w = 90
 
 crack_code_and_salt(u, candidates)
-
-
-p1 = {123 : 'very sensitive data on person 123',
-      555 : 'very sensitive data on person 555'}
 
 
 

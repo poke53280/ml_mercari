@@ -1,0 +1,60 @@
+
+
+Category: Men/Athletic Apparel/Tracksuits & Sweats size = 106
+Category: Men/Sweaters/Cardigan size = 87
+Category: Men/Sweaters/Crewneck size = 820
+Category: Men/Sweaters/Full Zip size = 169
+Category: Men/Sweaters/Other size = 126
+Category: Men/Sweaters/Polo size = 33
+Category: Men/Sweaters/Turtleneck size = 20
+Category: Men/Sweaters/V-Neck size = 159
+Category: Men/Sweaters/Vest size = 26
+Category: Men/Sweats & Hoodies/Hoodie size = 3702
+   ===> RMSLE basic = 0.469962369493
+Category: Men/Sweats & Hoodies/Other size = 37
+Category: Men/Sweats & Hoodies/Sweatshirt, Pullover size = 2972
+   ===> RMSLE basic = 0.399134677376
+Category: Men/Sweats & Hoodies/Track & Sweat Pants size = 1464
+Category: Men/Sweats & Hoodies/Track & Sweat Suits size = 48
+Category: Men/Sweats & Hoodies/Track Jacket size = 47
+Category: Vintage & Collectibles/Clothing/Sweater size = 1363
+Category: Women/Athletic Apparel/Tracksuits & Sweats size = 6414
+   ===> RMSLE basic = 0.405102185446
+Category: Women/Maternity/Sweaters size = 78
+Category: Women/Sweaters/Cardigan size = 8328
+   ===> RMSLE basic = 0.391575468998
+Category: Women/Sweaters/Collared size = 589
+Category: Women/Sweaters/Cowl Neck size = 586
+Category: Women/Sweaters/Crewneck size = 7385
+   ===> RMSLE basic = 0.410466527603
+Category: Women/Sweaters/Full Zip size = 2964
+   ===> RMSLE basic = 0.393705356363
+Category: Women/Sweaters/Henley size = 25
+Category: Women/Sweaters/Hooded size = 10478
+   ===> RMSLE basic = 0.397539441298
+Category: Women/Sweaters/Other size = 817
+Category: Women/Sweaters/Poncho size = 383
+Category: Women/Sweaters/Scoop Neck size = 426
+Category: Women/Sweaters/Shrug size = 90
+Category: Women/Sweaters/Sweatercoat size = 260
+Category: Women/Sweaters/Tunic size = 147
+Category: Women/Sweaters/Turtleneck, Mock size = 376
+Category: Women/Sweaters/V-Neck size = 843
+Category: Women/Sweaters/Vest, Sleeveless size = 560
+Category: Women/Sweaters/Wrap size = 43
+
+
+All: 51971, ok with length multi slice
+
+calculated: N = 42243, ok with code
+
+
+rmsle_comb
+>>> rmsle_acc
+0.40649717514337835
+
+>>> rmsle
+0.37757907955226905
+
+
+

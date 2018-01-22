@@ -31,6 +31,12 @@ Categorical:
 
 """--------------------------------------------------------------------------------------"""
 
+###############################################################################################
+#
+#   is_stop
+#
+#
+
 def is_stop():
     f = open(DATA_DIR + "stopfile.txt")
     s = f.read()
@@ -43,8 +49,11 @@ def is_stop():
 w = 90
    
 
-    
-
+###############################################################################################
+#
+#   mem_usage
+#
+#
 
 def mem_usage(pandas_obj):
     if isinstance(pandas_obj,pd.DataFrame):
@@ -58,13 +67,33 @@ def mem_usage(pandas_obj):
 
 q = 90
 
+###############################################################################################
+#
+#   rmsle
+#
+#
+
 def rmsle(y, y0):
      assert len(y) == len(y0)
      return np.sqrt(np.mean(np.power(np.log1p(y)-np.log1p(y0), 2)))
+
+
+###############################################################################################
+#
+#   split_cat
+#
+#
     
 def split_cat(text):
     try: return text.split("/")
     except: return ("No Label", "No Label", "No Label")
+
+
+###############################################################################################
+#
+#   handle_missing_inplace
+#
+#
     
 def handle_missing_inplace(dataset):
     dataset['general_cat'].fillna(value='missing', inplace=True)
@@ -73,6 +102,12 @@ def handle_missing_inplace(dataset):
     dataset['brand_name'].fillna(value='missing', inplace=True)
     dataset['item_description'].fillna(value='missing', inplace=True)
 
+
+###############################################################################################
+#
+#   cutting
+#
+#
 
 def cutting(dataset):
   
@@ -85,34 +120,55 @@ def cutting(dataset):
     dataset.loc[~dataset['subcat_2'].isin(pop_category3), 'subcat_2'] = 'missing'
 
 
+###############################################################################################
+#
+#   rmsle_func
+#
+#
 
 def rmsle_func(y, y0):
     return np.sqrt(np.mean(np.power(np.log1p(y)-np.log1p(y0), 2)))
 
 q = 90
 
+###############################################################################################
+#
+#   rmsle_comb
+#
+#
+
+def rmsle_comb(l):
+    counter = 0
+    denom = 0
+    
+    for x in l:
+        rmsle = x['rmsle']
+        n     = x['n']
+
+        denom = denom + n
+        counter = counter + n * rmsle * rmsle
+
+    print("N = " + str(denom))
+    
+    return np.sqrt (counter/denom)
+
+w = 90
+
+
+###############################################################################################
+#
+#   get_XY_Basic
+#
+#
 
 def get_XY_Basic(df):
+
   y = np.log1p(df["price"])
 
-  cv0 = TfidfVectorizer(ngram_range=(1,14))
+  cv0 = CountVectorizer(min_df = 3)
   X_name = cv0.fit_transform(df['name'])
-
-  lb0 = LabelBinarizer(sparse_output=True)
-
-  print("NOUN...")
-  s_NN = noun_ify_spacy(df['item_description'], ['NOUN'])
-
-  print("PROPN...")
-  s_PN = noun_ify_spacy(df['item_description'], ['PROPN'])
-
-  cv = CountVectorizer(stop_words='english')
-
-  X_description_NN = cv.fit_transform(s_NN)
-  X_description_PN = cv.fit_transform(s_PN)
-
    
-  tv = TfidfVectorizer(ngram_range=(1, 5))
+  tv = TfidfVectorizer(max_features=10000, ngram_range=(1, 3), stop_words='english')
 
   X_description = tv.fit_transform(df['item_description'])
 
@@ -122,18 +178,28 @@ def get_XY_Basic(df):
 
   X_dummies = csr_matrix(pd.get_dummies(df[['item_condition_id', 'shipping']], sparse=True).values)
 
-  X = hstack((X_dummies, X_description, X_description_NN, X_description_PN, X_brand, X_name)).tocsr()
+  cv = CountVectorizer()
+  X_category = cv.fit_transform(df['category_name'])
+
+
+  X = hstack((X_dummies, X_description, X_brand, X_name, X_category)).tocsr()
 
   return {'X': X, 'y':y}
 
 
 w = 90
 
+###############################################################################################
+#
+#   get_XY_Advanced
+#
+#
+
 def get_XY_Advanced(df):
 
   y = np.log1p(df["price"])
 
-  cv0 = TfidfVectorizer(ngram_range=(1,14))
+  cv0 = CountVectorizer(min_df = 3)
   X_name = cv0.fit_transform(df['name'])
 
   lb0 = LabelBinarizer(sparse_output=True)
@@ -141,35 +207,43 @@ def get_XY_Advanced(df):
   print("NUM...")
   s_NUM = noun_ify_spacy(df['item_description'], ['NUM'])
 
+  if is_stop():
+      return
+
   print("SYM...")
   s_SYM = noun_ify_spacy(df['item_description'], ['SYM'])
+
+  if is_stop():
+      return
 
   print("NOUN...")
   s_NN = noun_ify_spacy(df['item_description'], ['NOUN'])
 
+  if is_stop():
+      return
+
   print("PROPN...")
   s_PN = noun_ify_spacy(df['item_description'], ['PROPN'])
 
-  print("VERB...")
-  s_VB = noun_ify_spacy(df['item_description'], ['VERB'])
+  if is_stop():
+      return
 
-  print("ADJ...")
-  s_JJ = noun_ify_spacy(df['item_description'], ['ADJ'])
-
-  tv = TfidfVectorizer(stop_words='english')
+  tv = CountVectorizer(max_features=1000, min_df = 3)
    
   X_description_NUM = tv.fit_transform(s_NUM)
   X_description_SYM = tv.fit_transform(s_SYM)
   X_description_NN = tv.fit_transform(s_NN)
   X_description_PN = tv.fit_transform(s_PN)
-  X_description_VB  = tv.fit_transform(s_VB )
-  X_description_JJ = tv.fit_transform(s_JJ)
 
+  if is_stop():
+      return
 
-
-  tv = TfidfVectorizer(ngram_range=(1, 17), stop_words='english')
+  tv = TfidfVectorizer(max_features=1000, ngram_range=(1, 3), stop_words='english')
 
   X_descriptionFULL = tv.fit_transform(df['item_description'])
+
+  if is_stop():
+      return
 
   lb = LabelBinarizer(sparse_output=True)
     
@@ -177,13 +251,22 @@ def get_XY_Advanced(df):
 
   X_dummies = csr_matrix(pd.get_dummies(df[['item_condition_id', 'shipping']], sparse=True).values)
 
+  cv = CountVectorizer()
+  X_category = cv.fit_transform(df['category_name'])
+
   X = hstack((X_dummies, X_descriptionFULL, X_description_NUM,
-              X_description_SYM, X_description_NN, X_description_PN, X_description_VB, X_description_JJ, X_brand, X_name)).tocsr()
+              X_description_SYM, X_description_NN, X_description_PN, X_brand, X_name, X_category)).tocsr()
 
   return {'X': X, 'y':y}
 
 
 w = 90
+
+###############################################################################################
+#
+#   get_by_validation_sequence
+#
+#
 
 def get_by_validation_sequence(valid_l, epred, id):
     orig_row = valid_l[id]
@@ -203,9 +286,13 @@ def get_by_validation_sequence(valid_l, epred, id):
 
 w = 90
 
+###############################################################################################
+#
+#   train1
+#
+#
 
-
-def train1(X, y, random):
+def train1(X, y, random, is_output):
    
     idx = list(range(len(y)))
 
@@ -218,8 +305,13 @@ def train1(X, y, random):
     
     params = { 'learning_rate': 0.01, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
                     'bagging_fraction': 0.6, 'bagging_freq': 0, 'nthread': 4, 'max_bin': 255 }
+
+    eval_out = 50
+
+    if is_output:
+        eval_out = 35
    
-    model = lgb.train(params, train_set=d_train, num_boost_round=9310, valid_sets=watchlist, verbose_eval=15,early_stopping_rounds=400) 
+    model = lgb.train(params, train_set=d_train, num_boost_round=9310, valid_sets=watchlist, verbose_eval=eval_out,early_stopping_rounds=400) 
     
     valid_y_pred = model.predict(valid_X)
    
@@ -232,20 +324,27 @@ def train1(X, y, random):
 
     y2 = y2.values
 
-    error_dist(y2, 0.1)
+    if is_output:
+        error_dist(y2, 0.1)
 
     l = (-y2).argsort()
-    
-    for x in l:
-        s = get_by_validation_sequence(valid_idx, price_pred, x)
-        print (s)
 
-    w = 90
+    if is_output:
+        for x in l:
+            s = get_by_validation_sequence(valid_idx, price_pred, x)
+            print (s)
+
 
     return o
 
 
 w = 90
+
+###############################################################################################
+#
+#   get_cats_contains
+#
+#
 
 def get_cats_contains(c, txt):
     l = []
@@ -258,19 +357,54 @@ def get_cats_contains(c, txt):
     return l
 w = 90
 
+###############################################################################################
+#
+#   get_cats_startswith
+#
+#
 
 def get_cats_startswith(c, txt):
     l = []
     idx = 0
     for x in c:
-        if x.lower().startswith(txt):
+        if x.lower().startswith(txt.lower()):
             l.append(idx)
 
         idx = idx + 1
     return l
 w = 90
 
-cat_IDs = get_cats_startswith(cat_list, 'Elec')
+
+###############################################################################################
+#
+#   list_cats
+#
+#
+
+def list_cats(df, cat_IDs, l_first_index):
+
+    acc_amount = 0
+
+    for iCategory in cat_IDs:
+        i = get_cat_slice(df, l_first_index, iCategory)
+
+        size = len(i)
+
+        print("Category: " + c[iCategory]+ " size = " + str(size))
+
+        acc_amount = acc_amount + size
+
+    print("#Categories = " + str(len(cat_IDs)) + ", acc_size= " + str(acc_amount))
+
+    i = get_multi_slice(df, cat_IDs, l_first_index)
+    print("Size multi slice = " + str(len(i)))
+
+    return i
+
+    
+w = 90
+
+cat_IDs = get_cats_startswith(c, 'Wom')
 
 def get_multi_slice(df, cat_IDs, l_first_index):
     
@@ -356,58 +490,46 @@ def main():
         x = df.category_name.searchsorted(c_value)
         l_first_index.append(x[0])
 
-    df = df.drop(['category_name'], axis = 1)
-
-    iCategory = 0
-
-    iProcessed = 0
-
     nCategories = len(l_first_index)
 
-    while (iCategory < nCategories) & (iProcessed < 200):
+    cat_IDs = get_cats_contains(c, 'blouses')
+
+    list_cats(df, cat_IDs, l_first_index)
+
+
+    cat_res = []
+
+    i = get_multi_slice(df, cat_IDs, l_first_index)
+
+    print("Multi-cat, size = " + str(len(i)))
+
+    assert (len(i) > 2000)
+
+    d = get_XY_Basic(i)
+
+    y = d['y']
+    X = d['X']
+
+    basic_run = 0
+
+
+    while (basic_run < 1) :
 
         if is_stop():
             break
 
-        i = get_cat_slice(df, l_first_index, iCategory)
+        rmsle = train1(X, y, 117 + basic_run, True)
+        print("   ===> RMSLE basic = " + str(rmsle))
 
-        print("Category: " + c[iCategory]+ " size = " + str(len(i)))
+        d = { 'rmsle' : rmsle, 'n' : len(i) }
 
-        if len(i) > 2000:
-            d = get_XY_Advanced(i)
-            y = d['y']
-            X = d['X']
+        cat_res.append(d)
+        basic_run = basic_run + 1
 
-            d2 = get_XY_Basic(i)
-            y2 = d2['y']
-            X2 = d2['X']
+    q = 90
 
-            basic_run = 0
-
-            l_rmsle = []
-
-            while (basic_run < 3) :
-                rmsle = train1(X2, y2, 117 + basic_run)
-                print("   ===> RMSLE basic = " + str(rmsle))
-                l_rmsle.append(rmsle)
-                basic_run = basic_run + 1
-
-            advanced_run = 0
-
-            while (advanced_run < 3) :
-                rmsle = train1(X, y, 117 + advanced_run)
-                print("   ===> RMSLE adv = " + str(rmsle))
-                l_rmsle.append(rmsle)
-                advanced_run = advanced_run + 1
-
-            b = 90
-
-            print(l_rmsle)
-            iProcessed = iProcessed +1
-           
-
-        iCategory = iCategory + 1
-
+    rmsle_acc = rmsle_comb(cat_res)
+    
     q = 90
     
 
