@@ -1,0 +1,156 @@
+﻿[9310]	training's rmse: 0.306561	valid_1's rmse: 0.360867
+Did not meet early stopping. Best iteration is:
+[9310]	training's rmse: 0.306561	valid_1's rmse: 0.360867
+low = 0.0, e_acc= 362.3, count=7246
+low = 0.1, e_acc= 246.0, count=1640
+low = 0.2, e_acc= 184.5, count=738
+low = 0.30000000000000004, e_acc= 140.7, count=402
+low = 0.4, e_acc= 90.0, count=200
+low = 0.5, e_acc= 77.0, count=140
+low = 0.6, e_acc= 60.45, count=93
+low = 0.7, e_acc= 52.5, count=70
+low = 0.7999999999999999, e_acc= 43.35, count=51
+low = 0.8999999999999999, e_acc= 43.7, count=46
+low = 0.9999999999999999, e_acc= 30.45, count=29
+low = 1.0999999999999999, e_acc= 31.05, count=27
+low = 1.2, e_acc= 18.75, count=15
+low = 1.3, e_acc= 20.25, count=15
+low = 1.4000000000000001, e_acc= 17.4, count=12
+low = 1.5000000000000002, e_acc= 15.5, count=10
+low = 1.6000000000000003, e_acc= 16.5, count=10
+low = 1.7000000000000004, e_acc= 8.75, count=5
+low = 1.8000000000000005, e_acc= 12.95, count=7
+low = 1.9000000000000006, e_acc= 7.8, count=4
+low = 2.1000000000000005, e_acc= 4.3, count=2
+low = 2.2000000000000006, e_acc= 4.5, count=2
+low = 2.3000000000000007, e_acc= 2.35, count=1
+low = 2.400000000000001, e_acc= 4.9, count=2
+low = 2.500000000000001, e_acc= 2.55, count=1
+low = 2.600000000000001, e_acc= 2.65, count=1
+low = 2.700000000000001, e_acc= 13.75, count=5
+low = 2.800000000000001, e_acc= 5.7, count=2
+low = 2.9000000000000012, e_acc= 5.9, count=2
+low = 3.0000000000000013, e_acc= 3.05, count=1
+low = 3.1000000000000014, e_acc= 6.3, count=2
+low = 3.3000000000000016, e_acc= 3.35, count=1
+low = 3.4000000000000017, e_acc= 3.45, count=1
+low = 3.800000000000002, e_acc= 3.85, count=1
+low = 4.000000000000002, e_acc= 4.05, count=1
+low = 4.100000000000001, e_acc= 4.15, count=1
+low = 4.300000000000001, e_acc= 4.35, count=1
+low = 4.4, e_acc= 8.9, count=2
+low = 8.599999999999985, e_acc= 8.65, count=1
+rmsle real = 0.3608665175 rmsle binned=0.382252239747
+3.0, 74.4272287063 [Reserved Show me your mumu tunic dress] [Free People] : Show me your mumu tunic dress
+206.0, 24.1283899992 [BNWT Pink Friday Blue Sherpa] [PINK] : Brand new with tags pink friday Sherpa. For kit only.
+129.0, 14.8767356555 [Greenidgal ONLY bundle] [missing] : This is specifically for Greenidgal. If you see other things that you want me to add to this bundle, please let me know so I can do so when I ship them out. I will be shipping out tomorrow September 7th. Thanks!
+172.0, 20.6358229673 [Bundle] [Victoria's Secret] : Good condition Gray and lime green Xs 5 tops 4 bottoms
+123.0, 15.105401482 [Fever Cami for Lovely4] [Metal Mulisha] : NWT
+186.0, 23.8170222872 [Bundle] [Brandy Melville] : Reserved
+167.0, 22.8545650717 [Bundle for Alicia] [Under Armour] : No description yet
+7.0, 50.1166123746 [Taylor only! Bundle!] [PINK] : Bundle for Taylor only!
+250.0, 39.6490317348 [Burberry for Sahara *ON HOLD*] [Burberry] : Burberry framed heads print top for @SaharaSmith
+76.0, 12.03272516 [MM CLOTHING] [missing] : No description yet
+84.0, 13.5049856829 [Two piece see through] [missing] : Top xs bottom fit like a small
+164.0, 27.368880402 [Lularoe] [missing] : 3 XS Irma's. All brand new. Never been worn. NEW with tags.
+206.0, 35.9685678069 [SUPER RARE STONE COLD FOX SILK HOLY TUBE] [Stone Fox Swim] : Silk floral Holy Tube from Stone Cold Fox. Size 1 works best for US 4. Boned inner bodice, silk floral outer, back zip. New with tags.
+169.0, 29.3872433192 [(XS) Victoria's Secret Pink] [PINK] : In excellent like new condition no flaws. Loose fit.10 items
+65.0, 11.0298154399 [Pizza Slime Gucci Long Sleeve] [Gucci] : Size Small. Worn once Pizza Slime Long Sleeve. Popular black long sleeve as seen on Skrillex and Khloe Kardashian. No longer available on their website. Slight cracking to the graphic on the back of the shirt due to defective print the company used. I'm selling this shirt because they sent me a new one because of the defective ink. Feel free to make an offer!
+195.0, 34.8526599481 [LuLaRoe] [LuLaRoe] : 3 xxs classic tees 2 xxs irmas 3 xs irmas 1 xxs Randy
+114.0, 20.8509916941 [VICTORIA SECRET PINK SHIRT] [PINK] : Rainbow colors pm black long sleeve shirt,in excellent condition, no flaws.PRICE IS FIRM. This is pam don't buy.
+6.0, 35.744182611 [ON Hold !!!! Random VS Pink Collection] [PINK] : This is what I call a great collection of smalls !!!! So much fun!! You will receive everything in the picture !! Here is a list of everything you will receive --- • 6 destination YourCityYourPink Stickers - Atlanta , Charlotte , Kansas City , Las Vegas , North Jersey , and San Diego • 2 Free With Purchase only in store Sticker one just says " pink " and the other says " running from my problems " • 1 Victoria Secret Pink KeyChain Giftcard balance [rm] • 1 Victoria's Secret pink Iron on Dog Patch • 1 pink nation I'm in pin / button • 1 Associate/ employee pink pen • 1 travel size Cool and Bright Mist • 2 pink travel size Mood mists in pink Stress no More and Pink Zzzz please • 1 package of pink hair ties and bracelets • And 1 Pink Dog logo gift card holder Can include but may or not extra finds while I'm cleaning :)
+3.0, 19.9855776729 [Blouses are Reserved for buyer] [Marshall] : Two top bundle reserved for a buyer already.
+81.0, 14.7514133307 [PINK LOVE PINK L/S SHIRT bright pink] [missing] : RSVD CLEEKHEATHER..Bright pink with Pink wrote in black bold letters with love pink wrote in script below in script writing. Worn twice,didn't think i would be selling and I normally cut tags out of my shirts because of the way some just stick up an out or irritate me. Has not been put in dryer was hung to dry. Worn just around house an also wasn't planning on selling any of my clothes until my car broke down an needed money to get fixed or this closet wouldn't be here. But I have car payments now so I'm digging through closet an drawers. Price firm. Thanks for looking.plus was to big.HEATHER #1[rm]#2 [rm]#3[rm]#4[rm].#5 [rm] When bundles are made,it's pay when done due to a lot of non payments. Thank you. Adding now.
+69.0, 12.4600598307 [Free people led Zeppelin t shirt] [missing] : Worn once. Great t shirt!
+222.0, 43.1951783544 [Jane] [missing] : Bundle 226 5/19
+81.0, 15.5007073445 [Palace P45 T-Shirt Grey Marl (Med)] [Supreme] : Brand New Palace Skateboards P45 T-Shirt in hand. Bought off the website
+110.0, 22.3030934272 [Bundle for Allanna] [missing] : Bundle
+93.0, 18.819091727 [Dkny NWT blouse] [DKNY] : Prana yoga long sleeve, white tank, and black beaded tank.
+45.0, 9.0699913812 [Have a nice death.] [missing] : Perfect condition.
+56.0, 11.5955869667 [Tank Top And Shirts Bundle] [missing] : Most are in good condition, couple are new without tags, one white has a little stain but unnoticeable when one, the blue shirt in second pic has a little moth hole, brands: holister, roxy, full tilt, Vera wang, Charlotte Russe, Aeropostale, Abercrombie, love culture and more. Sizes small medium and large, most larges fit like medium
+4.0, 21.1165155245 [Victoria's Secret PINK Pink Nation Patch] [PINK] : Never has been used before! PINK nation dog patch!
+48.0, 10.3263733157 [Gymshark purple crop top] [Gymshark] : NWT size medium! It is a size medium and doesn't fit me as tight as I wanted it to but I'm Usually a small so it's understandable! However it still is for sale
+45.0, 9.75636331568 [BrandyMelville Cherry Blossom Berit Tank] [Brandy Melville] : ❌ PENDING, DO NOT BUY ❌ Brandy Melville Cherry Blossom Berit Tank Top // Size small, fits XS/S best // Super cute cropped tank top, with adjustable ties to fit to your liking. I have too many tank tops in this print, so I decided to sell this one! // no flaws, perfect condition.
+75.0, 17.5479414136 [**save**mich] [missing] : Bundle for mich. Brown Ralph Lauren blouse, stripe ralph Lauren blouse, size 12 maurices pants zipper dress, kimono and red dress
+46.0, 10.4999367249 [Banana republic women's sweat shirt] [Banana Republic] : No fading stains or rips
+126.0, 30.2662494284 [Lularoe. 7large classics.] [missing] : Large classics. All BRAND NEW with tags. 7 for 120.
+50.0, 11.6754547732 [Teacco] [Brandy Melville] : No description yet
+71.0, 17.2117594879 [Sinful hoodie like knew only wore once] [missing] : Sinful xl wore once so it's like new
+47.0, 11.1844214031 [Shirt xl package] [missing] : Brand New shirt
+72.0, 17.6283178293 [Bundle for terra] [FOREVER 21] : Tie dye tank, three me & d :)
+120.0, 30.2056994992 [Bundle for Melissfish] [Affliction] : Rocks 24X34, 2 affliction shirts
+126.0, 31.8534641061 [Bundle For Cheryl] [missing] : 5 Item Bundle
+57.0, 14.1153190974 [BUNDLED Pending SALE] [missing] : Click buy and it will be prepared for shipment tomorrow.
+59.0, 14.6825093358 [Brandy blue floral leesa] [Brandy Melville] : no flaws
+106.0, 26.974011534 [**Liz Castro Only..2 ITEM BUNDLE] [Levi's®] : Only for Liz Castro. .Levis bf, Oversized Grey Cut Out Shirt..2 ITEM BUNDLE + OVERSIZED TEE WITH BRALEY AS GIFT
+55.0, 13.6602629726 [Allyson] [missing] : Papa bear - large heather grey Baby bear - 2T heather grey Mama bear - XL vneck heather grey Brother bear 6-7 heather grey Mama bear - XL black tank
+66.0, 16.7248322957 [6 shirt bundle with hoodie] [Adidas] : No description yet
+66.0, 16.936866244 [Jo Malone Basil & Neroli Perfume] [missing] : Jo Malone perfume, brand new, 100 ml full size
+60.0, 15.4197704842 [NEW GRAY Puma trainers(size7)] [missing] : New never worn. Size 7.0, measures 24cm. Fits true to size.
+6.0, 24.7025125709 [NICOLE ONLY] [PINK] : Long sleeve xs begonia doggy tee
+55.0, 14.2779588327 [2 Ivory Ella Long Sleeve Tees Small] [Ivory Ella] : I think my daughter wore each of these once or twice. Washed and hung to dry, never in the dryer. Great condition and super cute! Both are small, both long sleeved.
+3.0, 13.6104479577 [New Wet Seal Ethnic Beaded Bra size S] [Wet Seal] : New wet seal ethnic beaded bra olive green bought this for my daughter but she didn't like the color. Paid [rm] plus tax.
+60.0, 15.8226326747 [(S)*FREE SHIP* VS PINK tank!] [PINK] : *FREE SHIPPING* Victoria's Secret pink tank-top in excellent like new condition! American flag letters. Size small!
+3.0, 13.4486898976 [Nothing] [missing] : Nothing at all
+80.0, 21.4620490093 [Reserved Bundle] [missing] : Size Large adjustable padded black bathing suit with high cut waist and low cut back. Brandy Melville No Foolin full length grey crew neck Sweater. 6 chokers one white and yellow flower, one heart, two star, one black and one multicolored 90's line choker and one velvet bow tie, one rainbow dream catcher adjustable bracelet, 2 faux septum rings, and 2 hair clips.
+33.0, 8.43425212225 [5 Medium American Eagle tank tops] [American Eagle] : Size- Medium Brand- American Eagle Colors- ivory, grey, white, navy, black FREE SHIPPING!!
+28.0, 7.10170364515 [XL Sheer and lace top] [missing] : Bundle and save on shipping
+50.0, 13.3811227618 [Mac selena world premier shirt] [missing] : XL NEVER WORN Firm on price. Thank you
+70.0, 19.0292869246 [OhPolly Nude Vinyl Co Ord set] [missing] : Oh Polly co ord set
+87.0, 24.0721769157 [**save**Marilyn Tshirt] [missing] : So cute Marilyn Monroe I woke up like this Tshirt. Jrs size xl. Plus watercolor skirt, fringe tshirt, dust tee, floral pants, and floral jacket, ombre blouse [rm] off bundles of 50.00 or more and Free Shipping on orders of 60.00 or more! I love to hold items! But please remember I am a small business and every sale counts, every day! If you request a hold please be prepared to purchase within 24hrs. Thank you so much for your business
+66.0, 18.1363512247 [Pole Fitness Shoes, Top, Hat, Shorts] [missing] : PRICE ABSOLUTELY FIRM For pole fitness/ pole dancing Shoes are Size 7 Top is a size Small Shorts are size S/M
+3.0, 12.9123676023 [Black and gold tee shirt] [missing] : Black and gold tee shirt brand new with tags
+64.0, 17.7245473094 [NWT Rails brand button up size Large] [missing] : This is new with tags Rails striped button up shirt. Size is large but runs small in my opinion....would fit a medium too or if you like oversized shirts like me it would be perfect if you normally wear a small... Great for layering. This is the softest shirt you'll ever own. :-) Orginally [rm] Thanks for looking and happy shopping Tags, Anthropolgie, Paige, free people, bb dakota, plaid shirts,
+10.0, 36.9643592115 [Bundle for jessi89] [PINK] : Two items
+75.0, 21.0897014043 [Chirpxchirp fox shirt wildfox] [Wildfox Couture] : :)
+8.0, 29.9245398561 [Reserved Bundle for Curlie-Cue Boutique] [missing] : Reserved bundle for Curlie-Cue Boutique ❤️ - Pink Fuzzy Cardigan - Black and White Scarf
+44.0, 12.1753958625 [MAGCON Signed Shirt (negotiable)] [missing] : PRICE IS NEGOTIABLE!!!! Purple shirt I got when I met the people at MAGCON. It's been signed by Sammy Wilkinson, Aaron Carpenter, Jacob Whitesides, Mahogany LOX, Matthew Espinosa, Jack & Jack (Jack Gilinsky and Jack Johnson), Nick Tangorra, Taylor Caniff, Dillon Rupp, and Chase Goehring (from X Factor). Probably also signed by Bart Bordelon. Signed by whoever else went to MAGCON Atlanta 2014. I don't quite remember who else. Turns out I was just in a phase lol. Size S/M. Never worn and never washed. Just been hanging in my closet. *NOT signed by Cameron Dallas, Nash Grier, Hayes Grier, Carter Reynolds, or Shawn Mendes* Tags: autograph autographed magcon authentic viners youtuber YouTube youtubers famous viner merch
+95.0, 27.1486981456 [M VS Pink Campus Tee & Bootcut Sweats T] [Victoria's Secret] : BOTH MEDIUM Long sleeve, crew neck, pocket tshirt. Light Orange with Dog logo decal. New with tag. Boot cut sweatpants. Back pocket. Light Gray. New in package.
+41.0, 11.3296643481 [KD Sleeveless Tank + Fanny Pack RESERVED] [Bella] : Only worn once! A fun mint green color with "Keep it fresh, keep it Kaydee" written on the front with a watermelon! It's true to size.
+23.0, 6.1327981106 [Women Polo Size Large Xlarge] [Polo Ralph Lauren] : Small stains on coral one orange says small it men but fit like a xlarge women small hole on the blue shirt
+120.0, 35.0261027907 [(7) VS PINK BUNDLE] [PINK] : Vs pink T Like new with no flaws Size xs Vs pink shorts Worn a handful of times (no outer flaws) Size xs *liner has been cut out for comfort* Cheetah vs pink tank Rare and like new with no flaws Size xs Blue vs pink tank Like new with no flaws Size small NWT vs pink Lightweight hoodie Size small (true to size) Neon yellow vs pink tank Great condition - no flaws Size xs RARE vs pink tropical tank Like new Size xs, will fit a small too!
+117.0, 34.1381152317 [LuLaRoe BNWT XS Baseball Irma] [LuLaRoe] : BNWT So cute!
+135.0, 39.5129786045 [HUGE CLOTHING BUNDLE] [American Eagle] : Huge clothing bundle. I stopped counting pieces after 50. All size small and medium. I will not separate! No holes, stains or missing sequins on any of them! Bundle includes: T-shirts, tanks, crops, long sleeves, sweaters, dresses, rompers, skirts, cardigans and more! Two tanks still have tags on them! Brands include: American Eagle, SO, Forever 21, Rue 21, Decree, Aeropostale, DayTrip, BKE, Victoria's Secret Pink, Body Central, Hollister and much more! WILL BE SHIPPED IN TWO BOXES! Due to the fact that it's so much. I WILL PRINT OFF THE SHIPPING LABEL TWICE AND PUT ONE ON EACH BOX! Sorry, but I can not take individual pictures of each items. It's just too much to do. :)
+3.0, 12.290967692 [For queen b] [missing] : Pink shirt strong
+46.0, 13.2656995468 [Kaiclothingbtq] [missing] : No description yet
+74.0, 21.8558258551 [Pink] [missing] : Bundle Deal 5 pants and 4 tops 2 leggings 1 medium 1 large 3 sweat pants 2 extra small 1 small 4 t-shirts 3 extra small 1 medium
+69.0, 20.3485927388 [Bundle band tees] [Hot Topic] : No description yet
+9.0, 31.7723055324 [Gray Lace Up Tee] [LF] : Handmade! Looks just like LF.
+3.0, 12.1085504451 [Victoria's Secret pink T-shirt] [PINK] : Okay first off my phone is taking odd colored pictures that shirt looks purple but it is actually bright pink just to let you know so if you would happen to order and think it was purple it's not it is Pink and it's size medium 60% cotton 40% polyester and there is a little black mark smudge really like I took a picture I think it's the third one so it's buy as is you may be able to get it out I have not tried but it's going to be priced as it should be with that little Mark is really nothing I may be able to even get it out before mailed if somebody bought it but just to let you know it is bright pink it is not purple and price is firm thank you. The last picture is the original color.and first pic is original color.
+36.0, 10.3271770537 [Joseph Ribkoff Black & White Striped Top] [Joseph Ribkoff] : Cute nautical feel! Light shoulder pads, Ruffle hemline and cute button details! Great condition!
+3.0, 12.0625165341 [SOLD CHRISSYVictoria secret tee] [Victoria's Secret] : Tag size small BUT fits more like a medium. Chest measures 40" body length measures: 27"
+131.0, 39.5293153873 [KARRY BUNDLE #2] [PINK] : All brand new with tag/still in plastic 5 medium shirts 3 pair of socks Pink, Victoria secret Bundle #2
+106.0, 31.8534641061 [Bundle for Cynthia] [missing] : 5 item bundle
+71.0, 21.4183162951 [Vs pink duvet] [Victoria's Secret] : Victoria secret pink duvet, perfect condition, absolute beautiful, king size duvet only. Can buy the rest separate!
+8.0, 27.8890083873 [Lilly Pulitzer $ 4] [Lilly Pulitzer] : Size medium Long sleeve Soft material
+44.0, 13.0785215383 [Old Navy Tanks] [missing] : Lace w/ stripes and grey with black trim. Great condition. Lace one is technically an XL but fits like an XXL. Blue leggings dress Aerie waffle Tank Brown Lace top Grey leggings tank
+90.0, 27.5262479259 [Tsalo09 only !] [Free People] : Free People amazing retro style romper
+35.0, 10.2880430936 [Maurice's blouse & tunic & Nike top] [Maurices] : Bundle Maurice's skull blouse XL, hooded tunic L, Nike work out top L
+63.0, 19.1124843226 [PINK tee bundle] [PINK] : Price is for all 4 All in okay condition
+46.0, 13.8077732862 [The Limited heather silver top] [The Limited] : The top is super easy to dress up or down. It is lightweight and extremely comfortable! The heather silver is slightly metallic and the 3/4 length sleeve is sheer black lace. Worn only a few times: in great condition! I'm open to offers.
+81.0, 24.8686962624 [Victoria Secret Pink sweatshirt/shirts] [missing] : Three Pink hoodies, 3 T shirts and one long sleeve shirt. All in great like new condition
+106.0, 32.8292558049 [Pink tee & sweats] [PINK] : Pink tee & pants Blue leopard medium new Maroon leopard medium Skinny collegiate large Begonia water bottle
+4.0, 14.8018488021 [Vs bling tee for summer only] [Victoria's Secret] : ❤️
+71.0, 21.8875035661 [Victoria's Secret PINK tanks] [PINK] : Both size xs. And HARD to find. Smoke free home. No free shipping.
+46.0, 13.973518686 [Victoria's Secret pink floral tank top] [PINK] : Tropical tank xs Gray shirt small Flag tank small No trades
+36.0, 10.8302828573 [Crochet tank] [missing] : No flaws super cute
+74.0, 22.9844973755 [Xs pink bundle] [missing] : Xs bundle
+111.0, 35.0243816791 [Blackmilk BUNDLE for NovaCat] [Blackmilk] : This is a reserved for NovaCat:) including the Blackmilk long sleeve drape hoodie and IEOM Bootleg leggings - both size XL Great condition!! A basic that ain't so basic after all. It's cute, it's cosy, it looks awesome with leggings and it has a hood that you can wear up (don't mess with me) and down (pretty draped neckline? Check). Perf. Composition: 95% Rayon, 5% Elastane Washing: Cold hand wash only Made in: Australia
+89.0, 27.9597234852 [Lularoe. Xl Irma's] [LuLaRoe] : 6 xl Irma's
+54.0, 16.7258696137 [UNIVERSITY OF KENTUCKY BLUE AND WHITE] [PINK] : And other UK shirt!!
+66.0, 20.6007885518 [Jess&Angie's Closet Bundle] [missing] : No description yet
+66.0, 20.7272824705 [Nwt free people cold sholder top] [missing] : Free people blue tunic top
+81.0, 25.6055112855 [Ladies Clothing] [missing] : -Disney Lion King Top, Size Large, New With Tags - Old Navy White Denim High Rise Wide Leg Stretch Capris, New With Tags, Size 16 Standard/Regular - Pink Old Navy Active Tank Top, Size XL, New With Tags - 2 Old Navy White Active Tank Tops With Gray Sports Bra, Size XL, New With Tags - Charcoal Active Shorts, Size XXL, Gently Used - Size XXL Red White Blue Active Shorts, New With Tags - Size XXL Colorful Active Shorts, New With Tags - Guess Sequined Top, New With Plastic but no tag, Size XL - Victoria's Secret PINK Nightgown, size Large, Like New - H&M Red Top, Size XL, New No Tags - INC Black Flowy Tank Top, Size Large, Gently Used - Aero White Lace Cami Size XL, Gently Used - Aero Black Lace Cami, Size Large, Gently Used - Navy Blue Old Navy Boot-Cut Pants, New With Tags, Size: 18 Regular - Riders Lee Mid Rise Bootcut Jeans, One New With Tags One Gently Used, Size: 18 Petite
+32.0, 9.74664671835 [Long sleeve T-shirt] [Russell Athletic] : Younique Long sleeve T-shirt black
+81.0, 25.7738453905 [French Bulldog tees for BrandonC] [missing] : Fancy French Bulldog tee shirts for BrandonC (heather gray, v-neck sizes small, medium and large). Frenchie wearing flower crown with "pardon my French" lettered below. Print colors may vary slightly.
+10.0, 32.3489358386 [BUNDLE FOR DCAMPY] [Sinful By Affliction] : Medium black sinful skull tee with silver metallic angel wings on the back. NWT Medium sequined tank from express
+33.0, 10.2372711627 [Espresso Women's Top - Large] [missing] : No description yet
+9.0, 29.1461391637 [Aeropostale 3 Piece Bundle m-lg] [Aeropostale] : Aeropostale pink velour zip up hoodie size large,velour pants size med & white t-shirt size med.
+5.0, 17.0511469577 [VS PINK BRALETTE] [PINK] : SIZE LARGE. SELLING bc I don't wear bralettes anymore. No stains/rips/pilling. Was hand washed. ❌NO TRADES❌
+5.0, 17.0456344368 [Saved yummycow Large top bundle] [missing] : Avocado green long sleeve cut outs on shoulders Blue teal tye dye style asymmetrical bottom
+61.0, 19.6471018024 [Vince poplin top] [Vince] : Reserved for @aalem005
+35.0, 11.0482949427 [Robe and Top for Marvel NYC] [missing] : Bundle for Marvel NYC
+75.0, 24.4539785954 [Mommyloves4 Bundle] [White House Black Market] : Mommyloves4 Bundle: WHBM Blk Silky Blouse H&M dress American Living dress Frank Lyman dress Tracy Reece skirt LOFT White top Loft dark grey sweater dress Bundle to save. @JFC1010 to see my closet
+3.0, 10.9099679153 [Sexy Green and white top] [missing] : Very nice top never used no tags on it Only
+44.0, 14.1332917589 [Ivory Ella shirt] [Ivory Ella] : This is worn a couple times, but is such a. Cute shirt ! Size medium
+36.0, 11.4697306416 [Hugo Boss] [missing] : Like new
