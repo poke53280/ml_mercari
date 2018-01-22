@@ -92,26 +92,6 @@ def rmsle_func(y, y0):
 q = 90
 
 
-
-     d = np.power(np.log1p(y)-np.log1p(y0), 2)
-
-     min = np.argmin(d)
-     max = np.argmax(d)
-
-
-     N = len(y)
-
-     mysum = np.sum(np.power(np.log1p(y)-np.log1p(y0), 2))
-
-     mean =  mysum / N;
-
-     return np.sqrt(mean)
-
-
-q = 90 
-
-
-
 def get_XY_Basic(df):
   y = np.log1p(df["price"])
 
@@ -205,10 +185,31 @@ def get_XY_Advanced(df):
 
 w = 90
 
+def get_by_validation_sequence(valid_l, epred, id):
+    orig_row = valid_l[id]
+    u = i[orig_row: orig_row +1]
 
+    desc = u.item_description.values[0]
+    name = u.name.values[0]
+    brand = u.brand_name.values[0]
+    p_in = u.price.values[0]
 
-def train1(train_X, valid_X, train_y, valid_y):
+    p_predicted = epred[id]
    
+
+    s = str(p_in) + ", " + str(p_predicted) + " [" + name + "] [" + brand + "] : " + desc
+
+    return s
+
+w = 90
+
+
+
+def train1(X, y, random):
+   
+    idx = list(range(len(y)))
+
+    train_X, valid_X, train_y, valid_y, train_idx, valid_idx = train_test_split(X, y, idx, test_size = 0.1, random_state = random)
 
     d_train = lgb.Dataset(train_X, label=train_y)
     d_valid = lgb.Dataset(valid_X, label=valid_y)
@@ -219,53 +220,81 @@ def train1(train_X, valid_X, train_y, valid_y):
                     'bagging_fraction': 0.6, 'bagging_freq': 0, 'nthread': 4, 'max_bin': 255 }
    
     model = lgb.train(params, train_set=d_train, num_boost_round=9310, valid_sets=watchlist, verbose_eval=15,early_stopping_rounds=400) 
-
     
     valid_y_pred = model.predict(valid_X)
    
-   
-    epred = np.expm1(valid_y_pred)
-    evalid = np.expm1(valid_y)
+    price_pred = np.expm1(valid_y_pred)
+    price_real = np.expm1(valid_y)
 
-    o = rmsle_func(epred, evalid)
+    o = rmsle_func(price_pred, price_real)
 
-    y2 = np.power(np.log1p(epred)-np.log1p(evalid), 2)
+    y2 = np.power(np.log1p(price_pred)-np.log1p(price_real), 2)
+
+    y2 = y2.values
+
+    error_dist(y2, 0.1)
+
+    l = (-y2).argsort()
+    
+    for x in l:
+        s = get_by_validation_sequence(valid_idx, price_pred, x)
+        print (s)
+
+    w = 90
 
     return o
 
 
 w = 90
 
+def get_cats_contains(c, txt):
+    l = []
+    idx = 0
+    for x in c:
+        if txt in x.lower():
+            l.append(idx)
+
+        idx = idx + 1
+    return l
+w = 90
 
 
+def get_cats_startswith(c, txt):
+    l = []
+    idx = 0
+    for x in c:
+        if x.lower().startswith(txt):
+            l.append(idx)
 
-"""sort all categories. Find start and stop for all categories. work on slices into arrays"""
+        idx = idx + 1
+    return l
+w = 90
 
+cat_IDs = get_cats_startswith(cat_list, 'Elec')
 
+def get_multi_slice(df, cat_IDs, l_first_index):
+    
+    df_new = pd.DataFrame()
 
+    for iCategory in cat_IDs:
+        i = get_cat_slice(df, l_first_index, iCategory)
+        df_new = pd.concat([df_new, i])
 
-i = 323
-  
+    return df_new
 
+w = 90
 
-#secure multiparty communication. a/b.
-#brukerreise- NN
-
-
-
-q = 90
-
-def get_cat_slice(df, c, iCategory):
-    nCategories = len(c)
+def get_cat_slice(df, l_first_index, iCategory):
+    nCategories = len(l_first_index)
     
     assert (iCategory < nCategories)
 
-    start = c[iCategory]
+    start = l_first_index[iCategory]
     
     if iCategory == nCategories -1 :
         passed_end = len(df)
     else:
-        passed_end = c[iCategory +1]
+        passed_end = l_first_index[iCategory +1]
 
     slice = df[start:passed_end]
 
@@ -336,7 +365,10 @@ def main():
     nCategories = len(l_first_index)
 
     while (iCategory < nCategories) & (iProcessed < 200):
-       
+
+        if is_stop():
+            break
+
         i = get_cat_slice(df, l_first_index, iCategory)
 
         print("Category: " + c[iCategory]+ " size = " + str(len(i)))
@@ -350,15 +382,12 @@ def main():
             y2 = d2['y']
             X2 = d2['X']
 
-
-
             basic_run = 0
 
             l_rmsle = []
 
             while (basic_run < 3) :
-                train_X, valid_X, train_y, valid_y = train_test_split(X2, y2, test_size = 0.1, random_state = 117 + basic_run)
-                rmsle = train1(train_X, valid_X, train_y, valid_y)
+                rmsle = train1(X2, y2, 117 + basic_run)
                 print("   ===> RMSLE basic = " + str(rmsle))
                 l_rmsle.append(rmsle)
                 basic_run = basic_run + 1
@@ -366,8 +395,7 @@ def main():
             advanced_run = 0
 
             while (advanced_run < 3) :
-                train_X, valid_X, train_y, valid_y = train_test_split(X, y, test_size = 0.1, random_state = 117 + advanced_run)
-                rmsle = train1(train_X, valid_X, train_y, valid_y)
+                rmsle = train1(X, y, 117 + advanced_run)
                 print("   ===> RMSLE adv = " + str(rmsle))
                 l_rmsle.append(rmsle)
                 advanced_run = advanced_run + 1

@@ -1,10 +1,72 @@
 
-import pandas as pd
-import time
 import spacy
 
 import nltk
 
+nlp = spacy.load('en', disable=['parser', 'ner'])
+
+nlp = spacy.load("en")
+
+from spacy.pipeline import Tagger
+
+
+texts = [u'One doc', u'...', u'Lots of docs']
+tagger = Tagger(nlp.vocab)
+for doc in tagger.pipe(texts, batch_size=50):
+    pass
+
+
+
+doc = nlp(u'Apple is looking at buying U.K. startup for $1 billion')
+
+nouns = []
+
+nlp.remove_pipe('ner')
+nlp.remove_pipe('parser')
+
+nlp.pipe_names;
+
+q = 90
+
+def pos_tag_spacy(str):
+    doc = nlp(str)
+
+    for token in doc:
+        print(token.pos_  + ", " + token.lemma_ + ", dep=" + token.dep_)
+
+
+q = 90
+
+def get_pos_words_spacy(txt, type_list):
+    doc = nlp(txt)
+
+    l = []
+
+    for token in doc:
+        if token.pos_ in type_list:
+            l.append(token.lemma_)
+
+
+    if len(l) > 0:
+        return " ".join(str(x) for x in l)
+    else:
+        return "none"
+
+
+
+q = 324
+
+def noun_ify_spacy(series, type_list):
+    l = series.values
+    n2 = []
+
+    for x in l:
+        q = get_pos_words_spacy(x, type_list)
+        n2.append(q)
+
+    return pd.Series(n2)
+
+q = 324
 
 
 
@@ -161,9 +223,7 @@ w = 90
 
 
 
-nlp = spacy.load('en', disable=['parser', 'ner'])
 
-nlp = spacy.load("en")
 
 def nounify(series):
     l = series.values
@@ -176,66 +236,7 @@ def nounify(series):
     return pd.Series(n2)
 
 
-from spacy.pipeline import Tagger
 
-
-texts = [u'One doc', u'...', u'Lots of docs']
-tagger = Tagger(nlp.vocab)
-for doc in tagger.pipe(texts, batch_size=50):
-    pass
-
-
-
-doc = nlp(u'Apple is looking at buying U.K. startup for $1 billion')
-
-nouns = []
-
-nlp.remove_pipe('ner')
-nlp.remove_pipe('parser')
-
-nlp.pipe_names;
-
-q = 90
-
-def pos_tag_spacy(str):
-    doc = nlp(str)
-
-    for token in doc:
-        print(token.pos_  + ", " + token.lemma_ + ", dep=" + token.dep_)
-
-
-q = 90
-
-def get_pos_words_spacy(txt, type_list):
-    doc = nlp(txt)
-
-    l = []
-
-    for token in doc:
-        if token.pos_ in type_list:
-            l.append(token.lemma_)
-
-
-    if len(l) > 0:
-        return " ".join(str(x) for x in l)
-    else:
-        return "none"
-
-
-
-df = 324
-
-def noun_ify_spacy(series, type_list):
-    l = series.values
-    n2 = []
-
-    for x in l:
-        q = get_pos_words_spacy(x, type_list)
-        n2.append(q)
-
-    return pd.Series(n2)
-
-df = 324
 
 def get_nouns_timed(list):
     s = ".".join((str(x) for x in list))
