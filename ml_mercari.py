@@ -157,7 +157,7 @@ def get_XY_Basic(df):
   cv0 = CountVectorizer(min_df = 3)
   X_name = cv0.fit_transform(df['name'])
    
-  tv = TfidfVectorizer(max_features=10000, ngram_range=(1, 3), stop_words='english')
+  tv = TfidfVectorizer(max_features=3000, ngram_range=(1, 2), stop_words='english')
 
   X_description = tv.fit_transform(df['item_description'])
 
@@ -166,12 +166,12 @@ def get_XY_Basic(df):
   X_brand = lb.fit_transform(df['brand_name'])
 
   X_dummies = csr_matrix(pd.get_dummies(df[['item_condition_id', 'shipping']], sparse=True).values)
+  
+  X_category = lb.fit_transform(df['category_name'])
 
-  cv = CountVectorizer()
-  X_category = cv.fit_transform(df['category_name'])
+  # brand out now:
 
-
-  X = hstack((X_dummies, X_description, X_brand, X_name, X_category)).tocsr()
+  X = hstack((X_dummies, X_description, X_name, X_category)).tocsr()
 
   return {'X': X, 'y':y}
 
@@ -438,14 +438,13 @@ def brand_retriever_valking(df, all_brands):
     def brandfinder(line):
         brand = line[0]
         name = line[1]
-        namesplit = name.split(' ')
         if brand != 'missing':
            return brand
  
-        for x in namesplit:
-           if x in all_brands:
-               print("Found " + x + " as new brand name")
-               return x
+        for b in all_brands:
+            if (b in name) & (len(b) > 3):
+                print("Found brand '" + b + "' in name '" + name + "'")
+                return b
         
         return brand
 
@@ -454,6 +453,18 @@ def brand_retriever_valking(df, all_brands):
     found = premissing-len(df.loc[df['brand_name'] == 'missing'])
     
     print(str(found) + " items branded")
+
+     # 0.36354 - pants, with brand retrieval.
+
+     # Better at 6350 iterations with no retrieval. 0.362694 at 9310. no early stop.
+
+     # Tfidf > countvectorizer.same, better after 6350 iterations. 0.362694. same??
+
+     # labelencoder on category. 0.362366
+
+     # again poorer to introduce brand retrieval   0.3639
+
+     # w/o brand alltogheter:  0.3734
 
 
 
@@ -510,7 +521,7 @@ def main():
 
     nCategories = len(l_first_index)
 
-    cat_IDs = get_cats_contains(c, 'handbag')
+    cat_IDs = get_cats_contains(c, 'pants')
 
     list_cats(df, cat_IDs, l_first_index)
 
@@ -518,6 +529,13 @@ def main():
     cat_res = []
 
     i = get_multi_slice(df, cat_IDs, l_first_index)
+
+    all = df
+    df = i
+
+    df = all
+
+    
 
     brand_retriever_valking(i, all_brands)
 
