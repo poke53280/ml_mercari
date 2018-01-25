@@ -69,17 +69,6 @@ q = 90
 
 ###############################################################################################
 #
-#   rmsle
-#
-#
-
-def rmsle(y, y0):
-     assert len(y) == len(y0)
-     return np.sqrt(np.mean(np.power(np.log1p(y)-np.log1p(y0), 2)))
-
-
-###############################################################################################
-#
 #   split_cat
 #
 #
@@ -396,11 +385,6 @@ def list_cats(df, cat_IDs, l_first_index):
 
     print("#Categories = " + str(len(cat_IDs)) + ", acc_size= " + str(acc_amount))
 
-    i = get_multi_slice(df, cat_IDs, l_first_index)
-    print("Size multi slice = " + str(len(i)))
-
-    return i
-
     
 w = 90
 
@@ -446,7 +430,7 @@ def main():
   
     DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\"
     DATA_DIR_BASEMENT = "D:\\mercari\\"
-    DATA_DIR = DATA_DIR_PORTABLE
+    DATA_DIR = DATA_DIR_BASEMENT
 
     df = pd.read_table(DATA_DIR + "train.tsv");
 
@@ -455,7 +439,7 @@ def main():
     df['item_description'].fillna(value='missing', inplace=True)
 
 
-    df = df.drop(df[(df.price < 1.0)].index)
+    df = df.drop(df[(df.price < 3.0)].index)
 
     df['category_name'].fillna(value='missing', inplace=True)
 
@@ -492,7 +476,7 @@ def main():
 
     nCategories = len(l_first_index)
 
-    cat_IDs = get_cats_contains(c, 'blouses')
+    cat_IDs = get_cats_contains(c, 'cards')
 
     list_cats(df, cat_IDs, l_first_index)
 
@@ -503,7 +487,7 @@ def main():
 
     print("Multi-cat, size = " + str(len(i)))
 
-    assert (len(i) > 2000)
+    assert (len(i) > 0)
 
     d = get_XY_Basic(i)
 

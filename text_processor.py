@@ -68,6 +68,17 @@ def noun_ify_spacy(series, type_list):
 
 q = 324
 
+s = "moving can not take with me..... Over 200 silver name rare..... Over 100 holographic....Gold master collection box with original 6 holo cards...."
+
+#Count vectorizer, count 200
+
+
+import re
+r = re.compile("([a-zA-Z]+)([0-9]+)")
+strings = ['foofo21', 'bar432', 'foobar12345']
+print [r.match(string).groups() for string in strings]
+
+#Quantity , and possibly units. Set
 
 
 
