@@ -420,6 +420,41 @@ def get_cat_slice(df, l_first_index, iCategory):
 
 q = 90
 
+# https://www.kaggle.com/valkling/mercari-rnn-2ridge-models-with-notes-0-42755
+
+def brand_retriever_valking(df, all_brands):
+
+  
+   
+    # before. 0.51229585402621125
+
+    #51247282934776772
+
+    
+
+    # get to finding!
+    premissing = len(df.loc[df['brand_name'] == 'missing'])
+    
+    def brandfinder(line):
+        brand = line[0]
+        name = line[1]
+        namesplit = name.split(' ')
+        if brand != 'missing':
+           return brand
+ 
+        for x in namesplit:
+           if x in all_brands:
+               print("Found " + x + " as new brand name")
+               return x
+        
+        return brand
+
+    df['brand_name'] = df[['brand_name','name']].apply(brandfinder, axis = 1)
+
+    found = premissing-len(df.loc[df['brand_name'] == 'missing'])
+    
+    print(str(found) + " items branded")
+
 
 
 def main():
@@ -430,25 +465,24 @@ def main():
   
     DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\"
     DATA_DIR_BASEMENT = "D:\\mercari\\"
-    DATA_DIR = DATA_DIR_BASEMENT
+    DATA_DIR = DATA_DIR_PORTABLE
 
     df = pd.read_table(DATA_DIR + "train.tsv");
 
-    df['brand_name'].fillna(value='missing', inplace=True)
-
     df['item_description'].fillna(value='missing', inplace=True)
-
 
     df = df.drop(df[(df.price < 3.0)].index)
 
+    # All category brand preprocessing
+    df['brand_name'].fillna(value='missing', inplace=True)
+    all_brands = set(df['brand_name'].values)
+    all_brands.remove('missing')
+
+
+
     df['category_name'].fillna(value='missing', inplace=True)
 
-    NUM_BRANDS = 4500
     NUM_CATEGORIES = 1200
-
-    pop_brand = df['brand_name'].value_counts().loc[lambda x: x.index != 'missing'].index[:NUM_BRANDS]
-    df.loc[~df['brand_name'].isin(pop_brand), 'brand_name'] = 'missing'
-
     pop_category0 = df['category_name'].value_counts().loc[lambda x: x.index != 'missing'].index[:NUM_CATEGORIES]
 
 
@@ -476,7 +510,7 @@ def main():
 
     nCategories = len(l_first_index)
 
-    cat_IDs = get_cats_contains(c, 'cards')
+    cat_IDs = get_cats_contains(c, 'handbag')
 
     list_cats(df, cat_IDs, l_first_index)
 
@@ -484,6 +518,8 @@ def main():
     cat_res = []
 
     i = get_multi_slice(df, cat_IDs, l_first_index)
+
+    brand_retriever_valking(i, all_brands)
 
     print("Multi-cat, size = " + str(len(i)))
 
@@ -502,7 +538,7 @@ def main():
         if is_stop():
             break
 
-        rmsle = train1(X, y, 117 + basic_run, True)
+        rmsle = train1(X, y, 117 + basic_run, False)
         print("   ===> RMSLE basic = " + str(rmsle))
 
         d = { 'rmsle' : rmsle, 'n' : len(i) }
