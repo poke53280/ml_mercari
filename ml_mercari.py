@@ -318,6 +318,8 @@ def train1(X, y, random, is_output):
 
     l = (-y2).argsort()
 
+    # Todo: Display a set of predictions, one for each run model.
+
     if is_output:
         for x in l:
             s = get_by_validation_sequence(valid_idx, price_pred, x)
@@ -466,6 +468,81 @@ def brand_retriever_valking(df, all_brands):
 
      # w/o brand alltogheter:  0.3734
 
+
+w = 90
+
+l = []
+
+l.append([3.0,   74.4272287063,  'Reserved Show me your mumu tunic dress', 'Free People', ' Show me your mumu tunic dress'])
+l.append([206.0, 24.1283899992,  'BNWT Pink Friday Blue Sherpa', 'PINK', 'Brand new with tags pink friday Sherpa. For kit only.'])
+l.append([129.0, 14.8767356555,  'Greenidgal ONLY bundle', 'missing', 'This is specifically for Greenidgal. If you see other things that you want me to add to this bundle, please let me know so I can do so when I ship them out. I will be shipping out tomorrow September 7th. Thanks!'])
+l.append([172.0, 20.6358229673,  'Bundle', 'Victoria\'s Secret', 'Good condition Gray and lime green Xs 5 tops 4 bottoms'])
+l.append([123.0, 15.105401482,   'Fever Cami for Lovely4','Metal Mulisha', 'NWT'])
+l.append([186.0, 23.8170222872,  'Bundle', 'Brandy Melville', 'Reserved'])
+l.append([167.0, 22.8545650717,  'Bundle for Alicia', 'Under Armour', 'No description yet'])
+l.append([7.0,   50.1166123746,  'Taylor only! Bundle!', 'PINK', 'Bundle for Taylor only!'])
+l.append([250.0, 39.6490317348,  'Burberry for Sahara *ON HOLD*', 'Burberry', 'Burberry framed heads print top for @SaharaSmith'])
+l.append([76.0,  12.03272516,    'MM CLOTHING', 'missing', 'No description yet'])
+l.append([84.0,  13.5049856829,  'Two piece see through', 'missing', 'Top xs bottom fit like a small'])
+l.append([164.0, 27.368880402,   'Lularoe', 'missing', '3 XS Irma\'s. All brand new. Never been worn. NEW with tags.'])
+l.append([206.0, 35.9685678069,  'SUPER RARE STONE COLD FOX SILK HOLY TUBE', 'Stone Fox Swim', 'Silk floral Holy Tube from Stone Cold Fox. Size 1 works best for US 4. Boned inner bodice, silk floral outer, back zip. New with tags.'])
+l.append([169.0, 29.3872433192,  '(XS) Victoria\'s Secret Pink', 'PINK', 'In excellent like new condition no flaws. Loose fit.10 items'])
+l = [65.0,  11.0298154399,  'Pizza Slime Gucci Long Sleeve', 'Gucci', 'Size Small. Worn once Pizza Slime Long Sleeve. Popular black long sleeve as seen on Skrillex and Khloe Kardashian. No longer available on their website. Slight cracking to the graphic on the back of the shirt due to defective print the company used. I\'m selling this shirt because they sent me a new one because of the defective ink. Feel free to make an offer!']
+l = [195.0, 34.8526599481,  'LuLaRoe', 'LuLaRoe', '3 xxs classic tees 2 xxs irmas 3 xs irmas 1 xxs Randy']
+l = [114.0, 20.8509916941,  'VICTORIA SECRET PINK SHIRT]', 'PINK', 'Rainbow colors pm black long sleeve shirt,in excellent condition, no flaws.PRICE IS FIRM. This is pam don\'t buy.']
+l = [6.0,   35.744182611,   'ON Hold !!!! Random VS Pink Collection', 'PINK', 'This is what I call a great collection of smalls !!!! So much fun!! You will receive everything in the picture !! Here is a list of everything you will receive --- • 6 destination YourCityYourPink Stickers - Atlanta , Charlotte , Kansas City , Las Vegas , North Jersey , and San Diego • 2 Free With Purchase only in store Sticker one just says " pink " and the other says " running from my problems " • 1 Victoria Secret Pink KeyChain Giftcard balance [rm] • 1 Victoria\'s Secret pink Iron on Dog Patch • 1 pink nation I\'m in pin / button • 1 Associate/ employee pink pen • 1 travel size Cool and Bright Mist • 2 pink travel size Mood mists in pink Stress no More and Pink Zzzz please • 1 package of pink hair ties and bracelets • And 1 Pink Dog logo gift card holder Can include but may or not extra finds while I\'m cleaning :)']
+l = [3.0,   19.9855776729,  'Blouses are Reserved for buyer', 'Marshall', 'Two top bundle reserved for a buyer already.']
+l = [81.0,  14.7514133307,  'PINK LOVE PINK L\/S SHIRT bright pink', 'missing', 'RSVD CLEEKHEATHER..Bright pink with Pink wrote in black bold letters with love pink wrote in script below in script writing. Worn twice,didn\'t think i would be selling and I normally cut tags out of my shirts because of the way some just stick up an out or irritate me. Has not been put in dryer was hung to dry. Worn just around house an also wasn\'t planning on selling any of my clothes until my car broke down an needed money to get fixed or this closet wouldn\'t be here. But I have car payments now so I\'m digging through closet an drawers. Price firm. Thanks for looking.plus was to big.HEATHER #1[rm]#2 [rm]#3[rm]#4[rm].#5 [rm] When bundles are made,it\'s pay when done due to a lot of non payments. Thank you. Adding now.']
+l = [69.0,  12.4600598307,  'Free people led Zeppelin t shirt', 'missing', 'Worn once. Great t shirt!']
+l = [222.0, 43.1951783544,  'Jane', 'missing', 'Bundle 226 5/19']
+l = [81.0,  15.5007073445,  'Palace P45 T-Shirt Grey Marl (Med)', 'Supreme', 'Brand New Palace Skateboards P45 T-Shirt in hand. Bought off the website']
+l = [110.0, 22.3030934272,  'Bundle for Allanna', 'missing', 'Bundle']
+l = [93.0,  18.819091727,   'Dkny NWT blouse', 'DKNY', 'Prana yoga long sleeve, white tank, and black beaded tank.']
+l = [45.0,   9.0699913812,  'Have a nice death.', 'missing', 'Perfect condition.']
+
+
+
+103.0, 17.6706128964 [Glitterdollz] : 8 items Sex bomb, Golden Wonder bomb, Jester, Butter Bear, Stardust, experimenter, comforter and mistletoe.
+124.0, 26.9171780002 [Lush bundle *RESERVED*] : All brand new. Includes everything listed in both pictures.
+125.0, 28.9232761716 [Lush Bundle on hold] : FOUR brand new reusable bars. A santa in space gift box, a large bubbly shower gel and a night before Christmas gift box
+57.0, 15.6284718555 [Heated Foot Spa] : Used just a few times - awesome!! Just don't have room for it anymore. Purchased brand new from Amazon. Two massage rollers, heating therapy, oxygen bubbles massage, water fall & wave massage. Digital temperature and time control. LED display.
+40.0, 10.7961140316 [5 Error 404 Lush Bath Bombs] : These are the new scent that was sold during black Friday. Wrapped in plastic wrap to keep them fresh.
+35.0, 9.52420520714 [Bath and body works] : New and never been used
+3.0, 12.5056078215 [For Cassandra] : ✨Includes One 5oz Bath Bomb •Each batch is made from the best organic ingredients and tested for quality •just place in the bath and relax •smells great and makes your skin super soft •Perfect gifts for Valentines Day coming up ✨Baking Soda, Citric Acid, Corn Starch, coconut oil, espom salts, food coloring, glitter, and essential oils (exotic jasmine) ✨tags: bath bomb, gift for her, black magic, Galaxy dust, glitter, LUSH, bath and body works, relax, zen, bath, home accessories, Valentine's Day gifts ✨want to bundle more? Just comment and I'll make you a listing. 1 for [rm] 2 for [rm] 3 for [rm] 4 for [rm] 5 for [rm] All with free next day shipping and tracking
+115.0, 34.2754220551 [4 bath & body works sets] : Brand new bath & body works set includes 8oz fragrance mist, 8oz body cream, 8.4oz shower gel & 8.4oz body lotion. Pet/smoke free. **price is firm/no trades/no free ship/no holds/will not separate** Cocktail dress Bourbon strawberry & vanilla Poolside coconut colada Golden pear & brown sugar
+7.0, 24.0414371843 [Lush sample empty containers bags bundle] : Lush sample empty containers & bags bundle. BUNDLES ARE THE BEST☺☺ SAVE $$$ check out my other items in my closet Lush 15 gift shopping bags and gift 10 sample empty containers bundle bags are different size and great condition. The sample containers are good to give as gifts when buyers buy your lush products. presentation in selling you lush products will give you a 5 star rating. these would be great if you are selling Lush items such as perfumes bath bombs and other lush cosmetics. perfect for gift wrapping birthday and holiday present. they are in great condition Lush set Lush cosmetics Lush gifts Lush bath bomb
+9.0, 29.4772961577 [On hold for megalooper] : Love spell Snowcastle Cherry blossom bubble bar Orange blossom Lux pud Havana sunrise sample
+7.0, 22.7906094201 [On hold for megalooper] : Brand new easter collection scrub! Shares its scent with honey I washed the kids but is a bit more coconut scented to my nose, similar to Buffy or king of skin :)
+35.0, 11.4084350349 [Full size exotic coconut] : Brand new never used, full sized products. Shower gel and body splash. Smoke free home. [rm] each or [rm] sold together. I ship on Tuesdays as its my only day off. Pricing is firm! On this item! Free shipping on this item. Selling together, only
+65.0, 22.0955372783 [Lush Kitchen 7 pc. Citrus Spring/Rhea] : All made fresh in the Kitchen this month Sunny Citrus soap Somewhere Over The Rainbow Soap Over & Over Bomb Ups-A-Daisy bath bomb The Sicilian Mum bomb Your Mother Should Know [rm] plus [rm] shipping
+17.0, 5.3549440164 [PINK bath Bomb] : Calming Vanilla
+9.0, 26.6029652528 [Body wash bundle] : This includes (3) 1.2 oz herbal essences body wash (1) 1.7oz old spice Fiji body wash (1) Nivea touch of happiness body wash **NO FREE SHIP**
+84.0, 29.9873399684 [Reserved Lush Bundle] : RESERVED Free USPS Shipping Brand new and never used 1 x The rough with the smooth 2 x unicorn horn 2 x candy mountain 2 x French kiss 1 x butter bear 1 x Santa's belly
+
+
+100.0, 20.2953771963 [Luchesse horn back croc] [missing] : Women's 10. Men's 8.5
+120.0, 25.1165618361 [Chanel !!!NEW!!!] [Chanel] : NEW CHANEL NO SCRATCHES
+55.0, 16.0658097137 [Vince Verell Slip-On Sneakers 6] [Vince] : Great Condition. Only worn 1/2 times. Back of shoe has a little rip from where my sister's foot got caught. Not noticeable when wearing. Pictured above. Smoke/Pet Free.
+125.0, 40.9778933657 [Burberry Espadrilles] [Burberry] : No description yet
+5.0, 16.6341695176 [Sperry boat shoes Ladies size 8] [Sperry] : Ladies animal print Sperry boat shoes Ladies size 8. Gently worn.
+9.0, 28.3821428738 [Pink suede UGGS] [UGG Australia] : Great condition, ugg slip ons with pink suede lined with fur inside
+9.0, 27.2920805847 [Pink bow slide on] [missing] : This pink bow slip on are brand new never worn. They are a size 7-8 but, can easily fit a 8.5. Very girly and cute
+9.0, 24.1096211128 [Pedro reserved] [missing] : In women's size 6
+81.0, 31.9562287335 [Black Uggs] [UGG Australia] : Black uggs slippers that you can wear anywhere
+46.0, 17.9845374972 [Ariat women's Cruiser slip on shoes] [Ariat] : Good condition, minimal wear. Very comfortable. Retail for [rm] new.
+9.0, 22.1907965682 [Size 8 Danskin slip on sneakers] [Danskin] : Barely worn Size 8 Dansko brand slip ons with memory foam No box
+5.0, 12.8517391783 [moccasins.] [missing] : No description yet
+
+
+
+
+
+def QtyScanner(s):
+    print("Hello")
+
+
+
+w = 90
 
 
 def main():
