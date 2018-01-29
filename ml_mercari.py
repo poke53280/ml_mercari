@@ -6,7 +6,8 @@ from scipy.sparse import csr_matrix, hstack
 from sklearn.linear_model import Ridge
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.preprocessing import LabelBinarizer
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, KFold
+from sklearn.linear_model import HuberRegressor
 
 import scipy
 
@@ -169,9 +170,7 @@ def get_XY_Basic(df):
   
   X_category = lb.fit_transform(df['category_name'])
 
-  # brand out now:
-
-  X = hstack((X_dummies, X_description, X_name, X_category)).tocsr()
+  X = hstack((X_dummies, X_description, X_brand, X_name, X_category)).tocsr()
 
   return {'X': X, 'y':y}
 
@@ -257,7 +256,7 @@ w = 90
 #
 #
 
-def get_by_validation_sequence(valid_l, epred, id):
+def get_by_validation_sequence(valid_l, epred_lgbm, epred_ridge, epred_huber, id):
     orig_row = valid_l[id]
     u = i[orig_row: orig_row +1]
 
@@ -266,14 +265,96 @@ def get_by_validation_sequence(valid_l, epred, id):
     brand = u.brand_name.values[0]
     p_in = u.price.values[0]
 
-    p_predicted = epred[id]
+    p_lgbm = epred_lgbm[id]
+    p_ridge = epred_ridge[id]
+    p_huber = epred_huber[id]
    
 
-    s = str(p_in) + ", " + str(p_predicted) + " [" + name + "] [" + brand + "] : " + desc
+    s = str(p_in) + ", " + str(p_lgbm) +  ", " + str(p_ridge) + ", " + str(p_huber) + " [" + name + "] [" + brand + "] : " + desc
 
     return s
 
 w = 90
+
+###############################################################################################
+#
+#   trainCV
+#
+#
+
+
+X_Backup = X
+y_backup = y
+
+X = X_Backup
+y = y_backup
+
+def trainCV(X, y, random):
+
+    y = y.values
+
+    kf = KFold(n_splits = 9)
+    
+    nSplits = kf.get_n_splits(X)
+
+    nFold = 0
+
+    for train_index, valid_index in kf.split(X):
+
+        print ("FOLD# " + str(nFold))
+
+        train_X = X[train_index]  
+        train_y = y[train_index]
+
+        valid_X = X[valid_index]
+        valid_y = y[valid_index]
+
+        price_valid_real = np.expm1(valid_y)
+
+        d_train = lgb.Dataset(train_X, label=train_y)
+        d_valid = lgb.Dataset(valid_X, label=valid_y)
+        
+        watchlist = [d_train, d_valid]
+    
+        params = { 'learning_rate': 0.01, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
+                        'bagging_fraction': 0.6, 'bagging_freq': 0, 'nthread': 4, 'max_bin': 255 }
+
+        model_lgbm = lgb.train(params, train_set=d_train, num_boost_round=110, valid_sets=watchlist, verbose_eval=50, early_stopping_rounds=400)
+
+        preds_lgbm = model_lgbm.predict(valid_X)
+        price_lgbm_pred = np.expm1(preds_lgbm)
+        o_lgbm = rmsle_func(price_lgbm_pred, price_valid_real)
+
+        print ("LGBM RMSLE: " + str(o_lgbm))
+
+
+        model_ridge = Ridge(alpha=.05, copy_X=True, fit_intercept=True, max_iter=1000, normalize=False, random_state=101, solver='auto', tol=0.001)
+
+
+        model_ridge.fit(train_X, train_y)
+
+        preds_ridge = model_ridge.predict(valid_X)
+        price_ridge_pred = np.expm1(preds_ridge)
+        o_ridge = rmsle_func(price_ridge_pred, price_valid_real)
+
+        print ("RIDGE RMSLE: " + str(o_ridge))
+
+
+        model_huber = HuberRegressor(fit_intercept=True, alpha=0.01, max_iter=800, epsilon=363)
+        model_huber.fit(train_X, train_y)
+
+        preds_huber = model_huber.predict(valid_X)
+        price_huber_pred = np.expm1(preds_huber)
+        o_huber = rmsle_func(price_huber_pred, price_valid_real)
+    
+        print ("HUBER RMSLE: " + str(o_huber))
+
+        nFold = nFold + 1
+    w = 90
+w = 90
+
+
+
 
 ###############################################################################################
 #
@@ -282,10 +363,17 @@ w = 90
 #
 
 def train1(X, y, random, is_output):
-   
+    X_Backup = X
+    y_backup = y
+
     idx = list(range(len(y)))
 
-    train_X, valid_X, train_y, valid_y, train_idx, valid_idx = train_test_split(X, y, idx, test_size = 0.1, random_state = random)
+    process_X, holdout_X, process_y, holdout_y, process_idx, holdout_idx = train_test_split(X, y, idx, test_size = 0.1, random_state = random)
+
+
+    train_X, valid_X, train_y, valid_y, train_idx, valid_idx = train_test_split(process_X, process_y, process_idx, test_size = 0.1, random_state = random)
+
+   
 
     d_train = lgb.Dataset(train_X, label=train_y)
     d_valid = lgb.Dataset(valid_X, label=valid_y)
@@ -300,16 +388,50 @@ def train1(X, y, random, is_output):
     if is_output:
         eval_out = 35
    
-    model = lgb.train(params, train_set=d_train, num_boost_round=9310, valid_sets=watchlist, verbose_eval=eval_out,early_stopping_rounds=400) 
+    model_lgbm = lgb.train(params, train_set=d_train, num_boost_round=9310, valid_sets=watchlist, verbose_eval=eval_out,early_stopping_rounds=400) 
     
-    valid_y_pred = model.predict(valid_X)
+    preds_lgbm = model_lgbm.predict(valid_X)
+
+    price_lgbm_pred = np.expm1(preds_lgbm)
+    price_valid_real = np.expm1(valid_y)
+
+    o_lgbm = rmsle_func(price_lgbm_pred, price_valid_real)
+
+    print ("LGBM RMSLE: " + str(o_lgbm))
+
+
+    preds_hold_out_lgbm = model_lgbm.predict(holdout_X)
+    price_hold_out_lgbm = np.expm1(preds_hold_out_lgbm)
+    price_hold_out_real = np.expm1(holdout_y)
+
+    o_lgbm_holdout = rmsle_func(price_hold_out_lgbm, price_hold_out_real)
+    print ("LGBM HOLDOUT RMSLE: " + str(o_lgbm_holdout))
+
+    model_ridge = Ridge(solver = "lsqr", fit_intercept=False)
+    model_ridge.fit(train_X, train_y)
+
+    preds_ridge = model_ridge.predict(valid_X)
+
+    price_ridge_pred = np.expm1(preds_ridge)
+
+    o_ridge = rmsle_func(price_ridge_pred, price_valid_real)
+
+    print ("RIDGE RMSLE: " + str(o_ridge))
    
-    price_pred = np.expm1(valid_y_pred)
-    price_real = np.expm1(valid_y)
 
-    o = rmsle_func(price_pred, price_real)
+    model_huber = HuberRegressor(fit_intercept=True, alpha=0.01, max_iter=80, epsilon=363)
+    model_huber.fit(train_X, train_y)
 
-    y2 = np.power(np.log1p(price_pred)-np.log1p(price_real), 2)
+    preds_huber = model_huber.predict(valid_X)
+    price_huber_pred = np.expm1(preds_huber)
+
+    o_huber = rmsle_func(price_huber_pred, price_valid_real)
+
+    print ("HUBER RMSLE: " + str(o_huber))
+   
+
+
+    y2 = np.power(np.log1p(price_lgbm_pred)-np.log1p(price_valid_real), 2)
 
     y2 = y2.values
 
@@ -322,7 +444,7 @@ def train1(X, y, random, is_output):
 
     if is_output:
         for x in l:
-            s = get_by_validation_sequence(valid_idx, price_pred, x)
+            s = get_by_validation_sequence(valid_idx, price_lgbm_pred, price_ridge_pred, price_huber_pred, x)
             print (s)
 
 
@@ -556,18 +678,11 @@ n = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "te
 # Free priority mail
 # bundle to save
 
-
-
-
-
-
 import re
 
 def StringScanner(s):
 
     #brands I have include....
-
-
 
     # Preprocess:
     # remove n in one
@@ -723,8 +838,6 @@ def main():
     df['item_description'].fillna(value='missing', inplace=True)
 
     df = df.drop(df[(df.price < 3.0)].index)
-
-    # All category brand preprocessing
     df['brand_name'].fillna(value='missing', inplace=True)
 
     all_brands = set(df['brand_name'].values)
@@ -763,7 +876,7 @@ def main():
 
     nCategories = len(l_first_index)
 
-    cat_IDs = get_cats_contains(c, 't-shirts')
+    cat_IDs = get_cats_contains(c, 'pant')
 
     list_cats(df, cat_IDs, l_first_index)
 
