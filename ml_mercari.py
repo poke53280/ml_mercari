@@ -293,13 +293,19 @@ def trainCV(X, y, random):
 
     y = y.values
 
-    kf = KFold(n_splits = 9)
+    kf = KFold(n_splits = 5)
     
     nSplits = kf.get_n_splits(X)
 
     nFold = 0
 
+    l_lgbm = []
+    l_ridge = []
+    l_huber = []
+
     for train_index, valid_index in kf.split(X):
+        if is_stop():
+            break
 
         print ("FOLD# " + str(nFold))
 
@@ -316,16 +322,17 @@ def trainCV(X, y, random):
         
         watchlist = [d_train, d_valid]
     
-        params = { 'learning_rate': 0.01, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
+        params = { 'learning_rate': 0.321, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
                         'bagging_fraction': 0.6, 'bagging_freq': 0, 'nthread': 4, 'max_bin': 255 }
 
-        model_lgbm = lgb.train(params, train_set=d_train, num_boost_round=110, valid_sets=watchlist, verbose_eval=50, early_stopping_rounds=400)
+        model_lgbm = lgb.train(params, train_set=d_train, num_boost_round=1110, valid_sets=watchlist, verbose_eval=50, early_stopping_rounds=400)
 
         preds_lgbm = model_lgbm.predict(valid_X)
         price_lgbm_pred = np.expm1(preds_lgbm)
         o_lgbm = rmsle_func(price_lgbm_pred, price_valid_real)
 
         print ("LGBM RMSLE: " + str(o_lgbm))
+        l_lgbm.append(o_lgbm)
 
 
         model_ridge = Ridge(alpha=.05, copy_X=True, fit_intercept=True, max_iter=1000, normalize=False, random_state=101, solver='auto', tol=0.001)
@@ -338,7 +345,7 @@ def trainCV(X, y, random):
         o_ridge = rmsle_func(price_ridge_pred, price_valid_real)
 
         print ("RIDGE RMSLE: " + str(o_ridge))
-
+        l_ridge.append(o_ridge)
 
         model_huber = HuberRegressor(fit_intercept=True, alpha=0.01, max_iter=800, epsilon=363)
         model_huber.fit(train_X, train_y)
@@ -348,12 +355,13 @@ def trainCV(X, y, random):
         o_huber = rmsle_func(price_huber_pred, price_valid_real)
     
         print ("HUBER RMSLE: " + str(o_huber))
+        l_huber.append(o_huber)
 
         nFold = nFold + 1
     w = 90
 w = 90
 
-
+# X = Three predictions, item categori, item brand, category size
 
 
 ###############################################################################################
@@ -876,7 +884,7 @@ def main():
 
     nCategories = len(l_first_index)
 
-    cat_IDs = get_cats_contains(c, 'pant')
+    cat_IDs = get_cats_contains(c, 'elec')
 
     list_cats(df, cat_IDs, l_first_index)
 
