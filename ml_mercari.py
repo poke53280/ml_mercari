@@ -155,10 +155,10 @@ def get_XY_Basic(df):
 
   y = np.log1p(df["price"])
 
-  cv0 = CountVectorizer(min_df = 3)
+  cv0 = CountVectorizer()
   X_name = cv0.fit_transform(df['name'])
    
-  tv = TfidfVectorizer(max_features=3000, ngram_range=(1, 2), stop_words='english')
+  tv = TfidfVectorizer(max_features=30000, ngram_range=(1, 2))
 
   X_description = tv.fit_transform(df['item_description'])
 
@@ -276,32 +276,24 @@ def get_by_validation_sequence(valid_l, epred_lgbm, epred_ridge, epred_huber, id
 
 w = 90
 
+
 ###############################################################################################
 #
-#   trainCV
+#   get_by_validation_sequence
 #
 #
 
+def trainSTACK(X, y, splits):
 
-X_Backup = X
-y_backup = y
-
-X = X_Backup
-y = y_backup
-
-def trainCV(X, y, random):
-
-    y = y.values
-
-    kf = KFold(n_splits = 5)
+    kf = KFold(n_splits = splits)
     
     nSplits = kf.get_n_splits(X)
 
     nFold = 0
 
     l_lgbm = []
-    l_ridge = []
-    l_huber = []
+
+    y_stacked = np.zeros(len (y))
 
     for train_index, valid_index in kf.split(X):
         if is_stop():
@@ -322,35 +314,117 @@ def trainCV(X, y, random):
         
         watchlist = [d_train, d_valid]
     
-        params = { 'learning_rate': 0.321, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
+        params = { 'learning_rate': 0.001, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
                         'bagging_fraction': 0.6, 'bagging_freq': 0, 'nthread': 4, 'max_bin': 255 }
 
-        model_lgbm = lgb.train(params, train_set=d_train, num_boost_round=1110, valid_sets=watchlist, verbose_eval=50, early_stopping_rounds=400)
+        model_lgbm = lgb.train(params, train_set=d_train, num_boost_round=3110, valid_sets=watchlist, verbose_eval=0, early_stopping_rounds=400)
 
         preds_lgbm = model_lgbm.predict(valid_X)
+
+        y_stacked[valid_index] = preds_lgbm
+
         price_lgbm_pred = np.expm1(preds_lgbm)
         o_lgbm = rmsle_func(price_lgbm_pred, price_valid_real)
 
         print ("LGBM RMSLE: " + str(o_lgbm))
         l_lgbm.append(o_lgbm)
 
+        nFold = nFold + 1
 
-        model_ridge = Ridge(alpha=.05, copy_X=True, fit_intercept=True, max_iter=1000, normalize=False, random_state=101, solver='auto', tol=0.001)
+    w = 90
+    a_lgbm = np.array(l_lgbm)
+    print ("STACK LGBM-RIDGE-HUBER (META: LGBM) RMSLE = " + str (a_lgbm.mean()) + " +/- " + str(a_lgbm.std()))
 
+    return y_stacked
+
+w = 90
+
+
+###############################################################################################
+#
+#   trainCV
+#
+#
+
+
+X_Backup = X
+y_backup = y
+
+X = X_Backup
+y = y_backup
+
+def trainCV(X, y, random, splits):
+   
+
+    kf = KFold(n_splits = splits)
+    
+    nSplits = kf.get_n_splits(X)
+
+    nFold = 0
+
+    l_lgbm = []
+    l_ridge = []
+    l_huber = []
+
+    y_lgbm  = np.zeros(len (y))
+    y_ridge = np.zeros(len (y))
+    y_huber = np.zeros(len (y))
+
+    for train_index, valid_index in kf.split(X):
+        if is_stop():
+            break
+
+        print ("FOLD# " + str(nFold))
+
+        train_X = X[train_index]  
+        train_y = y[train_index]
+
+        valid_X = X[valid_index]
+        valid_y = y[valid_index]
+
+        price_valid_real = np.expm1(valid_y)
+
+        d_train = lgb.Dataset(train_X, label=train_y)
+        d_valid = lgb.Dataset(valid_X, label=valid_y)
+        
+        watchlist = [d_train, d_valid]
+    
+        params = { 'learning_rate': 0.01, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
+                        'bagging_fraction': 0.6, 'bagging_freq': 0, 'nthread': 4, 'max_bin': 255 }
+
+        model_lgbm = lgb.train(params, train_set=d_train, num_boost_round=810, valid_sets=watchlist, verbose_eval=0, early_stopping_rounds=400)
+
+        preds_lgbm = model_lgbm.predict(valid_X)
+
+        y_lgbm[valid_index] = preds_lgbm
+
+        price_lgbm_pred = np.expm1(preds_lgbm)
+        o_lgbm = rmsle_func(price_lgbm_pred, price_valid_real)
+
+        print ("LGBM RMSLE: " + str(o_lgbm))
+        l_lgbm.append(o_lgbm)
+
+        model_ridge = Ridge(alpha=.05, copy_X=True, fit_intercept=True, max_iter=5000, normalize=False, random_state=101, solver='auto', tol=0.001)
 
         model_ridge.fit(train_X, train_y)
 
         preds_ridge = model_ridge.predict(valid_X)
+        
+        y_ridge[valid_index] = preds_ridge
+        
         price_ridge_pred = np.expm1(preds_ridge)
         o_ridge = rmsle_func(price_ridge_pred, price_valid_real)
 
         print ("RIDGE RMSLE: " + str(o_ridge))
         l_ridge.append(o_ridge)
 
-        model_huber = HuberRegressor(fit_intercept=True, alpha=0.01, max_iter=800, epsilon=363)
+        model_huber = HuberRegressor(fit_intercept=True, alpha=0.01, max_iter=5800, epsilon=363)
         model_huber.fit(train_X, train_y)
 
         preds_huber = model_huber.predict(valid_X)
+
+        y_huber[valid_index] = preds_huber
+
         price_huber_pred = np.expm1(preds_huber)
         o_huber = rmsle_func(price_huber_pred, price_valid_real)
     
@@ -358,10 +432,49 @@ def trainCV(X, y, random):
         l_huber.append(o_huber)
 
         nFold = nFold + 1
-    w = 90
+    
+    a_lgbm = np.array(l_lgbm)
+    a_ridge = np.array(l_ridge)
+    a_huber = np.array(l_huber)
+
+    print ("LGBM  RMSLE = " + str (a_lgbm.mean()) + " +/- " + str(a_lgbm.std()))
+    print ("RIDGE RMSLE = " + str (a_ridge.mean()) + " +/- " + str(a_ridge.std()))
+    print ("HUBER RMSLE = " + str (a_huber.mean()) + " +/- " + str(a_huber.std()))
+
+    return [y_lgbm, y_ridge, y_huber]
+
 w = 90
 
-# X = Three predictions, item categori, item brand, category size
+
+y = y.values
+a, b, c = trainCV(X, y, 119, 5)
+
+
+#Input a set of predictions a, b, c
+
+#create matrix of all:
+
+X_array = np.column_stack((a, b, c))
+X_s = csr_matrix(X_array)
+
+y_s = trainSTACK(X_s, y, 11)
+
+
+#word baggging with dictionay: test.  train, test and train.
+
+
+#preds = predsH*w[0] + predsF*w[1] + predsL*w[2] + predsFM*w[3]
+    
+#To kernel:
+
+    X_array = np.column_stack((predsH, predsF, predsL, predsFM))
+    X_s = csr_matrix(X_array)
+    
+    preds = trainSTACK(X_s, train_y, 11)
+    
+
+    submission['price'] = np.expm1(preds)
+
 
 
 ###############################################################################################
@@ -388,7 +501,7 @@ def train1(X, y, random, is_output):
         
     watchlist = [d_train, d_valid]
     
-    params = { 'learning_rate': 0.01, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
+    params = { 'learning_rate': 0.03, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
                     'bagging_fraction': 0.6, 'bagging_freq': 0, 'nthread': 4, 'max_bin': 255 }
 
     eval_out = 50
@@ -396,7 +509,7 @@ def train1(X, y, random, is_output):
     if is_output:
         eval_out = 35
    
-    model_lgbm = lgb.train(params, train_set=d_train, num_boost_round=9310, valid_sets=watchlist, verbose_eval=eval_out,early_stopping_rounds=400) 
+    model_lgbm = lgb.train(params, train_set=d_train, num_boost_round=6310, valid_sets=watchlist, verbose_eval=eval_out,early_stopping_rounds=400) 
     
     preds_lgbm = model_lgbm.predict(valid_X)
 
@@ -520,7 +633,6 @@ def list_cats(df, cat_IDs, l_first_index):
     
 w = 90
 
-cat_IDs = get_cats_startswith(c, 'Wom')
 
 def get_multi_slice(df, cat_IDs, l_first_index):
     
@@ -884,7 +996,7 @@ def main():
 
     nCategories = len(l_first_index)
 
-    cat_IDs = get_cats_contains(c, 'elec')
+    cat_IDs = get_cats_contains(c, 'jacket')
 
     list_cats(df, cat_IDs, l_first_index)
 
@@ -910,6 +1022,7 @@ def main():
 
     y = d['y']
     X = d['X']
+
 
     basic_run = 0
 

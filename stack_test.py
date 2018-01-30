@@ -209,17 +209,31 @@ def main():
     X_BACKUP = X
     y_BACKUP = y
 
+    IN: train_X, train_y
 
-    if develop:
-        train_X, valid_X, train_y, valid_y = train_test_split(X, y, test_size=0.05, random_state=100)
+    OUT:  
+        predsF = model.predict(X_test)
+        predsFM = model.predict(X_test)
+        predsL = model.predict(X_test)
+        predsH = model.predict(X=X_test)
+
+    Create X_s as predsF, predsFM, predsL, predsH = train_y
+
+
+
+
+
+    preds = predsH * 0.04 + predsF * 0.09 + predsL * 0.33 + predsFM * 0.54
+
+    submission['price'] = np.expm1(preds)
+
+
+
 
     model = FTRL(alpha=0.01, beta=0.1, L1=0.00001, L2=1.0, D=sparse_merge.shape[1], iters=30, inv_link="identity", threads=1)
     del X; gc.collect()
     model.fit(train_X, train_y)
     print('[{}] Train FTRL completed'.format(time.time() - start_time))
-    if develop:
-        preds = model.predict(X=valid_X)
-        print("FTRL dev RMSLE:", rmsle(np.expm1(valid_y), np.expm1(preds)))
 
     predsF = model.predict(X_test)
     print('[{}] Predict FTRL completed'.format(time.time() - start_time))
@@ -281,10 +295,7 @@ def main():
                       early_stopping_rounds=1000, verbose_eval=1000)
                           
     del d_train; gc.collect()
-    if develop:
-        preds = model.predict(valid_X)
-        del valid_X; gc.collect()
-        print("LGB dev RMSLE:", rmsle(np.expm1(valid_y), np.expm1(preds)))
+    
 
     predsL = model.predict(X_test)
    # del X_test; gc.collect()
@@ -302,6 +313,14 @@ def main():
     # preds = (predsF * 0.2 + predsL * 0.3 + predsFM * 0.5)
 
     # modified 
+
+    # brand cateogory. Length desc. Bundle prob, number of numbers. Guess on quantity.
+
+
+
+    out :
+        preds = y_s
+
     preds = predsH * 0.04 + predsF * 0.09 + predsL * 0.33 + predsFM * 0.54
 
     submission['price'] = np.expm1(preds)
