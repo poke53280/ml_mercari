@@ -1,6 +1,5 @@
 
 import pandas as pd
-import pyximport; pyximport.install()
 import numpy as np
 from scipy.sparse import csr_matrix, hstack
 from sklearn.linear_model import Ridge
@@ -634,6 +633,11 @@ def list_cats(df, cat_IDs, l_first_index):
     
 w = 90
 
+###############################################################################################
+#
+#   get_multi_slice
+#
+#
 
 def get_multi_slice(df, cat_IDs, l_first_index):
     
@@ -646,6 +650,12 @@ def get_multi_slice(df, cat_IDs, l_first_index):
     return df_new
 
 w = 90
+
+###############################################################################################
+#
+#   get_cat_slice
+#
+#
 
 def get_cat_slice(df, l_first_index, iCategory):
     nCategories = len(l_first_index)
@@ -665,49 +675,35 @@ def get_cat_slice(df, l_first_index, iCategory):
 
 q = 90
 
-
+###############################################################################################
+#
+#   fake_brand_retriever
+#
+#
 
 def fake_brand_retriever(df, all_brands):
 
-   
-    # before. 0.51229585402621125
 
-    #51247282934776772
-
-    # get to finding!
-
-    premissing = len(df.loc[df['brand_name'] == 'missing'])
-    
     def fakebrandfinder(line):
         brand = line[0]
         name = line[1]
         if brand != 'missing':
-           return 'no'
+           return 'missing'
  
         for b in all_brands:
             if (b in name) & (len(b) > 3):
-                print("Found fake brand '" + b + "' in name '" + name + "'")
+                # print("Found fake brand '" + b + "' in name '" + name + "'")
                 return b
         
         return 'missing'
 
-    df['fake_brand_name'] = df[['brand_name','name']].apply(fakebrandfinder, axis = 1)
+    newColumn = df[['brand_name','name']].apply(fakebrandfinder, axis = 1)
 
     found = len(df.loc[df['fake_brand_name'] != 'missing'])
     
-    print(str(found) + " items branded")
+    print(str(found) + " fake items branded")
 
-     # 0.36354 - pants, with brand retrieval.
-
-     # Better at 6350 iterations with no retrieval. 0.362694 at 9310. no early stop.
-
-     # Tfidf > countvectorizer.same, better after 6350 iterations. 0.362694. same??
-
-     # labelencoder on category. 0.362366
-
-     # again poorer to introduce brand retrieval   0.3639
-
-     # w/o brand alltogheter:  0.3734
+    return newColumn
 
 
 w = 90
@@ -895,8 +891,6 @@ def StringScanner(s):
     # Remove women's 10. Men's 8.5
     # Remove digit times.  worn two times. worn one time. Keep time/times.
 
-
-
     print(s)
 
     s = s.lower()
@@ -908,7 +902,7 @@ def StringScanner(s):
 
     regex_word_signal = "bundle|all|everything|and|collection"
 
-    regex_word_antisignal = "will bundle|each"
+    regex_word_antisignal = "will bundle|each|random|[rm]"
 
     m1 = re.findall(regex_number_and_item, s)
     m2 = re.findall(regex_number_in_parantheses, s)
@@ -917,7 +911,7 @@ def StringScanner(s):
     print (m2)
 
     # remove qty + time, qty + times
-    
+ 
 
 
     print ("-----------")
@@ -995,7 +989,7 @@ def main():
 
     nCategories = len(l_first_index)
 
-    cat_IDs = get_cats_contains(c, '/')
+    cat_IDs = get_cats_contains(c, 'card')
 
     list_cats(df, cat_IDs, l_first_index)
 
@@ -1009,9 +1003,7 @@ def main():
 
     df = all
 
-    
-
-    brand_retriever_valking(i, all_brands)
+    df.fake2 = fake_brand_retriever(i, all_brands)
 
     print("Multi-cat, size = " + str(len(i)))
 
