@@ -780,20 +780,54 @@ s.append([5.0, 12.8517391783, 'moccasins.', 'missing', 'No description yet'])
 
 n = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "elleven", "twelve"]
 
-
-#text cut after:
-
-# . Please 
-# .Free shipping
-# .No free shipping
-
-# Check out...
-# Will ship....
-# Shipping
-# Free priority mail
-# bundle to save
-
+dsfs
 import re
+
+def CutAfter(s):
+    
+    s = s.lower()
+
+    l = [
+        "please",
+        "Free shipping",
+        "No free shipping",
+        "Check out",
+        "Will ship",
+        "Shipping",
+        "Free priority",
+        "bundle to save"
+        "Ships fast",
+        "Freely message",
+        "please do not",
+        "prices are",
+        "Thank you",
+        "P.S.",
+        "do not buy",
+        "please let me",
+        "will pack",
+        "let me",
+        "leave us",
+        "all sales are"]
+
+    for x in l:
+        x = x.lower()
+        s = re.sub(x + ".*$", "___CUT___", s)
+
+    return s
+
+w = 90
+
+def CutSeriesAfter(s):
+    for x in s:
+        print(CutAfter(x))
+
+
+w = 90
+
+
+
+
+
 
 def StringScanner(s):
 
@@ -818,7 +852,7 @@ def StringScanner(s):
 
     # will combine
 
-    # Ships fast!
+
 
     #  10 yrs, year years
 
@@ -837,11 +871,7 @@ def StringScanner(s):
 
     # look for item sum: [('10', 'pajama'), ('3', 'pajama'), ('7', 'pajama')]. Almost certain bundle.
 
-    # Freely message
-
-    # please do not
-
-    # prices are....
+   
 
     # boy's medium 10/12 brand new 
 
@@ -853,13 +883,7 @@ def StringScanner(s):
 
     # Sizes 12-16 
 
-    # Thank you for 
-
-    # P.S.
-
-    # do not buy
-
-    # please let me
+   
 
     # no description yet => na
 
@@ -900,9 +924,9 @@ def StringScanner(s):
 
     regex_number_in_parantheses = "\((\d+)\)"
 
-    regex_word_signal = "bundle|all|everything|and|collection"
+    regex_word_signal = " (bundle|all|everything|and|collection|set)"
 
-    regex_word_antisignal = "will bundle|each|random|[rm]"
+    regex_word_antisignal = " will bundle|each|random|\[rm\]"
 
     m1 = re.findall(regex_number_and_item, s)
     m2 = re.findall(regex_number_in_parantheses, s)
@@ -912,7 +936,13 @@ def StringScanner(s):
 
     # remove qty + time, qty + times
  
+    l_anti = re.findall(regex_word_antisignal, s)
 
+    print (l_anti)
+
+    l_pro  =  re.findall(regex_word_signal, s)
+
+    print (l_pro)
 
     print ("-----------")
 
