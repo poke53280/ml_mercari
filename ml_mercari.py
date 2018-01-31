@@ -26,9 +26,7 @@ Categorical:
 """
 
 """Add to below: Find and return a category name with close to desired elements."""
-
 """Todo: Work in detail on a small category. Post improved kernel."""
-
 
 """--------------------------------------------------------------------------------------"""
 
@@ -44,6 +42,9 @@ def is_stop():
     f.close()
 
     isStop = s[:4] == 'stop'
+
+    if (isStop):
+        print("Processing stopped by stop file")
 
     return isStop
 
@@ -664,37 +665,35 @@ def get_cat_slice(df, l_first_index, iCategory):
 
 q = 90
 
-# https://www.kaggle.com/valkling/mercari-rnn-2ridge-models-with-notes-0-42755
 
-def brand_retriever_valking(df, all_brands):
 
-  
+def fake_brand_retriever(df, all_brands):
+
    
     # before. 0.51229585402621125
 
     #51247282934776772
 
-    
-
     # get to finding!
+
     premissing = len(df.loc[df['brand_name'] == 'missing'])
     
-    def brandfinder(line):
+    def fakebrandfinder(line):
         brand = line[0]
         name = line[1]
         if brand != 'missing':
-           return brand
+           return 'no'
  
         for b in all_brands:
             if (b in name) & (len(b) > 3):
-                print("Found brand '" + b + "' in name '" + name + "'")
+                print("Found fake brand '" + b + "' in name '" + name + "'")
                 return b
         
-        return brand
+        return 'missing'
 
-    df['brand_name'] = df[['brand_name','name']].apply(brandfinder, axis = 1)
+    df['fake_brand_name'] = df[['brand_name','name']].apply(fakebrandfinder, axis = 1)
 
-    found = premissing-len(df.loc[df['brand_name'] == 'missing'])
+    found = len(df.loc[df['fake_brand_name'] != 'missing'])
     
     print(str(found) + " items branded")
 
@@ -996,7 +995,7 @@ def main():
 
     nCategories = len(l_first_index)
 
-    cat_IDs = get_cats_contains(c, 'jacket')
+    cat_IDs = get_cats_contains(c, '/')
 
     list_cats(df, cat_IDs, l_first_index)
 
