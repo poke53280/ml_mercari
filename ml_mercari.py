@@ -4,7 +4,7 @@ import numpy as np
 from scipy.sparse import csr_matrix, hstack
 from sklearn.linear_model import Ridge
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.preprocessing import LabelBinarizer
+from sklearn.preprocessing import LabelBinarizer, LabelEncoder
 from sklearn.model_selection import train_test_split, cross_val_score, KFold
 from sklearn.linear_model import HuberRegressor
 
@@ -144,6 +144,23 @@ def rmsle_comb(l):
 
 w = 90
 
+def CountVectorize(s):
+    cv = CountVectorizer(ngram_range = (1, 17))
+    return cv.fit_transform(s)
+
+w = 90
+
+def LabelBinarize(s):
+    lb = LabelBinarizer(sparse_output=True)
+    return lb.fit_transform(s)
+
+w = 90
+
+def LabelEncode(s):
+    lb = LabelEncoder()
+    return lb.fit_transform(s)
+
+w = 90
 
 ###############################################################################################
 #
@@ -153,24 +170,26 @@ w = 90
 
 def get_XY_Basic(df):
 
-  y = np.log1p(df["price"])
+  l = []
 
-  cv0 = CountVectorizer()
-  X_name = cv0.fit_transform(df['name'])
-   
-  tv = TfidfVectorizer(max_features=30000, ngram_range=(1, 2))
+  l.append( CountVectorize (df['name'])                                         )
+  l.append( LabelBinarize  (df['brand_name'])                                   )
 
-  X_description = tv.fit_transform(df['item_description'])
+  if 'fake_brand' in df:
+    l.append (LabelBinarize(df['fake_brand']))
 
-  lb = LabelBinarizer(sparse_output=True)
-    
-  X_brand = lb.fit_transform(df['brand_name'])
+  # DUMMIES -------------------------------------------------------------
+  w = 90
 
-  X_dummies = csr_matrix(pd.get_dummies(df[['item_condition_id', 'shipping']], sparse=True).values)
+  l_dummies = ['item_condition_id', 'shipping']
+
+  l.append( csr_matrix(pd.get_dummies(df[l_dummies], sparse=True).values))
+
+  l.append( LabelBinarize  (df['category_name']))
   
-  X_category = lb.fit_transform(df['category_name'])
+  X = hstack(l).tocsr()
 
-  X = hstack((X_dummies, X_description, X_brand, X_name, X_category)).tocsr()
+  y = np.log1p(df["price"])
 
   return {'X': X, 'y':y}
 
@@ -282,6 +301,8 @@ w = 90
 #   get_by_validation_sequence
 #
 #
+w = 90asdfsdfsdf
+
 
 def trainSTACK(X, y, splits):
 
@@ -389,7 +410,7 @@ def trainCV(X, y, random, splits):
         
         watchlist = [d_train, d_valid]
     
-        params = { 'learning_rate': 0.01, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
+        params = { 'learning_rate': 0.05, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
                         'bagging_fraction': 0.6, 'bagging_freq': 0, 'nthread': 4, 'max_bin': 255 }
 
         model_lgbm = lgb.train(params, train_set=d_train, num_boost_round=810, valid_sets=watchlist, verbose_eval=0, early_stopping_rounds=400)
@@ -404,7 +425,7 @@ def trainCV(X, y, random, splits):
         print ("LGBM RMSLE: " + str(o_lgbm))
         l_lgbm.append(o_lgbm)
 
-        model_ridge = Ridge(alpha=.05, copy_X=True, fit_intercept=True, max_iter=5000, normalize=False, random_state=101, solver='auto', tol=0.001)
+        model_ridge = Ridge(alpha=.05, copy_X=True, fit_intercept=True, max_iter=50, normalize=False, random_state=101, solver='auto', tol=0.001)
 
         model_ridge.fit(train_X, train_y)
 
@@ -418,7 +439,7 @@ def trainCV(X, y, random, splits):
         print ("RIDGE RMSLE: " + str(o_ridge))
         l_ridge.append(o_ridge)
 
-        model_huber = HuberRegressor(fit_intercept=True, alpha=0.01, max_iter=5800, epsilon=363)
+        model_huber = HuberRegressor(fit_intercept=True, alpha=0.01, max_iter=58, epsilon=363)
         model_huber.fit(train_X, train_y)
 
         preds_huber = model_huber.predict(valid_X)
@@ -445,8 +466,9 @@ def trainCV(X, y, random, splits):
 
 w = 90
 
-
 y = y.values
+
+
 a, b, c = trainCV(X, y, 119, 5)
 
 
@@ -457,7 +479,13 @@ a, b, c = trainCV(X, y, 119, 5)
 X_array = np.column_stack((a, b, c))
 X_s = csr_matrix(X_array)
 
-y_s = trainSTACK(X_s, y, 11)
+y_s = trainSTACK(X_s, y, 5)
+
+
+f = LabelEncode(df.category_name)
+...
+
+
 
 
 #word baggging with dictionay: test.  train, test and train.
@@ -699,272 +727,14 @@ def fake_brand_retriever(df, all_brands):
 
     newColumn = df[['brand_name','name']].apply(fakebrandfinder, axis = 1)
 
-    found = len(df.loc[df['fake_brand_name'] != 'missing'])
+    found = len(newColumn.loc[df['brand_name'] != 'missing'])
     
     print(str(found) + " fake items branded")
 
     return newColumn
 
 
-w = 90
 
-l = []
-
-l.append([3.0,   74.4272287063,  'Reserved Show me your mumu tunic dress', 'Free People', ' Show me your mumu tunic dress'])
-l.append([206.0, 24.1283899992,  'BNWT Pink Friday Blue Sherpa', 'PINK', 'Brand new with tags pink friday Sherpa. For kit only.'])
-l.append([129.0, 14.8767356555,  'Greenidgal ONLY bundle', 'missing', 'This is specifically for Greenidgal. If you see other things that you want me to add to this bundle, please let me know so I can do so when I ship them out. I will be shipping out tomorrow September 7th. Thanks!'])
-l.append([172.0, 20.6358229673,  'Bundle', 'Victoria\'s Secret', 'Good condition Gray and lime green Xs 5 tops 4 bottoms'])
-l.append([123.0, 15.105401482,   'Fever Cami for Lovely4','Metal Mulisha', 'NWT'])
-l.append([186.0, 23.8170222872,  'Bundle', 'Brandy Melville', 'Reserved'])
-l.append([167.0, 22.8545650717,  'Bundle for Alicia', 'Under Armour', 'No description yet'])
-l.append([7.0,   50.1166123746,  'Taylor only! Bundle!', 'PINK', 'Bundle for Taylor only!'])
-l.append([250.0, 39.6490317348,  'Burberry for Sahara *ON HOLD*', 'Burberry', 'Burberry framed heads print top for @SaharaSmith'])
-l.append([76.0,  12.03272516,    'MM CLOTHING', 'missing', 'No description yet'])
-l.append([84.0,  13.5049856829,  'Two piece see through', 'missing', 'Top xs bottom fit like a small'])
-l.append([164.0, 27.368880402,   'Lularoe', 'missing', '3 XS Irma\'s. All brand new. Never been worn. NEW with tags.'])
-l.append([206.0, 35.9685678069,  'SUPER RARE STONE COLD FOX SILK HOLY TUBE', 'Stone Fox Swim', 'Silk floral Holy Tube from Stone Cold Fox. Size 1 works best for US 4. Boned inner bodice, silk floral outer, back zip. New with tags.'])
-l.append([169.0, 29.3872433192,  '(XS) Victoria\'s Secret Pink', 'PINK', 'In excellent like new condition no flaws. Loose fit.10 items'])
-l.append([65.0,  11.0298154399,  'Pizza Slime Gucci Long Sleeve', 'Gucci', 'Size Small. Worn once Pizza Slime Long Sleeve. Popular black long sleeve as seen on Skrillex and Khloe Kardashian. No longer available on their website. Slight cracking to the graphic on the back of the shirt due to defective print the company used. I\'m selling this shirt because they sent me a new one because of the defective ink. Feel free to make an offer!'])
-l.append([195.0, 34.8526599481,  'LuLaRoe', 'LuLaRoe', '3 xxs classic tees 2 xxs irmas 3 xs irmas 1 xxs Randy'])
-l.append([114.0, 20.8509916941,  'VICTORIA SECRET PINK SHIRT]', 'PINK', 'Rainbow colors pm black long sleeve shirt,in excellent condition, no flaws.PRICE IS FIRM. This is pam don\'t buy.'])
-l.append([6.0,   35.744182611,   'ON Hold !!!! Random VS Pink Collection', 'PINK', 'This is what I call a great collection of smalls !!!! So much fun!! You will receive everything in the picture !! Here is a list of everything you will receive --- • 6 destination YourCityYourPink Stickers - Atlanta , Charlotte , Kansas City , Las Vegas , North Jersey , and San Diego • 2 Free With Purchase only in store Sticker one just says " pink " and the other says " running from my problems " • 1 Victoria Secret Pink KeyChain Giftcard balance [rm] • 1 Victoria\'s Secret pink Iron on Dog Patch • 1 pink nation I\'m in pin / button • 1 Associate/ employee pink pen • 1 travel size Cool and Bright Mist • 2 pink travel size Mood mists in pink Stress no More and Pink Zzzz please • 1 package of pink hair ties and bracelets • And 1 Pink Dog logo gift card holder Can include but may or not extra finds while I\'m cleaning :)'])
-l.append([3.0,   19.9855776729,  'Blouses are Reserved for buyer', 'Marshall', 'Two top bundle reserved for a buyer already.'])
-l.append([81.0,  14.7514133307,  'PINK LOVE PINK L\/S SHIRT bright pink', 'missing', 'RSVD CLEEKHEATHER..Bright pink with Pink wrote in black bold letters with love pink wrote in script below in script writing. Worn twice,didn\'t think i would be selling and I normally cut tags out of my shirts because of the way some just stick up an out or irritate me. Has not been put in dryer was hung to dry. Worn just around house an also wasn\'t planning on selling any of my clothes until my car broke down an needed money to get fixed or this closet wouldn\'t be here. But I have car payments now so I\'m digging through closet an drawers. Price firm. Thanks for looking.plus was to big.HEATHER #1[rm]#2 [rm]#3[rm]#4[rm].#5 [rm] When bundles are made,it\'s pay when done due to a lot of non payments. Thank you. Adding now.'])
-l.append([69.0,  12.4600598307,  'Free people led Zeppelin t shirt', 'missing', 'Worn once. Great t shirt!'])
-l.append([222.0, 43.1951783544,  'Jane', 'missing', 'Bundle 226 5/19'])
-l.append([81.0,  15.5007073445,  'Palace P45 T-Shirt Grey Marl (Med)', 'Supreme', 'Brand New Palace Skateboards P45 T-Shirt in hand. Bought off the website'])
-l.append([110.0, 22.3030934272,  'Bundle for Allanna', 'missing', 'Bundle'])
-l.append([93.0,  18.819091727,   'Dkny NWT blouse', 'DKNY', 'Prana yoga long sleeve, white tank, and black beaded tank.'])
-l.append([45.0,   9.0699913812,  'Have a nice death.', 'missing', 'Perfect condition.'])
-
-
-# Bath bombs
-
-b = []
-
-b.append([103.0, 17.6706128964, 'Glitterdollz', '8 items Sex bomb, Golden Wonder bomb, Jester, Butter Bear, Stardust, experimenter, comforter and mistletoe.'])
-b.append([124.0, 26.9171780002, 'Lush bundle *RESERVED*', 'All brand new. Includes everything listed in both pictures.'])
-b.append([125.0, 28.9232761716, 'Lush Bundle on hold','FOUR brand new reusable bars. A santa in space gift box, a large bubbly shower gel and a night before Christmas gift box'])
-b.append([57.0, 15.6284718555, 'Heated Foot Spa', 'Used just a few times - awesome!! Just don\'t have room for it anymore. Purchased brand new from Amazon. Two massage rollers, heating therapy, oxygen bubbles massage, water fall & wave massage. Digital temperature and time control. LED display.'])
-b.append([40.0, 10.7961140316, '5 Error 404 Lush Bath Bombs', 'These are the new scent that was sold during black Friday. Wrapped in plastic wrap to keep them fresh.'])
-b.append([35.0, 9.52420520714, 'Bath and body works', 'New and never been used'])
-b.append([3.0, 12.5056078215, 'For Cassandra', 'Includes One 5oz Bath Bomb Each batch is made from the best organic ingredients and tested for quality •just place in the bath and relax •smells great and makes your skin super soft •Perfect gifts for Valentines Day coming up ✨Baking Soda, Citric Acid, Corn Starch, coconut oil, espom salts, food coloring, glitter, and essential oils (exotic jasmine) ✨tags: bath bomb, gift for her, black magic, Galaxy dust, glitter, LUSH, bath and body works, relax, zen, bath, home accessories, Valentine\'s Day gifts ✨want to bundle more? Just comment and I\'ll make you a listing. 1 for [rm] 2 for [rm] 3 for [rm] 4 for [rm] 5 for [rm] All with free next day shipping and tracking'])
-b.append([115.0, 34.2754220551, '4 bath & body works sets', ' Brand new bath & body works set includes 8oz fragrance mist, 8oz body cream, 8.4oz shower gel & 8.4oz body lotion. Pet/smoke free. **price is firm/no trades/no free ship/no holds/will not separate** Cocktail dress Bourbon strawberry & vanilla Poolside coconut colada Golden pear & brown sugar'])
-b.append([7.0, 24.0414371843, 'Lush sample empty containers bags bundle', 'Lush sample empty containers & bags bundle. BUNDLES ARE THE BEST☺☺ SAVE $$$ check out my other items in my closet Lush 15 gift shopping bags and gift 10 sample empty containers bundle bags are different size and great condition. The sample containers are good to give as gifts when buyers buy your lush products. presentation in selling you lush products will give you a 5 star rating. these would be great if you are selling Lush items such as perfumes bath bombs and other lush cosmetics. perfect for gift wrapping birthday and holiday present. they are in great condition Lush set Lush cosmetics Lush gifts Lush bath bomb'])
-
-b.append([9.0, 29.4772961577, 'On hold for megalooper', 'Love spell Snowcastle Cherry blossom bubble bar Orange blossom Lux pud Havana sunrise sample'])
-b.append([7.0, 22.7906094201, 'On hold for megalooper', 'Brand new easter collection scrub! Shares its scent with honey I washed the kids but is a bit more coconut scented to my nose, similar to Buffy or king of skin :)'])
-b.append([35.0, 11.4084350349, 'Full size exotic coconut', 'Brand new never used, full sized products. Shower gel and body splash. Smoke free home. [rm] each or [rm] sold together. I ship on Tuesdays as its my only day off. Pricing is firm! On this item! Free shipping on this item. Selling together, only'])
-b.append([65.0, 22.0955372783, 'Lush Kitchen 7 pc. Citrus Spring/Rhea', 'All made fresh in the Kitchen this month Sunny Citrus soap Somewhere Over The Rainbow Soap Over & Over Bomb Ups-A-Daisy bath bomb The Sicilian Mum bomb Your Mother Should Know [rm] plus [rm] shipping'])
-b.append([17.0, 5.3549440164, 'PINK bath Bomb', 'Calming Vanilla'])
-b.append([9.0, 26.6029652528, 'Body wash bundle', 'This includes (3) 1.2 oz herbal essences body wash (1) 1.7oz old spice Fiji body wash (1) Nivea touch of happiness body wash **NO FREE SHIP**'])
-b.append([84.0, 29.9873399684, 'Reserved Lush Bundle', 'RESERVED Free USPS Shipping Brand new and never used 1 x The rough with the smooth 2 x unicorn horn 2 x candy mountain 2 x French kiss 1 x butter bear 1 x Santa\'s belly'])
-
-# Shoes - no or few bundles for inverse check
-s = []
-
-s.append([100.0, 20.2953771963, 'Luchesse horn back crocs.', 'missing', 'Women\'s 10. Men\'s 8.5'])
-s.append([120.0, 25.1165618361, 'Chanel !!!NEW!!!', 'Chanel', 'NEW CHANEL NO SCRATCHES'])
-s.append([55.0, 16.0658097137, 'Vince Verell Slip-On Sneakers 6', 'Vince', 'Great Condition. Only worn 1/2 times. Back of shoe has a little rip from where my sister\'s foot got caught. Not noticeable when wearing. Pictured above. Smoke/Pet Free.'])
-s.append([125.0, 40.9778933657, 'Burberry Espadrilles', 'Burberry', 'No description yet'])
-s.append([5.0, 16.6341695176, 'Sperry boat shoes Ladies size 8', 'Sperry', 'Ladies animal print Sperry boat shoes Ladies size 8. Gently worn.'])
-s.append([9.0, 28.3821428738, 'Pink suede UGGS', 'UGG Australia', 'Great condition, ugg slip ons with pink suede lined with fur inside'])
-s.append([9.0, 27.2920805847, 'Pink bow slide on', 'missing', 'This pink bow slip on are brand new never worn. They are a size 7-8 but, can easily fit a 8.5. Very girly and cute'])
-s.append([9.0, 24.1096211128, 'Pedro reserved', 'missing', 'In women\'s size 6'])
-s.append([81.0, 31.9562287335, 'Black Uggs', 'UGG Australia', 'Black uggs slippers that you can wear anywhere'])
-
-s.append([46.0, 17.9845374972, 'Ariat women\'s Cruiser slip on shoes', 'Ariat', 'Good condition, minimal wear. Very comfortable. Retail for [rm] new.'])
-s.append([9.0, 22.1907965682, 'Size 8 Danskin slip on sneakers', 'Danskin', 'Barely worn Size 8 Dansko brand slip ons with memory foam No box'])
-s.append([5.0, 12.8517391783, 'moccasins.', 'missing', 'No description yet'])
-
-
-n = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "elleven", "twelve"]
-
-dsfs
-import re
-
-def CutAfter(s):
-    
-    s = s.lower()
-
-    l = [
-        "please",
-        "Free shipping",
-        "No free shipping",
-        "Check out",
-        "Will ship",
-        "Shipping",
-        "Free priority",
-        "bundle to save"
-        "Ships fast",
-        "Freely message",
-        "please do not",
-        "prices are",
-        "Thank you",
-        "P.S.",
-        "do not buy",
-        "please let me",
-        "will pack",
-        "let me",
-        "leave us",
-        "all sales are"]
-
-    for x in l:
-        x = x.lower()
-        s = re.sub(x + ".*$", "___CUT___", s)
-
-    return s
-
-w = 90
-
-def CutSeriesAfter(s):
-    for x in s:
-        print(CutAfter(x))
-
-
-w = 90
-
-
-
-
-
-
-def StringScanner(s):
-
-    #brands I have include....
-
-    # Preprocess:
-    # remove n in one
-    # two in one
-    # Sz.7.5
-    # 1960 - 2020 - likely year drop here or in post?
-
-    #number am
-    #number pm
-    #1st, 2nd
-
-    #matt27  - drop
-    #stone   - drop (one)
-
-    #...both ...or ...each... X and Y.
-    # ...both for or each for... rm or number
-
-
-    # will combine
-
-
-
-    #  10 yrs, year years
-
-    # in total ....100 cards...
-
-    # one side, two-sided 
-
-    # all/included/on the in the picture
-
-    # set of... noun + s.
-
-    # 4/25 green card
-    # Card #84 -124
-
-    # Holo Machamp 9/101
-
-    # look for item sum: [('10', 'pajama'), ('3', 'pajama'), ('7', 'pajama')]. Almost certain bundle.
-
-   
-
-    # boy's medium 10/12 brand new 
-
-    # Sizes medium 10/12
-
-    # and H&M, Crazy 8.
-
-    # size small 5/6
-
-    # Sizes 12-16 
-
-   
-
-    # no description yet => na
-
-    # Price includes shipping 
-
-    #model A1218. Worges great,  - '1219. works'
-
-    # 7", 10.1"
-    # 1 case is [rm] 2 cases is [rm] 3 cases is [rm] 
-
-    # gen, generation 3rd gen. gen 3. Generation 3. first gen
-
-    #GB, gb, gigs, gig.
-
- 
-    # 48MB/s => '48', 'mb'
-
-    # USB 3.0
-
-
-    s = re.sub("men's \d+\.?\d*", "men's", s)
-    s = re.sub("mens \d+\.?\d*", "men's", s)
-    s = re.sub("womens \d+\.?\d*", "women's", s)
-
-    s = re.sub("size \d+-\d+", "size", s)
-    s = re.sub("size \d+\.?\d*", "size", s)
-
-    # Remove size number  'Size 8' , size 8.5 size 7-8
-    # Remove women's 10. Men's 8.5
-    # Remove digit times.  worn two times. worn one time. Keep time/times.
-
-    print(s)
-
-    s = s.lower()
-    letter_digits = "|one|two|three|four|five|six|seven|eight|nine|ten"
-
-    regex_number_and_item = "(\d+\.?\d*" + letter_digits + ")\s*([a-zA-Z]+)"
-
-    regex_number_in_parantheses = "\((\d+)\)"
-
-    regex_word_signal = " (bundle|all|everything|and|collection|set)"
-
-    regex_word_antisignal = " will bundle|each|random|\[rm\]"
-
-    m1 = re.findall(regex_number_and_item, s)
-    m2 = re.findall(regex_number_in_parantheses, s)
-
-    print (m1)
-    print (m2)
-
-    # remove qty + time, qty + times
- 
-    l_anti = re.findall(regex_word_antisignal, s)
-
-    print (l_anti)
-
-    l_pro  =  re.findall(regex_word_signal, s)
-
-    print (l_pro)
-
-    print ("-----------")
-
-w = 90
-
-def SeriesScanner(s):
-    for x in s:
-        StringScanner(x)
-
-w = 90
-
-def QtyScanner(l):
-    for x in l:
-        StringScanner(x[4])
-        
-
-
-
-w = 90
-
-
-QtyScanner(l)
 
 def main():
     
@@ -986,6 +756,10 @@ def main():
     all_brands = set(df['brand_name'].values)
 
     all_brands.remove('missing')
+
+    isFakeBrand = False
+
+    df['fake_brand'] = fake_brand_retriever(df, all_brands)
 
 
 
@@ -1019,7 +793,7 @@ def main():
 
     nCategories = len(l_first_index)
 
-    cat_IDs = get_cats_contains(c, 'card')
+    cat_IDs = get_cats_contains(c, 'shirt')
 
     list_cats(df, cat_IDs, l_first_index)
 
@@ -1032,8 +806,6 @@ def main():
     df = i
 
     df = all
-
-    df.fake2 = fake_brand_retriever(i, all_brands)
 
     print("Multi-cat, size = " + str(len(i)))
 
