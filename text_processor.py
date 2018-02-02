@@ -878,7 +878,7 @@ def SingleStringScanner(s):
     s = re.sub("size \d+-\d+", "size", s)
     s = re.sub("size \d+\.?\d*", "size", s)
    
-    print(s)
+    #print(s)
     letter_digits = "|one|two|three|four|five|six|seven|eight|nine|ten"
 
     regex_number_and_item = "(\d+\.?\d*" + letter_digits + ")\s*([a-zA-Z]+)"

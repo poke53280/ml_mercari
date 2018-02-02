@@ -176,12 +176,17 @@ def get_XY_Basic(df):
   l.append( LabelBinarize  (df['brand_name'])                                   )
 
   if 'fake_brand' in df:
-    l.append (LabelBinarize(df['fake_brand']))
+      print ("fake brand feature enabled")
+      l.append (LabelBinarize(df['fake_brand']))
 
   # DUMMIES -------------------------------------------------------------
   w = 90
 
   l_dummies = ['item_condition_id', 'shipping']
+
+  if 'qty' in df:
+      print("qty feature found")
+      l_dummies.append('qty')
 
   l.append( csr_matrix(pd.get_dummies(df[l_dummies], sparse=True).values))
 
@@ -338,7 +343,7 @@ def trainSTACK(X, y, splits):
         params = { 'learning_rate': 0.001, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
                         'bagging_fraction': 0.6, 'bagging_freq': 0, 'nthread': 4, 'max_bin': 255 }
 
-        model_lgbm = lgb.train(params, train_set=d_train, num_boost_round=3110, valid_sets=watchlist, verbose_eval=0, early_stopping_rounds=400)
+        model_lgbm = lgb.train(params, train_set=d_train, num_boost_round=3110, valid_sets=watchlist, verbose_eval=50, early_stopping_rounds=400)
 
         preds_lgbm = model_lgbm.predict(valid_X)
 
@@ -410,10 +415,10 @@ def trainCV(X, y, random, splits):
         
         watchlist = [d_train, d_valid]
     
-        params = { 'learning_rate': 0.05, 'application': 'regression', 'num_leaves': 31, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
+        params = { 'learning_rate': 0.01, 'application': 'regression', 'num_leaves': 311, 'verbosity': -1, 'metric': 'RMSE', 'data_random_seed': 1,
                         'bagging_fraction': 0.6, 'bagging_freq': 0, 'nthread': 4, 'max_bin': 255 }
 
-        model_lgbm = lgb.train(params, train_set=d_train, num_boost_round=810, valid_sets=watchlist, verbose_eval=0, early_stopping_rounds=400)
+        model_lgbm = lgb.train(params, train_set=d_train, num_boost_round=810, valid_sets=watchlist, verbose_eval=50, early_stopping_rounds=400)
 
         preds_lgbm = model_lgbm.predict(valid_X)
 
@@ -759,8 +764,10 @@ def main():
 
     isFakeBrand = False
 
-    df['fake_brand'] = fake_brand_retriever(df, all_brands)
 
+
+
+    q['qty'] = q.item_description.apply(lambda x: SingleStringScanner(x))
 
 
     df['category_name'].fillna(value='missing', inplace=True)
@@ -793,14 +800,20 @@ def main():
 
     nCategories = len(l_first_index)
 
-    cat_IDs = get_cats_contains(c, 'shirt')
+    cat_IDs = get_cats_contains(c, 'elec')
 
     list_cats(df, cat_IDs, l_first_index)
-
-
+    
     cat_res = []
 
     i = get_multi_slice(df, cat_IDs, l_first_index)
+
+
+    i['qty'] = i.item_description.apply(lambda x: SingleStringScanner(x))
+
+
+
+
 
     all = df
     df = i
