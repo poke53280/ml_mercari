@@ -939,3 +939,121 @@ def QtyScanner(l):
 w = 90
 
 QtyScanner(b)
+
+
+
+from nltk.corpus import stopwords
+import re
+
+NUM_BRANDS = 4500
+NUM_CATEGORIES = 1250
+
+###############################################################################################
+#
+#   TXTP_rmsle
+#
+
+def TXTP_rmsle(y, y0):
+    assert len(y) == len(y0)
+    return np.sqrt(np.mean(np.power(np.log1p(y) - np.log1p(y0), 2)))
+
+
+###############################################################################################
+#
+#   TXTP_split_cat
+#
+
+def TXTP_split_cat(text):
+    try:
+        return text.split("/")
+    except:
+        return ("No Label", "No Label", "No Label")
+
+
+###############################################################################################
+#
+#   TXTP_handle_missing_inplace
+#
+
+def TXTP_handle_missing_inplace(dataset):
+    dataset['general_cat'].fillna(value='missing', inplace=True)
+    dataset['subcat_1'].fillna(value='missing', inplace=True)
+    dataset['subcat_2'].fillna(value='missing', inplace=True)
+    dataset['brand_name'].fillna(value='missing', inplace=True)
+    dataset['item_description'].fillna(value='missing', inplace=True)
+
+w = 90
+
+###############################################################################################
+#
+#   TXTP_cutting
+#
+
+def TXTP_cutting(dataset):
+    pop_brand = dataset['brand_name'].value_counts().loc[lambda x: x.index != 'missing'].index[:NUM_BRANDS]
+    dataset.loc[~dataset['brand_name'].isin(pop_brand), 'brand_name'] = 'missing'
+    pop_category1 = dataset['general_cat'].value_counts().loc[lambda x: x.index != 'missing'].index[:NUM_CATEGORIES]
+    pop_category2 = dataset['subcat_1'].value_counts().loc[lambda x: x.index != 'missing'].index[:NUM_CATEGORIES]
+    pop_category3 = dataset['subcat_2'].value_counts().loc[lambda x: x.index != 'missing'].index[:NUM_CATEGORIES]
+    dataset.loc[~dataset['general_cat'].isin(pop_category1), 'general_cat'] = 'missing'
+    dataset.loc[~dataset['subcat_1'].isin(pop_category2), 'subcat_1'] = 'missing'
+    dataset.loc[~dataset['subcat_2'].isin(pop_category3), 'subcat_2'] = 'missing'
+
+###############################################################################################
+#
+#   TXTP_to_categorical
+#
+
+def TXTP_to_categorical(dataset):
+    dataset['general_cat'] = dataset['general_cat'].astype('category')
+    dataset['subcat_1'] = dataset['subcat_1'].astype('category')
+    dataset['subcat_2'] = dataset['subcat_2'].astype('category')
+    dataset['item_condition_id'] = dataset['item_condition_id'].astype('category')
+
+
+###############################################################################################
+#
+#   TXTP_normalize_text
+#
+
+# Define helpers for text normalization
+stopwords = {x: 1 for x in stopwords.words('english')}
+non_alphanums = re.compile(u'[^A-Za-z0-9]+')
+
+
+def TXTP_normalize_text(text):
+    return u" ".join(
+        [x for x in [y for y in non_alphanums.sub(' ', text).lower().strip().split(" ")] \
+         if len(x) > 1 and x not in stopwords])
+
+w = 90
+
+from sklearn.feature_extraction.text import HashingVectorizer
+#from sklearn.linear_model import *
+#vct= HashingVectorizer()
+#clf= SGDRegressor()
+
+import wordbatch
+from wordbatch.models import FTRL
+from wordbatch.extractors import WordBag
+
+
+
+wb= wordbatch.WordBatch(normalize_text,extractor=(WordBag, {"hash_ngrams":2, "hash_ngrams_weights":[0.5, -1.0],
+                                                                    "hash_size":2**23, "norm":'l2', "tf":'log', "idf":50.0}))
+
+
+
+clf= FTRL(alpha=1.0, beta=1.0, L1=0.00001, L2=1.0, D=2 ** 25, iters=1)
+
+train_texts= ["Cut down a tree with a herring? It can't be done.", "Don't say that word.", "How can we not say the word if you don't tell us what it is?"]
+
+train_labels= [1, 0, 1]
+
+test_texts= ["Wait! I said it! I said it! Ooh! I said it again!"]
+
+X = wb.transform(train_texts)
+
+clf.fit(X, train_labels)
+
+preds= clf.predict(wb.transform(test_texts))
