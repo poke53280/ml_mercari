@@ -17,7 +17,7 @@ class Bucketer():
         a = zip(l, l.index)
         _, w = zip(*a)
 
-        w = w[:90]
+        w = w[:100]
 
         self.base = np.sort(w)
 
@@ -36,6 +36,62 @@ class Bucketer():
 
 b = Bucketer(train.price)
 
-my_nums = np.array([31.2,9.9,55.3,128.9])
+my_nums = np.array([31.2,9.9,55.3,128.9, 2.1])
 
 my_nums2 = b.get_binned_price(my_nums)
+
+
+
+l = s.value_counts()
+
+import matplotlib.pyplot as plt
+import numpy as np
+import plotly.plotly as py
+
+a = l.index
+
+a = a.values
+
+a = np.sort(a)
+
+plt.plot(a[:100])
+
+plt.show()
+
+l = l.sort_index()
+
+plt.hist(a)
+
+fig = plt.gcf()
+plt.show()
+
+
+l[:10].sum()
+
+
+a = np.random.randint(10, size=100)
+b = a + 1
+
+rmsle_func(a, b)
+
+def bottom_digitize(x):
+    if x < 3.5:
+        return 3
+    elif x < 4.5:
+        return 4
+    elif x < 5.5:
+        return 5
+    elif x < 6.5:
+        return 6
+    elif x < 7.5:
+        return 7
+    elif x < 8.5:
+        return 8
+    elif x < 9.5:
+        return 9
+    else:
+        return x
+
+w = 90
+
+price_series.apply(bottom_digitize)

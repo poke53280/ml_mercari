@@ -26,8 +26,6 @@ from wordbatch.extractors import WordBag, WordHash
 from sklearn.linear_model import HuberRegressor
 
 
-# --------------------------copy in begin
-
 
 from nltk.corpus import stopwords
 import re
@@ -35,6 +33,26 @@ import re
 NUM_BRANDS = 4500
 NUM_CATEGORIES = 1250
 
+def TXTP_bottom_digitize(x):
+    if x < 3.5:
+        return 3
+    elif x < 4.5:
+        return 4
+    elif x < 5.5:
+        return 5
+    elif x < 6.5:
+        return 6
+    elif x < 7.5:
+        return 7
+    elif x < 8.5:
+        return 8
+    elif x < 9.5:
+        return 9
+    else:
+        return x
+
+
+w = 90
 ###############################################################################################
 #
 #   TXTP_rmsle
@@ -92,11 +110,13 @@ def TXTP_cutting(dataset):
 #
 
 def TXTP_to_categorical(dataset):
+    dataset['category_name'] = dataset['category_name'].astype('category')
     dataset['general_cat'] = dataset['general_cat'].astype('category')
     dataset['subcat_1'] = dataset['subcat_1'].astype('category')
     dataset['subcat_2'] = dataset['subcat_2'].astype('category')
     dataset['item_condition_id'] = dataset['item_condition_id'].astype('category')
 
+w = 90
 
 ###############################################################################################
 #
@@ -120,8 +140,7 @@ w = 90
 
 
 
-
-def main():
+def process():
     start_time = time.time()
    
     print(strftime("%Y-%m-%d %H:%M:%S", gmtime()))
@@ -133,23 +152,22 @@ def main():
         DATA_DIR_BASEMENT = "D:\\mercari\\"
         DATA_DIR = DATA_DIR_PORTABLE
 
+
         train = pd.read_table(DATA_DIR + "train.tsv");
         test = pd.read_table(DATA_DIR + "test.tsv");
 
     else:
         train = pd.read_table('../input/mercari-price-suggestion-challenge/train.tsv', engine='c')
         test = pd.read_table('../input/mercari-price-suggestion-challenge/test.tsv', engine='c')
-
-
   
-    print('[{}] Finished to load data'.format(time.time() - start_time))
-    print('Train shape: ', train.shape)
-    print('Test shape: ', test.shape)
     nrow_test = train.shape[0]  # -dftt.shape[0]
     dftt = train[(train.price < 3.0)]
     train = train.drop(train[(train.price < 3.0)].index)
     del dftt['price']
     nrow_train = train.shape[0]
+
+    #investigate_price(train["price"])
+
     y = np.log1p(train["price"])
     merge: pd.DataFrame = pd.concat([train, dftt, test])
     submission: pd.DataFrame = test[['test_id']]
@@ -160,18 +178,25 @@ def main():
 
     merge['general_cat'], merge['subcat_1'], merge['subcat_2'] = \
         zip(*merge['category_name'].apply(lambda x: TXTP_split_cat(x)))
-    merge.drop('category_name', axis=1, inplace=True)
-    print('[{}] Split categories completed.'.format(time.time() - start_time))
+    
+    
+    
 
     TXTP_handle_missing_inplace(merge)
-    print('[{}] Handle missing completed.'.format(time.time() - start_time))
 
     TXTP_cutting(merge)
-    print('[{}] Cut completed.'.format(time.time() - start_time))
 
     TXTP_to_categorical(merge)
-    print('[{}] Convert categorical completed'.format(time.time() - start_time))
+    
+    merge['coded'] = merge[:nrow_train].category_name.cat.codes
+   
+    _, cat3coded_valid = train_test_split(merge['coded'], test_size=0.3, random_state=100)
 
+    merge.drop('category_name', axis=1, inplace=True)
+
+    lb = LabelBinarizer(sparse_output=True)
+
+    X_cat3_valid = lb.fit_transform(cat3coded_valid)
 
 
     merge['name'] = merge['name'].apply(lambda x: TXTP_normalize_text(x))
@@ -356,8 +381,17 @@ def main():
 
     preds = model.predict(X_test)
 
-    submission['price'] = np.expm1(preds)
+    submission['price'] =  np.expm1(preds)                  
     submission.to_csv("submission_wordbatch_ftrl_fm_lgb.csv", index=False)
+
+    print("All done.")
+
+
+w = 90
+
+def main():
+    process()
+
 
 
 if __name__ == '__main__':
