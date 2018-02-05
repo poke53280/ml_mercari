@@ -146,7 +146,7 @@ def process():
    
     print(strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
-    isHome = True
+    isHome = False
 
     isQuickRun = True
 
@@ -160,8 +160,8 @@ def process():
         test = pd.read_table(DATA_DIR + "test.tsv");
 
     else:
-        train = pd.read_table('../input/mercari-price-suggestion-challenge/train.tsv', engine='c')
-        test = pd.read_table('../input/mercari-price-suggestion-challenge/test.tsv', engine='c')
+        train = pd.read_table('../input/train.tsv', engine='c')
+        test = pd.read_table('../input/test.tsv', engine='c')
   
     nrow_test = train.shape[0]  # -dftt.shape[0]
     dftt = train[(train.price < 3.0)]
@@ -258,6 +258,9 @@ def process():
     else:
         model = FTRL(alpha=0.01, beta=0.1, L1=0.00001, L2=1.0, D=sparse_merge.shape[1], iters=50, inv_link="identity", threads=1)
    
+
+    #=> 0.438, 485s.
+
     model.fit(train_X, train_y)
     print('[{}] Train FTRL completed'.format(time.time() - start_time))
     
@@ -269,8 +272,12 @@ def process():
     # FTRL END
 
     # HUBER BEGIN
+
     setup_Huber = 1
-    
+
+    if isQuickRun:
+        setupHuber = 4
+
     if (setup_Huber==1):
         model = HuberRegressor(fit_intercept=True, alpha=0.01, 
                                max_iter=80, epsilon=363)
@@ -281,8 +288,15 @@ def process():
                                
     if (setup_Huber==3):
         model = HuberRegressor(fit_intercept=True, alpha=0.02, 
-                               max_iter=200, epsilon=256)       
+                               max_iter=200, epsilon=256)  
+        
+    if (setup_Huber==4):
+        model = HuberRegressor(fit_intercept=True, alpha=0.02, 
+                               max_iter=2, epsilon=256)
                         
+
+    # => 0.476, 587 s.
+
     model.fit(train_X, train_y)
     print('[{}] Predict Huber completed.'.format(time.time() - start_time))
     predsHUBER = model.predict(X=valid_X)
@@ -293,6 +307,9 @@ def process():
 
     # PASSIVE AGRESSIVE BEGIN
     setup_PAR = 2
+
+    if isQuickRun:
+        setup_PAR = 3
     
     if (setup_PAR==1):
         model = PassiveAggressiveRegressor(C=1.05, fit_intercept=True, loss='epsilon_insensitive', max_iter=120, random_state=433)
@@ -300,8 +317,15 @@ def process():
     if (setup_PAR==2):
         model = PassiveAggressiveRegressor(C=2.05, 
               fit_intercept=True, loss='epsilon_insensitive',
-              max_iter=150, random_state=3232)          
+              max_iter=150, random_state=3232)     
+        
+    if (setup_PAR==3):
+        model = PassiveAggressiveRegressor(C=2.05, 
+              fit_intercept=True, loss='epsilon_insensitive',
+              max_iter=2, random_state=3232) 
     
+
+    # => 0.599, 229s.
     
     model.fit(train_X, train_y)
     print('[{}] Predict PAR completed.'.format(time.time() - start_time))
@@ -380,7 +404,6 @@ def process():
 
     print("LGB dev RMSLE:", TXTP_rmsle(np.expm1(valid_y), np.expm1(predsLGB)))
           
-    del X_test; gc.collect()
     print('[{}] Predict LGB completed.'.format(time.time() - start_time))
 
     d = X_cat3_valid.todense()
