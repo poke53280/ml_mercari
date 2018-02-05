@@ -41,12 +41,13 @@ from nltk.corpus import stopwords
 from nltk.tokenize import RegexpTokenizer 
 import os, re, csv, math, codecs
 
+
 sns.set_style("whitegrid")
 np.random.seed(0)
 
 DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\toxic\\"
 
-MAX_NB_WORDS = 100000
+MAX_NB_WORDS = 10000
 
 
 print('loading word embeddings...')
@@ -62,7 +63,7 @@ for line in tqdm(f):
     embeddings_index[word] = coefs
 f.close()
 
-w = 90
+"""c"""
 
 print('found %s word vectors' % len(embeddings_index))
 
@@ -229,18 +230,18 @@ model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
 
 model.summary()
 
-#define callbacks
 early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.01, patience=4, verbose=1)
+
 callbacks_list = [early_stopping]
 
 
 hist = model.fit(word_seq_train, y_train, batch_size=batch_size, epochs=num_epochs, callbacks=callbacks_list, validation_split=0.1, shuffle=True, verbose=2)
 
 
+y_test = model.predict(word_seq_test)
 
 
-
-######################################
+###########################################################################
 
 
 df['item_description'].fillna(value='missing', inplace=True)
