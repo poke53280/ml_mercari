@@ -95,3 +95,18 @@ def bottom_digitize(x):
 w = 90
 
 price_series.apply(bottom_digitize)
+
+
+
+l = train.price.value_counts()
+# possible to clip here
+sum = l.sum()
+l.apply(lambda x: x/sum)
+
+# input stream:
+# sort
+# let each group take from bottom.
+
+
+
+
