@@ -24,6 +24,7 @@ from wordbatch.models import FTRL, FM_FTRL
 from wordbatch.extractors import WordBag, WordHash
 
 from sklearn.linear_model import HuberRegressor
+from sklearn.linear_model import PassiveAggressiveRegressor
 
 
 
@@ -147,6 +148,8 @@ def process():
 
     isHome = True
 
+    isQuickRun = True
+
     if isHome:
         DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\"
         DATA_DIR_BASEMENT = "D:\\mercari\\"
@@ -166,8 +169,6 @@ def process():
     del dftt['price']
     nrow_train = train.shape[0]
 
-    #investigate_price(train["price"])
-
     y = np.log1p(train["price"])
     merge: pd.DataFrame = pd.concat([train, dftt, test])
     submission: pd.DataFrame = test[['test_id']]
@@ -176,11 +177,7 @@ def process():
     del test
     gc.collect()
 
-    merge['general_cat'], merge['subcat_1'], merge['subcat_2'] = \
-        zip(*merge['category_name'].apply(lambda x: TXTP_split_cat(x)))
-    
-    
-    
+    merge['general_cat'], merge['subcat_1'], merge['subcat_2'] = zip(*merge['category_name'].apply(lambda x: TXTP_split_cat(x)))
 
     TXTP_handle_missing_inplace(merge)
 
@@ -188,10 +185,11 @@ def process():
 
     TXTP_to_categorical(merge)
     
-    merge['coded'] = merge[:nrow_train].category_name.cat.codes
+    m = merge[:nrow_train].category_name.cat.codes
    
-    _, cat3coded_valid = train_test_split(merge['coded'], test_size=0.3, random_state=100)
+    _, cat3coded_valid = train_test_split(m, test_size=0.3, random_state=100)
 
+    del m
     merge.drop('category_name', axis=1, inplace=True)
 
     lb = LabelBinarizer(sparse_output=True)
@@ -209,8 +207,6 @@ def process():
                                                                   }), procs=8)
     wb.dictionary_freeze= True
   
-
-
     X_name = wb.fit_transform(merge['name'])
 
     print('[{}] name fit_transform completed'.format(time.time() - start_time))
@@ -223,8 +219,6 @@ def process():
     X_category1 = wb.fit_transform(merge['general_cat'])
     X_category2 = wb.fit_transform(merge['subcat_1'])
     X_category3 = wb.fit_transform(merge['subcat_2'])
-    print('[{}] Count vectorize `categories` completed.'.format(time.time() - start_time))
-
 
     merge['item_description'] = merge['item_description'].apply(lambda x: TXTP_normalize_text(x))
 
@@ -232,62 +226,95 @@ def process():
 
     wb = wordbatch.WordBatch(extractor=(WordBag, {"hash_ngrams": 2, "hash_ngrams_weights": [1.0, 1.0],
                                                                   "hash_size": 2 ** 28, "norm": "l2", "tf": 1.0,
-                                                                  "idf": None})
-                             , procs=8)
+                                                                  "idf": None}) , procs=8)
     wb.dictionary_freeze= True
     X_description = wb.fit_transform(merge['item_description'])
     
-    print('[{}] item_description fit_transform completed'.format(time.time() - start_time))
-
     del(wb)
     X_description = X_description[:, np.array(np.clip(X_description.getnnz(axis=0) - 1, 0, 1), dtype=bool)]
-    print('[{}] Vectorize `item_description` completed.'.format(time.time() - start_time))
 
     lb = LabelBinarizer(sparse_output=True)
     X_brand = lb.fit_transform(merge['brand_name'])
-    print('[{}] Label binarize `brand_name` completed.'.format(time.time() - start_time))
 
-    X_dummies = csr_matrix(pd.get_dummies(merge[['item_condition_id', 'shipping']],
-                                          sparse=True).values)
-    print('[{}] Get dummies on `item_condition_id` and `shipping` completed.'.format(time.time() - start_time))
-    print(X_dummies.shape, X_description.shape, X_brand.shape, X_category1.shape, X_category2.shape, X_category3.shape,
-          X_name.shape)
+    X_dummies = csr_matrix(pd.get_dummies(merge[['item_condition_id', 'shipping']], sparse=True).values)
+
     sparse_merge = hstack((X_dummies, X_description, X_brand, X_category1, X_category2, X_category3, X_name)).tocsr()
 
     print('[{}] Create sparse merge completed'.format(time.time() - start_time))
     del X_dummies, merge, X_description, lb, X_brand, X_category1, X_category2, X_category3, X_name; gc.collect()
 
-    # pd.to_pickle((sparse_merge, y), DATA_DIR + "xy_anders.pkl")
-    # else:
-    #nrow_train, nrow_test= 1481661, 1482535
-    #sparse_merge, y = pd.read_pickle("xy.pkl")
-
-    # Remove features with document frequency <=1
-    print(sparse_merge.shape)
     mask = np.array(np.clip(sparse_merge.getnnz(axis=0) - 1, 0, 1), dtype=bool)
     sparse_merge = sparse_merge[:, mask]
     X = sparse_merge[:nrow_train]
     X_test = sparse_merge[nrow_test:]
-    print(sparse_merge.shape)
     
     train_X, valid_X, train_y, valid_y = train_test_split(X, y, test_size=0.3, random_state=100)
+    del X; gc.collect()
 
-    if isHome:
+    # FTRL BEGIN
+
+    if isQuickRun:
         model = FTRL(alpha=0.01, beta=0.1, L1=0.00001, L2=1.0, D=sparse_merge.shape[1], iters=1, inv_link="identity", threads=1)
     else:
         model = FTRL(alpha=0.01, beta=0.1, L1=0.00001, L2=1.0, D=sparse_merge.shape[1], iters=50, inv_link="identity", threads=1)
-
-    del X; gc.collect()
+   
     model.fit(train_X, train_y)
     print('[{}] Train FTRL completed'.format(time.time() - start_time))
-
     
     preds_FTRL = model.predict(X=valid_X)
     print("FTRL dev RMSLE:", TXTP_rmsle(np.expm1(valid_y), np.expm1(preds_FTRL)))
 
     print('[{}] Predict FTRL completed'.format(time.time() - start_time))
 
-    if isHome:
+    # FTRL END
+
+    # HUBER BEGIN
+    setup_Huber = 1
+    
+    if (setup_Huber==1):
+        model = HuberRegressor(fit_intercept=True, alpha=0.01, 
+                               max_iter=80, epsilon=363)
+    
+    if (setup_Huber==2):
+        model = HuberRegressor(fit_intercept=True, alpha=0.05, 
+                               max_iter=200, epsilon=1.2)
+                               
+    if (setup_Huber==3):
+        model = HuberRegressor(fit_intercept=True, alpha=0.02, 
+                               max_iter=200, epsilon=256)       
+                        
+    model.fit(train_X, train_y)
+    print('[{}] Predict Huber completed.'.format(time.time() - start_time))
+    predsHUBER = model.predict(X=valid_X)
+
+    print("HUBER  RMSLE:", TXTP_rmsle(np.expm1(valid_y), np.expm1(predsHUBER)))
+
+    # HUBER END
+
+    # PASSIVE AGRESSIVE BEGIN
+    setup_PAR = 2
+    
+    if (setup_PAR==1):
+        model = PassiveAggressiveRegressor(C=1.05, fit_intercept=True, loss='epsilon_insensitive', max_iter=120, random_state=433)
+              
+    if (setup_PAR==2):
+        model = PassiveAggressiveRegressor(C=2.05, 
+              fit_intercept=True, loss='epsilon_insensitive',
+              max_iter=150, random_state=3232)          
+    
+    
+    model.fit(train_X, train_y)
+    print('[{}] Predict PAR completed.'.format(time.time() - start_time))
+    predsPAR = model.predict(X=valid_X)
+
+    print("PASSIVE AGRESSIVE RMSLE:", TXTP_rmsle(np.expm1(valid_y), np.expm1(predsPAR)))
+
+    # PASSIVE AGRESSIVE END
+
+
+    # FM_FTRL BEGIN
+
+    if isQuickRun:
         model = HuberRegressor(fit_intercept=True, alpha=0.01, max_iter=8, epsilon=363)
     else:
         model = FM_FTRL(alpha=0.01, beta=0.01, L1=0.00001, L2=0.1, D=sparse_merge.shape[1], alpha_fm=0.01, L2_fm=0.0, init_fm=0.01,
@@ -302,6 +329,9 @@ def process():
 
    
     print('[{}] Predict FM_FTRL completed'.format(time.time() - start_time))
+
+    # FM_FTRL END
+
     del X_test; gc.collect()
     params = {
         'learning_rate': 0.6,
@@ -338,7 +368,7 @@ def process():
   
     watchlist = [d_train, d_valid]
 
-    if isHome:
+    if isQuickRun:
         model = lgb.train(params, train_set=d_train, num_boost_round=180, valid_sets=watchlist, early_stopping_rounds=1000, verbose_eval=1000)
     else:
         model = lgb.train(params, train_set=d_train, num_boost_round=6800, valid_sets=watchlist, early_stopping_rounds=1000, verbose_eval=1000)
@@ -353,8 +383,10 @@ def process():
     del X_test; gc.collect()
     print('[{}] Predict LGB completed.'.format(time.time() - start_time))
 
+    d = X_cat3_valid.todense()
 
-    X_s = csr_matrix(np.column_stack((preds_FTRL, predsFM_FTRL, predsLGB)))
+    X_s = csr_matrix(np.column_stack((preds_FTRL, predsFM_FTRL, predsLGB, predsHUBER, predsPAR, d )))
+   
     
     # Stacking
     
@@ -389,11 +421,6 @@ def process():
 
 w = 90
 
-def main():
-    process()
-
-
-
 if __name__ == '__main__':
-    main()
+    process()
 
