@@ -306,7 +306,7 @@ w = 90
 #   get_by_validation_sequence
 #
 #
-w = 90asdfsdfsdf
+w = 90
 
 
 def trainSTACK(X, y, splits):
@@ -605,7 +605,7 @@ def train1(X, y, random, is_output):
     return o
 
 
-w = 90
+"""c"""
 
 ###############################################################################################
 #
@@ -613,34 +613,42 @@ w = 90
 #
 #
 
-def get_cats_contains(c, txt):
-    l = []
-    idx = 0
-    for x in c:
-        if txt in x.lower():
-            l.append(idx)
+def get_cats_contains(lcCatRange, txt):
 
-        idx = idx + 1
+    l = []
+    txt = txt.lower()
+
+    for r in lcCatRange:
+        # if x.lower().startswith(txt.lower()):
+        if txt in r[0].lower():
+            l.append(r)
+
     return l
-w = 90
+
+"""c"""
+
+
+l1 = [1,2,6,8]
+l2 = [2,3,5,8]
+
+l3 = [x for x in l1 if x not in l2]
 
 ###############################################################################################
 #
-#   get_cats_startswith
+#   list_count
 #
 #
 
-def get_cats_startswith(c, txt):
-    l = []
-    idx = 0
-    for x in c:
-        if x.lower().startswith(txt.lower()):
-            l.append(idx)
+def list_count(lcCatRange):
+    nElements = 0
 
-        idx = idx + 1
-    return l
-w = 90
+    for r in lcCatRange:
+        size = r[2] - r[1]
+        nElements = nElements + size
 
+    return nElements
+
+"""c"""
 
 ###############################################################################################
 #
@@ -648,65 +656,70 @@ w = 90
 #
 #
 
-def list_cats(df, cat_IDs, l_first_index):
+def list_cats(lcCatRange):
 
-    acc_amount = 0
+    nElements = 0
 
-    for iCategory in cat_IDs:
-        i = get_cat_slice(df, l_first_index, iCategory)
+    for r in lcCatRange:
+        
+        size = r[2] - r[1]
+        print("Category: " + r[0] + " size = " + str(size))
+        nElements = nElements + size
 
-        size = len(i)
+    print("#Categories = " + str(len(lcCatRange)) + ", acc_size= " + str(nElements))
 
-        print("Category: " + c[iCategory]+ " size = " + str(size))
 
-        acc_amount = acc_amount + size
-
-    print("#Categories = " + str(len(cat_IDs)) + ", acc_size= " + str(acc_amount))
-
-    
-w = 90
+"""c"""
 
 ###############################################################################################
 #
-#   get_multi_slice
+#   get_multi_slice_SLOW1
 #
 #
 
-def get_multi_slice(df, cat_IDs, l_first_index):
-    
-    df_new = pd.DataFrame()
+def get_multi_slice_SLOW1(df, lcCatRange):
 
-    for iCategory in cat_IDs:
-        i = get_cat_slice(df, l_first_index, iCategory)
-        df_new = pd.concat([df_new, i])
+     rangeList = []
 
-    return df_new
+     df_new = pd.DataFrame()
 
-w = 90
+     for r in lcCatRange:
+         i = df[r[1]: r[2]]
+
+         df_new = pd.concat([df_new, i])
+
+     return df_new
+
+"""c"""
 
 ###############################################################################################
 #
-#   get_cat_slice
+#   get_multi_slice_SLOW2
 #
 #
 
-def get_cat_slice(df, l_first_index, iCategory):
-    nCategories = len(l_first_index)
-    
-    assert (iCategory < nCategories)
+def get_multi_slice_SLOW2(df, lcCatRange):
 
-    start = l_first_index[iCategory]
-    
-    if iCategory == nCategories -1 :
-        passed_end = len(df)
-    else:
-        passed_end = l_first_index[iCategory +1]
+     rangeList = []
 
-    slice = df[start:passed_end]
+     for r in lcCatRange:
 
-    return slice
+         l = list (range(r[1], r[2]))
+         rangeList.extend(l)
 
-q = 90
+     return df.iloc[rangeList]
+
+"""c"""
+
+rangeList = []
+
+for r in lcCatRange:
+
+    l = list (range(r[1], r[2]))
+    rangeList.extend(l)
+
+return df[rangeList]
+
 
 ###############################################################################################
 #
@@ -715,7 +728,6 @@ q = 90
 #
 
 def fake_brand_retriever(df, all_brands):
-
 
     def fakebrandfinder(line):
         brand = line[0]
@@ -738,8 +750,68 @@ def fake_brand_retriever(df, all_brands):
 
     return newColumn
 
+###############################################################################################
+#
+#   cat_chunk_test
+#
+#
+
+def cat_chunk_test(df, lcCatRange, chunk_name):
+    
+
+    nBatchProcessed = 0
+
+    l = lcCatRange;
+
+    for keyword in chunk_name:
+        
+
+        pCat = get_cats_contains(l, keyword)
+
+        nListCount = list_count(pCat)
+
+        print("---------------------------------- Containing " + keyword + "(" + str(nListCount) + ") -------------------------");
+
+        nBatchProcessed = nBatchProcessed + nListCount
+
+        list_cats(pCat)
+
+        i = get_multi_slice_SLOW2(df, pCat)
+        print("Chunk retrieved, size is " + str(len(i)))
+
+        l = [x for x in l if x not in pCat]
 
 
+    nListCount = list_count(l)            
+
+    list_cats(l)
+
+
+    print ("Rest elements: " + str(nListCount))
+    # print ("Rest elements2: " + str(len(iRest)))
+
+    print ("Batch processed: " + str (nBatchProcessed))
+    print ("Sum: " + str(nListCount + nBatchProcessed))
+    print ("Total:" + str(len (df)))
+
+"""c"""
+
+# Add support for or/and/not
+
+chunk_name = ['vintage', 'elec', 'pants', 'handbag', 'sweaters', 'skirts', 'shoes', 'jeans', 'tops', 'jewel', 'coat', 'apparel', 'card', 'wear', 'exercise',
+              'beau', 'handmade', 'home', 'kids', 'women', 'men', 'sports', 'other', 'missing']
+
+population = [1,2,6,8, 11, 23, 29]
+removelist = [2,6,23]
+
+population = [x for x in population if x not in removelist]
+
+
+###############################################################################################
+#
+#   main
+#
+#
 
 def main():
     
@@ -810,28 +882,19 @@ def main():
 
     w = 90
 
-    ranges = list(zip(c, l_first_index, l_end_index))
+    lcCatRange = list(zip(c, l_first_index, l_end_index))
 
-    categorySet = set (ranges)
-    categoryList = list (categorySet)
+    nCategories = len(lcCatRange)
 
-    # ...
+    pCat = get_cats_contains(lcCatRange, 'elec')
 
-    nCategories = len(l_first_index)
-
-    cat_IDs = get_cats_contains(c, 'elec')
-
-    list_cats(df, cat_IDs, l_first_index)
+    list_cats(pCat)
     
     cat_res = []
 
-    i = get_multi_slice(df, cat_IDs, l_first_index)
-
+    i = get_multi_slice(df, pCat)
 
     i['qty'] = i.item_description.apply(lambda x: SingleStringScanner(x))
-
-
-
 
 
     all = df
