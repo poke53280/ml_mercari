@@ -798,6 +798,25 @@ def main():
         x = df.category_name.searchsorted(c_value)
         l_first_index.append(x[0])
 
+    l_end_index = []
+
+    for begin in l_first_index:
+        if begin == 0:
+            pass
+        else:
+            l_end_index.append(begin)
+
+    l_end_index.append(len(df))
+
+    w = 90
+
+    ranges = list(zip(c, l_first_index, l_end_index))
+
+    categorySet = set (ranges)
+    categoryList = list (categorySet)
+
+    # ...
+
     nCategories = len(l_first_index)
 
     cat_IDs = get_cats_contains(c, 'elec')
