@@ -19,6 +19,18 @@
 #
 #
 
+
+# So far I've had best luck with simple FastText and GRUs for text fields and separate embeddings for
+# categorical inputs. With these I get about 15 minutes for 0.42 and 7 minutes for 0.425 scores.
+# Convolutions don't do much, neither do MaxPooling layers.
+
+
+
+
+
+
+
+
 import numpy as np
 import pandas as pd
 import seaborn as sns
