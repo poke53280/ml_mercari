@@ -37,25 +37,7 @@ import AFM
 
 
 
-###############################################################################################
-#
-#   is_stop
-#
-#
 
-def is_stop():
-    f = open(DATA_DIR + "stopfile.txt")
-    s = f.read()
-    f.close()
-
-    isStop = s[:4] == 'stop'
-
-    if (isStop):
-        print("Processing stopped by stop file")
-
-    return isStop
-
-w = 90
    
 
 ###############################################################################################
