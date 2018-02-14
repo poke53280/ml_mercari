@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix, hstack
 
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 import lightgbm as lgb
@@ -175,13 +175,13 @@ def load_train(isHome):
 """c"""
 
 def create_wordBatchForName():
-    wb = wordbatch.WordBatch(extractor=(WordBag, {"hash_ngrams": 2, "hash_ngrams_weights": [1.5, 1.0],
-                                                                  "hash_size": 2 ** 29, "norm": None, "tf": 'binary',
-                                                                  "idf": None
-                                                                  }), procs=8)
-    wb.dictionary_freeze= True
+    #wb = wordbatch.WordBatch(extractor=(WordBag, {"hash_ngrams": 1, "hash_ngrams_weights": [1.0], "hash_size": 2 ** 29, "norm": None, "tf": 'binary', "idf": None }), procs=8)
+    #wb.dictionary_freeze= True
 
-    return wb
+    Tvect=TfidfVectorizer(stop_words='english',ngram_range=(1,2),max_features=30000)
+
+
+    return Tvect
 
 
 def get_X_name_train(df, wb):
@@ -189,7 +189,7 @@ def get_X_name_train(df, wb):
   
     X_name = wb.fit_transform(df['name'])
     
-    X_name = X_name[:, np.array(np.clip(X_name.getnnz(axis=0) - 1, 0, 1), dtype=bool)]
+    # X_name = X_name[:, np.array(np.clip(X_name.getnnz(axis=0) - 1, 0, 1), dtype=bool)]
 
     return X_name
 
@@ -200,7 +200,7 @@ def get_X_name_test(df, wb):
   
     X_name = wb.transform(df['name'])
     
-    X_name = X_name[:, np.array(np.clip(X_name.getnnz(axis=0) - 1, 0, 1), dtype=bool)]
+    # X_name = X_name[:, np.array(np.clip(X_name.getnnz(axis=0) - 1, 0, 1), dtype=bool)]
 
     return X_name
 
@@ -229,19 +229,23 @@ def get_category_name_X(df):
 """c"""
 
 def create_wb_for_description():
-    wb = wordbatch.WordBatch(extractor=(WordBag, {"hash_ngrams": 2, "hash_ngrams_weights": [1.0, 1.0],
-                                                                  "hash_size": 2 ** 28, "norm": "l2", "tf": 1.0,
-                                                                  "idf": None}) , procs=8)
-    wb.dictionary_freeze= True
+    #wb = wordbatch.WordBatch(extractor=(WordBag, {"hash_ngrams": 1, "hash_ngrams_weights": [1.0],
+     #                                                             "hash_size": 2 ** 28, "norm": "l2", "tf": 1.0,
+      #                                                            "idf": None}) , procs=8)
+    #wb.dictionary_freeze= True
+    #
+    #return wb
 
-    return wb
+    Tvect=TfidfVectorizer(stop_words='english',ngram_range=(1,2),max_features=30000)
+    return Tvect
+
 
 def get_description_X_train(df, wb):
     df['item_description'] = df['item_description'].apply(lambda x: TXTP_normalize_text(x))
     
     X_description = wb.fit_transform(df['item_description'])
     
-    X_description = X_description[:, np.array(np.clip(X_description.getnnz(axis=0) - 1, 0, 1), dtype=bool)]
+    # X_description = X_description[:, np.array(np.clip(X_description.getnnz(axis=0) - 1, 0, 1), dtype=bool)]
 
     return X_description
 
@@ -252,7 +256,7 @@ def get_description_X_test(df, wb):
     
     X_description = wb.transform(df['item_description'])
     
-    X_description = X_description[:, np.array(np.clip(X_description.getnnz(axis=0) - 1, 0, 1), dtype=bool)]
+    # X_description = X_description[:, np.array(np.clip(X_description.getnnz(axis=0) - 1, 0, 1), dtype=bool)]
 
     return X_description
 
@@ -329,8 +333,8 @@ def getXTrain(df, isQuickRun):
     X = hstack(l).tocsr()
   
 
-    mask = np.array(np.clip(X.getnnz(axis=0) - 1, 0, 1), dtype=bool)
-    X = X[:, mask]
+    #mask = np.array(np.clip(X.getnnz(axis=0) - 1, 0, 1), dtype=bool)
+    #X = X[:, mask]
 
     X = X.astype(np.float64)
 
@@ -390,8 +394,8 @@ def getXTest(df, isQuickRun, train_bits):
     X = hstack(l).tocsr()
   
 
-    mask = np.array(np.clip(X.getnnz(axis=0) - 1, 0, 1), dtype=bool)
-    X = X[:, mask]
+    #mask = np.array(np.clip(X.getnnz(axis=0) - 1, 0, 1), dtype=bool)
+    #X = X[:, mask]
 
     X = X.astype(np.float64)
 
@@ -402,7 +406,7 @@ def getXTest(df, isQuickRun, train_bits):
 def FTRL_train(train_X, train_y, isQuickRun):
 
     if isQuickRun:
-        model = FTRL(alpha=0.01, beta=0.1, L1=0.00001, L2=1.0, D=train_X.shape[1], iters=3, inv_link="identity", threads=4)
+        model = FTRL(alpha=0.01, beta=0.1, L1=0.00001, L2=1.0, D=train_X.shape[1], iters=9, inv_link="identity", threads=4)
     else:
         model = FTRL(alpha=0.01, beta=0.1, L1=0.00001, L2=1.0, D=train_X.shape[1], iters=47, inv_link="identity", threads=4)
    
@@ -415,7 +419,7 @@ def FTRL_train(train_X, train_y, isQuickRun):
 def FM_FTRL_train(train_X, train_y, isQuickRun):
 
     if isQuickRun:
-        model = FTRL(alpha=0.01, beta=0.1, L1=0.00001, L2=1.0, D=train_X.shape[1], iters=7, inv_link="identity", threads=4)
+        model = FTRL(alpha=0.01, beta=0.1, L1=0.00001, L2=1.0, D=train_X.shape[1], iters=12, inv_link="identity", threads=4)
     else:
         model = FM_FTRL(alpha=0.01, beta=0.1, L1=0.00001, L2=0.1, D=train_X.shape[1], alpha_fm=0.01, L2_fm=0.0, init_fm=0.01,
                     D_fm=200, e_noise=0.0001, iters=18, inv_link="identity", threads=4)
@@ -446,11 +450,10 @@ def LGB_train(train_X, train_y, isQuickRun):
     # Remove features with document frequency <=100
     #print(train_X.shape)
 
-    mask = np.array(np.clip(train_X.getnnz(axis=0) - 100, 0, 1), dtype=bool)
-
-    train_X_Trimmed = train_X[:, mask]
+    #mask = np.array(np.clip(train_X.getnnz(axis=0) - 100, 0, 1), dtype=bool)
+    #train_X_Trimmed = train_X[:, mask]
+    train_X_Trimmed = train_X
        
-    #print(train_X_Trimmed.shape)
     
     d_train = lgb.Dataset(train_X_Trimmed, label=train_y)
     del train_X_Trimmed
@@ -459,7 +462,7 @@ def LGB_train(train_X, train_y, isQuickRun):
     watchlist = [d_train]
 
     if isQuickRun:
-        model = lgb.train(params, train_set=d_train, num_boost_round=100, valid_sets=watchlist, verbose_eval=0)
+        model = lgb.train(params, train_set=d_train, num_boost_round=300, valid_sets=watchlist, verbose_eval=0)
     else:
         model = lgb.train(params, train_set=d_train, num_boost_round=4800, valid_sets=watchlist, verbose_eval=0)
 
@@ -534,6 +537,36 @@ def trainAllModels(start_time, X, y, isQuickRun):
 
 """c"""
 
+def showRMSLE(lm, X_t, y_valid, isQuickTrain, isQuickPreprocess):
+
+    p0 = lm[0].predict(X_t)
+    p1 = lm[1].predict(X_t)
+    p2 = lm[2].predict(X_t)
+
+    y_pred = []
+
+    y_pred.append(p0)
+    y_pred.append(p1)
+    y_pred.append(p2)
+
+    X_s = sparse.csr_matrix(np.column_stack((y_pred[0], y_pred[1], y_pred[2])))
+
+    # meta regressor
+
+    y = lm[3].predict(X_s)
+
+
+    rmsle_m0 = TXTP_rmsle(np.expm1(p0), np.expm1(y_valid))
+    rmsle_m1 = TXTP_rmsle(np.expm1(p1), np.expm1(y_valid))
+    rmsle_m2 = TXTP_rmsle(np.expm1(p2), np.expm1(y_valid))
+    rmsle_st = TXTP_rmsle(np.expm1(y), np.expm1(y_valid))
+
+    print ("QuickTrain " + str (isQuickTrain)+ ", QuickPreprocess " + str(isQuickPreprocess))
+    print("RMSLE m0: " + str(rmsle_m0) + ", m1: " + str(rmsle_m1) + ", m2: " + str(rmsle_m2) + ", stack: " + str(rmsle_st))
+
+
+"""c"""
+
 def predictOnline(lm, X_t):
 
     y_pred = []
@@ -581,9 +614,10 @@ def trainOnline(start_time, X, y, isQuickRun):
 
     return lm
    
-def trainCV(X, y, splits, isQuickRun):
+def trainCV(d, y, splits, isQuickRun):
 
-    #train_X, valid_X, train_y, valid_y = train_test_split(X, y, test_size=0.3, random_state=100)
+    X = d['X']
+    train_bits = d['bits']
 
     kf = KFold(n_splits = splits)
     
@@ -613,6 +647,7 @@ def trainCV(X, y, splits, isQuickRun):
         y_col = 0
 
         for m in lm:
+             # Todo: Should preprocess as train set.
              p = m.predict(valid_X)
              print("  RMSLE mod #" + str(y_col) + " " +str(TXTP_rmsle(np.expm1(valid_y), np.expm1(p))))
 
@@ -627,7 +662,48 @@ def trainCV(X, y, splits, isQuickRun):
   
 
 """c"""
-  
+
+def validate_run(start_time, isHome, isQuickTrain, isQuickPreprocess):
+    print (psutil.virtual_memory().percent)
+    print('[{}] Loading train data...'.format(time.time() - start_time))
+    
+    df = load_train(isHome)
+
+    print (psutil.virtual_memory().percent)
+    print('[{}] Preprocessing...'.format(time.time() - start_time))
+
+    y = np.log1p(df["price"])
+    y = y.values
+
+    df_train, df_valid, y_train, y_valid = train_test_split(df, y, test_size=0.2, random_state=42)
+    
+    del df
+    gc.collect()
+
+
+    d = getXTrain(df_train, isQuickPreprocess)
+
+    X_train = d['X']
+    train_bits = d['bits']
+
+    print (X_train.shape)
+
+    print (psutil.virtual_memory().percent)
+    print('[{}] Training...'.format(time.time() - start_time))
+   
+    lm = trainOnline(start_time, X_train, y_train, isQuickTrain)
+
+    print ("Training done.")
+
+    del X_train
+    del y_train
+    gc.collect()
+
+    X_test = getXTest(df_valid, isQuickPreprocess, train_bits)
+
+    print (X_test.shape)
+
+    showRMSLE(lm, X_test, y_valid, isQuickTrain, isQuickPreprocess)
 
   
 def deliver_run(start_time, isHome, isQuickTrain, isQuickPreprocess):
@@ -669,7 +745,7 @@ def deliver_run(start_time, isHome, isQuickTrain, isQuickPreprocess):
 
     print('[{}] Test prediction in chunks...'.format(time.time() - start_time))
 
-    CHUNK_SIZE = 100 *1000
+    CHUNK_SIZE = 350 *1000
 
     if isHome:
         DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\"
@@ -696,15 +772,16 @@ def deliver_run(start_time, isHome, isQuickTrain, isQuickPreprocess):
         y_out.extend(y_p)
 
         test_id_out.extend(df_t.test_id.values)
+        gc.collect()
 
     data_tuples = list(zip(test_id_out,np.expm1(y_out)))
 
     submission = pd.DataFrame(data_tuples, columns=['test_id','price'])
 
     if isHome:
-        submission.to_csv(DATA_DIR + "submission_anders.csv", index=False)
+        submission.to_csv(DATA_DIR + "submission.csv", index=False)
     else:
-        submission.to_csv("submission_anders.csv", index=False)
+        submission.to_csv("submission.csv", index=False)
 
     print("Stored test lines: " + str(len (submission)))
     print('[{}] All done.'.format(time.time() - start_time))
@@ -713,25 +790,27 @@ def deliver_run(start_time, isHome, isQuickTrain, isQuickPreprocess):
 
 """c"""
 
-def dev_run(isHome, isQuickRun):
+def dev_run(isHome, isQuickTrain, isQuickPreprocess):
 
-    print (psutil.virtual_memory().percent)
+    print (str(psutil.virtual_memory().percent) + "%")
 
     df = load_train(isHome)
 
-    print (psutil.virtual_memory().percent)
+    print (str(psutil.virtual_memory().percent) + "%")
 
     y = np.log1p(df["price"])
     y = y.values
 
-    X = getX(df, isQuickRun)
+    d = getXTrain(df, isQuickPreprocess)
+    X = d['X']
+    train_bits = d['bits']
 
     del df
     gc.collect()
 
-    print (psutil.virtual_memory().percent)
+    print (str(psutil.virtual_memory().percent) + "%")
 
-    X_s = trainCV(X, y, 5, isQuickRun)
+    X_s = trainCV(d, y, 5, isQuickRun)
 
     print (psutil.virtual_memory().percent)
 
@@ -744,6 +823,8 @@ if __name__ == '__main__':
     isHome = True
     isQuickTrain = True
     isQuickPreprocess = False
-    deliver_run(start_time, isHome, isQuickTrain, isQuickPreprocess) 
+    #dev_run(isHome, isQuickTrain, isQuickPreprocess)
+    #deliver_run(start_time, isHome, isQuickTrain, isQuickPreprocess) 
+    validate_run(start_time, isHome, True, False)
 
 
