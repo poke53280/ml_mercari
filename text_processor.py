@@ -1,4 +1,202 @@
 
+
+
+#import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+import keras
+from keras import optimizers
+from keras import backend as K
+from keras import regularizers
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Dropout, Flatten
+from keras.layers import Embedding, Conv1D, MaxPooling1D, GlobalMaxPooling1D 
+from keras.utils import plot_model
+from keras.preprocessing import sequence
+from keras.preprocessing.text import Tokenizer
+from keras.callbacks import EarlyStopping
+
+from tqdm import tqdm
+from nltk.corpus import stopwords
+from nltk.tokenize import RegexpTokenizer 
+import os, re, csv, math, codecs
+
+def TXTP_rmsle(y, y0):
+    assert len(y) == len(y0)
+    return np.sqrt(np.mean(np.power(np.log1p(y) - np.log1p(y0), 2)))
+
+
+def dist_words(w1, w2, e):
+    a = (e[w1] + 1) * 0.5
+    b = (e[w2] + 1) * 0.5
+
+    o = TXTP_rmsle(a, b)
+
+    print("Distance " + w1 + ", " + w2 +": " + str(o))
+
+
+"""c"""
+
+
+sns.set_style("whitegrid")
+np.random.seed(0)
+
+
+DATA_DIR = "C:\\Users\\T149900\\ml_mercari\\"
+
+MAX_NB_WORDS = 100000
+tokenizer = RegexpTokenizer(r'\w+')
+stop_words = set(stopwords.words('english'))
+stop_words.update(['.', ',', '"', "'", ':', ';', '(', ')', '[', ']', '{', '}'])
+
+
+
+
+print('loading word embeddings...')
+embeddings_index = {}
+f = codecs.open(DATA_DIR + "toxic\\wiki.simple.vec", encoding="utf8")
+for line in tqdm(f):
+    values = line.rstrip().rsplit(' ')
+    word = values[0]
+    coefs = np.asarray(values[1:], dtype='float32')
+    embeddings_index[word] = coefs
+f.close()
+print('found %s word vectors' % len(embeddings_index))
+
+
+
+
+train_df = pd.read_csv( DATA_DIR + "toxic\\train.csv")
+test_df = pd.read_csv( DATA_DIR + "toxic\\test.csv")
+
+test_df = test_df.fillna('_NA_')
+
+print("num train: ", train_df.shape[0])
+print("num test: ", test_df.shape[0])
+
+label_names = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]
+
+y_train = train_df[label_names].values
+
+print (y_train.shape)
+
+train_df['doc_len'] = train_df['comment_text'].apply(lambda words: len(words.split(" ")))
+
+max_seq_len = np.round(train_df['doc_len'].mean() + train_df['doc_len'].std()).astype(int)
+
+raw_docs_train = train_df['comment_text'].tolist()
+raw_docs_test = test_df['comment_text'].tolist() 
+
+num_classes = len(label_names)
+
+
+print("pre-processing train data...")
+processed_docs_train = []
+for doc in tqdm(raw_docs_train):
+    tokens = tokenizer.tokenize(doc)
+    filtered = [word for word in tokens if word not in stop_words]
+    processed_docs_train.append(" ".join(filtered))
+#end for
+
+processed_docs_test = []
+for doc in tqdm(raw_docs_test):
+    tokens = tokenizer.tokenize(doc)
+    filtered = [word for word in tokens if word not in stop_words]
+    processed_docs_test.append(" ".join(filtered))
+#end for
+
+"""c"""
+
+
+tokenizer = keras.preprocessing.text.Tokenizer(num_words=MAX_NB_WORDS, lower=True, char_level=False)
+
+l = processed_docs_train + processed_docs_test
+
+tokenizer.fit_on_texts(l)  #leaky
+
+word_seq_train = tokenizer.texts_to_sequences(processed_docs_train)
+word_seq_test = tokenizer.texts_to_sequences(processed_docs_test)
+
+word_index = tokenizer.word_index
+
+print("dictionary size: ", len(word_index))
+
+
+word_seq_train = sequence.pad_sequences(word_seq_train, maxlen=max_seq_len)
+word_seq_test = sequence.pad_sequences(word_seq_test, maxlen=max_seq_len)
+
+
+batch_size = 256
+num_epochs = 8 
+
+num_filters = 64
+embed_dim = 300 
+weight_decay = 1e-4
+
+
+# We can now prepare our embedding matrix limiting to a max number of words:
+
+print('preparing embedding matrix...')
+
+words_not_found = []
+words_not_found_index = []
+
+nb_words = min(MAX_NB_WORDS, len(word_index))
+
+embedding_matrix = np.zeros((nb_words, embed_dim))
+
+for word, i in word_index.items():
+    if i >= nb_words:
+        continue
+    embedding_vector = embeddings_index.get(word)
+    if (embedding_vector is not None) and len(embedding_vector) > 0:
+        # words not found in embedding index will be all-zeros.
+        embedding_matrix[i] = embedding_vector
+    else:
+        words_not_found.append(word)
+        words_not_found_index.append(i)
+
+print('number of null word embeddings: %d' % np.sum(np.sum(embedding_matrix, axis=1) == 0))
+
+# We can finally define the CNN architecture
+
+#CNN architecture
+print("training CNN ...")
+
+model = Sequential()
+
+
+model.add(Embedding(nb_words, embed_dim, weights=[embedding_matrix], input_length=max_seq_len, trainable=False))
+
+
+
+model.add(Conv1D(num_filters, 7, activation='relu', padding='same'))
+model.add(MaxPooling1D(2))
+model.add(Conv1D(num_filters, 7, activation='relu', padding='same'))
+model.add(GlobalMaxPooling1D())
+model.add(Dropout(0.5))
+model.add(Dense(32, activation='relu', kernel_regularizer=regularizers.l2(weight_decay)))
+model.add(Dense(num_classes, activation='sigmoid'))  #multi-label (k-hot encoding)
+
+adam = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
+model.summary()
+
+
+early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.01, patience=4, verbose=1)
+callbacks_list = [early_stopping]
+
+
+
+hist = model.fit(word_seq_train, y_train, batch_size=batch_size, epochs=num_epochs, callbacks=callbacks_list, validation_split=0.1, shuffle=True, verbose=2)
+
+
+
+
+
+
 import spacy
 
 import nltk
@@ -948,14 +1146,7 @@ import re
 NUM_BRANDS = 4500
 NUM_CATEGORIES = 1250
 
-###############################################################################################
-#
-#   TXTP_rmsle
-#
 
-def TXTP_rmsle(y, y0):
-    assert len(y) == len(y0)
-    return np.sqrt(np.mean(np.power(np.log1p(y) - np.log1p(y0), 2)))
 
 
 ###############################################################################################

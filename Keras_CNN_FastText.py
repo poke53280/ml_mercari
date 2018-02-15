@@ -1,5 +1,5 @@
 
-isHome = True
+isHome = False
 
 if isHome:
     pass
@@ -39,6 +39,8 @@ def TXTP_rmsle(y, y0):
     assert len(y) == len(y0)
     return np.sqrt(np.mean(np.power(np.log1p(y) - np.log1p(y0), 2)))
 
+
+"""c"""
 
 def dameraulevenshtein(seq1, seq2):
    
@@ -844,6 +846,22 @@ def LGB_train_B(X, y, isValidate):
 
 """c"""
 
+def getW(lm, X, y):
+    p0 = lm[0].predict(X)
+    p1 = lm[1].predict(X)
+    p2 = lm[2].predict(X)
+
+    w0 = 0.9
+    w1 = 0.05
+    w2 = 0.05
+
+    p = w0*p0 + w1 * p1 + w2 * p2
+
+    o = TXTP_rmsle(np.expm1(p), np.expm1(y))
+
+    o0 = TXTP_rmsle(np.expm1(p0), np.expm1(y))
+
+
 def trainOnline(start_time, X, X_category_name, y, isValidate):
 
     y_pred = []
@@ -959,17 +977,17 @@ def trainAllModels(start_time, X, y, isValidate):
     gc.collect()
     print (psutil.virtual_memory().percent)
 
-    start_time = time()
-    lm.append(RidgeSAG_A_train(X, y, isValidate))
-    print(f'[{time() - start_time}] base model done.')
-    gc.collect()
-    print (psutil.virtual_memory().percent)
+    #start_time = time()
+    #lm.append(RidgeSAG_A_train(X, y, isValidate))
+    #print(f'[{time() - start_time}] base model done.')
+    #gc.collect()
+    #print (psutil.virtual_memory().percent)
 
-    start_time = time()
-    lm.append(RidgeSAG_B_train(X, y, isValidate))
-    print(f'[{time() - start_time}] base model done.')
-    gc.collect()
-    print (psutil.virtual_memory().percent)
+    #start_time = time()
+    #lm.append(RidgeSAG_B_train(X, y, isValidate))
+    #print(f'[{time() - start_time}] base model done.')
+    #gc.collect()
+    #print (psutil.virtual_memory().percent)
 
     #start_time = time()
     #lm.append(LGB_train_A(X, y, isValidate))
@@ -1015,8 +1033,8 @@ if __name__ == '__main__':
     isValidate = False
     isOneChunkOnly = False
     nClip = 0
-    #train = train[:10000]
-    isMeta = False
+    train = train[:10000]
+    isMeta = True
 
     print('Train shape with price >= 3 ', train.shape)
    
