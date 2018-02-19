@@ -1,7 +1,7 @@
 
 
 
-#import numpy as np
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -98,7 +98,7 @@ for doc in tqdm(raw_docs_train):
     tokens = tokenizer.tokenize(doc)
     filtered = [word for word in tokens if word not in stop_words]
     processed_docs_train.append(" ".join(filtered))
-#end for
+"""end for"""
 
 processed_docs_test = []
 for doc in tqdm(raw_docs_test):
@@ -107,22 +107,21 @@ for doc in tqdm(raw_docs_test):
     processed_docs_test.append(" ".join(filtered))
 #end for
 
-"""c"""
+"""end for"""
 
 
 tokenizer = keras.preprocessing.text.Tokenizer(num_words=MAX_NB_WORDS, lower=True, char_level=False)
 
 l = processed_docs_train + processed_docs_test
 
-tokenizer.fit_on_texts(l)  #leaky
-
-word_seq_train = tokenizer.texts_to_sequences(processed_docs_train)
-word_seq_test = tokenizer.texts_to_sequences(processed_docs_test)
+tokenizer.fit_on_texts(processed_docs_train)  #non-leaky
 
 word_index = tokenizer.word_index
 
 print("dictionary size: ", len(word_index))
 
+word_seq_train = tokenizer.texts_to_sequences(processed_docs_train)
+word_seq_test = tokenizer.texts_to_sequences(processed_docs_test)
 
 word_seq_train = sequence.pad_sequences(word_seq_train, maxlen=max_seq_len)
 word_seq_test = sequence.pad_sequences(word_seq_test, maxlen=max_seq_len)
@@ -192,6 +191,17 @@ callbacks_list = [early_stopping]
 
 hist = model.fit(word_seq_train, y_train, batch_size=batch_size, epochs=num_epochs, callbacks=callbacks_list, validation_split=0.1, shuffle=True, verbose=2)
 
+
+y_test = model.predict(word_seq_test)
+
+submission_df = pd.DataFrame(columns=['id'] + label_names)
+submission_df['id'] = test_df['id'].values 
+submission_df[label_names] = y_test 
+submission_df.to_csv(DATA_DIR + "cnn_fasttext_submission.csv", index=False)
+
+
+### Gave LB 0.9542
+# epoch 5: acc 0.9829 val_acc 0.9793
 
 
 
@@ -1248,3 +1258,6 @@ X = wb.transform(train_texts)
 clf.fit(X, train_labels)
 
 preds= clf.predict(wb.transform(test_texts))
+
+
+
