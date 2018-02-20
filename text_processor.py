@@ -18,6 +18,7 @@ from keras.preprocessing import sequence
 from keras.preprocessing.text import Tokenizer
 from keras.callbacks import EarlyStopping
 from keras.wrappers.scikit_learn import KerasClassifier
+from keras.wrappers.scikit_learn import KerasRegressor
 
 from sklearn.model_selection import train_test_split, cross_val_score, KFold
 from sklearn.metrics import roc_auc_score
@@ -105,6 +106,9 @@ def dist_words(w1, w2, e):
 
     print("Distance " + w1 + ", " + w2 +": " + str(o))
 
+def mse_function(y_true, y_pred):
+    mse = ((y_true - y_pred) ** 2).mean()
+    return mse
 
 """c"""
 
@@ -137,7 +141,7 @@ def error_function_digitized(y_true, y_pred):
 
 
 
-def keras_CV(model, X, y, splits, nEpochs, nBatchSize):
+def keras_CV(model, X, y, splits, nEpochs, nBatchSize, type_str):
     
     kf = KFold(n_splits = splits, random_state = 122)
     
@@ -162,9 +166,16 @@ def keras_CV(model, X, y, splits, nEpochs, nBatchSize):
 
         hist = model.fit(train_X, train_y, batch_size=nBatchSize, epochs=nEpochs, callbacks=callbacks_list, validation_data=(valid_X, valid_y), shuffle=True, verbose=2)
 
+        o = 0
+
         y_pred = model.predict_proba(valid_X)
-        
-        o = error_function(valid_y, y_pred)
+
+        if type_str == "MULTI_LABEL":
+            o = error_function(valid_y, y_pred)
+        elif type_str == "REGRESSION":
+            o = mse_function(valid_y, y_pred)
+        else:
+            print("ERROR")
 
         print("Accuracy = " + str(o))
 
@@ -311,7 +322,7 @@ from keras.wrappers.scikit_learn import KerasClassifier
 
 
 
-def get_model_2(nWords, input_length, eMatrix, nEmbDim, nClasses):
+def get_model_regression(nWords, input_length, eMatrix, nEmbDim, nClasses):
     
     num_filters = 64
     weight_decay = 1e-4
@@ -325,10 +336,13 @@ def get_model_2(nWords, input_length, eMatrix, nEmbDim, nClasses):
     model.add(GlobalMaxPooling1D())
     model.add(Dropout(0.5))
     model.add(Dense(32, activation='relu', kernel_regularizer=regularizers.l2(weight_decay)))
-    model.add(Dense(nClasses, activation='sigmoid'))  #multi-label (k-hot encoding)
+
+    model.add(Dense(1, activation='relu'))
 
     adam = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-    model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
+
+    model.compile(loss='mean_squared_error', optimizer=adam)
+  
     model.summary()
 
     return model
@@ -359,66 +373,54 @@ def get_embedding_matrix_X(num_dim) :
     
 """c"""    
 
-def process_lines(lA, lB, lC):
-    assert (len(lA) == len(lB))
-    assert (len(lA) == len(lC))
+def process_lines(z):
 
-    z = zip(lA, lB, lC)
 
-    i_out = []
+    i_out = np.zeros(len(z[0]), 1, dtype = np.float32)
 
-    for i, val in enumerate(z):
-        idx = val[0] * 1 + val[1] * 2 + val[2] * 4
-        i_out.append(idx)
+    for t in z:
+        sum = 0
+        for i, x in enumerate(t):
+            sum = sum + x * (2**i)
+
+        i_out.append(sum)
 
     return i_out
 
 """c""" 
 
-def create_timeline(seq_len):
-    a = np.random.choice(2, seq_len).astype(np.float32)
-    b = np.random.choice(2, seq_len).astype(np.float32)
-    c = np.random.choice(2, seq_len).astype(np.float32)
 
-    return a,b,c
+def create_timeline(seq_len):
+    q = np.random.choice(2, seq_len).astype(np.float32)
+   
+    return q
 
 """c"""
 
-def create_target(a, b, c):
-    assert (len(a) == len(b))
-    assert (len(a) == len(c))
-    
-    a_sum = a.sum()
-    b_sum = b.sum()
-    c_sum = c.sum()
+def create_target_regression(l):
 
-    all_90 = len(a) * 0.9
-    all_60 = len(a) * 0.6
 
-    y = np.zeros((7 ), dtype=np.float32)
+    n = l[0].sum() + l[1].sum() + l[2].sum()
 
-    if a_sum > c_sum:
-        y[0] = 1.0
+    i = np.random.choice([1,2,3], 1)
 
-    if a_sum > b_sum:
-        y[1] = 1.0
+    if i == 1:
+        n = n + l[2].std()
+    elif i == 2:
+        n = n + l[1].std()
+    elif i == 3:
+        n = n + l[0].std()
 
-    if a_sum + b_sum > b_sum + c_sum:
-        y[2] = 1.0
+    if l[0].sum() > l[1].sum():
+        n = n * 1.1 + l[2].mean()
 
-    if a_sum + b_sum >  all_60:
-        y[3] = 1.0
+    if l[1].sum() > l[2].sum():
+        n = n * 1.2 + l[1].mean()
 
-    if a_sum + c_sum > all_90:
-        y[4] = 1.0
+    n = n / len (l[0])
 
-    if c_sum >  all_60:
-        y[5] = 1.0
+    return n
 
-    if c_sum + b_sum > all_90:
-        y[6] = 1.0
-
-    return y
 
 """c"""
 
@@ -429,27 +431,25 @@ def create_dataset(num_elements, seq_len):
     t = []
 
     for i in range(0, num_elements):
-        a, b, c = create_timeline(seq_len)
-        z = zip(a,b,c)
-        p.append(z)
+       
+        a = create_timeline(seq_len)
+        b = create_timeline(seq_len)
+        c = create_timeline(seq_len)
 
-        y = create_target(a, b, c)
+        l = []
+
+        l.append(a)
+        l.append(b)
+        l.append(c)
+
+        p.append(l)
+
+        y = create_target_regression(l)
         t.append(y)
 
     return p, t
 
 """c"""
-
-def create_Y(t):
-    y = np.zeros((len(t), 7))
-
-    for i, x in enumerate(t):
-         y[i] = x
-
-    return y
-
-"""c"""
-
 
 
 def create_idx_runs(p, seq_len):
@@ -459,9 +459,7 @@ def create_idx_runs(p, seq_len):
 
     for i, p_this in enumerate(p):
 
-        a,b,c = zip (*p_this)
-
-        data = process_lines (a, b, c)
+        data = process_lines (p_this)
         
         p_i[i] = data
 
@@ -470,29 +468,38 @@ def create_idx_runs(p, seq_len):
 """c"""
 
 
-word_length = 9 * 1
+word_length = 3 * 365
 
 d = get_embedding_matrix_X(3)
 
-df, t = create_dataset(20, word_length)
+df, t = create_dataset(4400, word_length)
 
 X = create_idx_runs(df, word_length)
 X = X.astype(np.float32)
 
-y = create_Y(t)
+y = np.array(t)
+y = y.reshape(len(t), 1)
+
 y = y.astype(np.float32)
 
 
-m = get_model_2(2**3, word_length, d, 3, 7)
+m = get_model_regression(2**3, word_length, d, 3, 7)
 
 print ("X.shape = " + str(X.shape))
 print ("y.shape = " + str(y.shape))
 
-res = keras_CV(m, X, y, 10, 8, 16)
+seed = 7
+np.random.seed(seed)
+
+
+res = keras_CV(m, X, y, 10, 8, 32, "REGRESSION")
 
 print("CV accuracy is " + str(res['score']) + " +/- " + str(res['std']))
 
 """c"""
+
+
+y_p = m.predict(X)
 
 # Got X and y and embedding matrix
 
