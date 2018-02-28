@@ -9,7 +9,7 @@ import time
 from time import gmtime, strftime
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix, hstack
+from scipy.sparse import csr_matrix, hstack, vstack
 
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.preprocessing import LabelBinarizer
@@ -34,6 +34,13 @@ from nltk.corpus import stopwords
 import re
 
 from scipy import sparse
+
+sys.path.append('C:\\Users\\T149900\\Documents\\Visual Studio 2017\\Projects\\PythonApplication4')
+
+from hellocython import FM_FTRL_EXP
+
+
+
 
 NUM_BRANDS = 4500
 NUM_CATEGORIES = 1250
@@ -82,7 +89,7 @@ def TXTP_split_cat(text):
     except:
         return ("No Label", "No Label", "No Label")
 
-"ccc"
+"""c"""
 
 ###############################################################################################
 #
@@ -279,6 +286,47 @@ def get_dummies_X(df):
 
 """c"""
 
+nRows = 1185328
+nCols = 66904
+nElements = 38431623
+
+fDensity = nElements / (nRows * nCols)
+
+
+rs = np.random.RandomState(seed = 9)
+
+r0 = scipy.sparse.rand(nRows//112, nCols, density = fDensity, dtype=np.float64, format = 'csr', random_state = rs)
+
+from scipy.sparse import coo_matrix, bmat
+
+l = []
+
+nRowChunk = 30000
+
+c = []
+
+c += (nRows//nRowChunk) * [nRowChunk]
+
+m = nRows % nRowChunk
+
+if m > 0:
+    c.append(m)
+
+for nRowChunk in c:
+    print(f"Processing chunk {nRowChunk}...")
+    A2 = scipy.sparse.rand(nRowChunk, nCols, density = fDensity, dtype=np.float64, format = 'csr', random_state = rs) 
+    l.append(A2)
+    iRow = iRow + nRowChunk
+    
+
+"""c"""
+
+D = vstack(l)
+
+D
+ys = np.random.rand(nRows)
+
+
 def getXTrain(df, isQuickRun):
 
 
@@ -416,13 +464,29 @@ def FTRL_train(train_X, train_y, isQuickRun):
    
 """c"""
 
+
+
+def FM_FTRL_EXP_train(train_X, train_y, isQuickRun, is_use_baseline, nIters, dfm):
+
+    
+    model = FM_FTRL_EXP(alpha=0.01, beta=0.1, L1=0.00001, L2=0.1, D=train_X.shape[1], alpha_fm=0.01, L2_fm=0.0, init_fm=0.01,
+                    D_fm=dfm, e_noise=0.0001, iters=nIters, inv_link="identity", threads=8, verbose=1, use_baseline = is_use_baseline)
+
+    model.fit(train_X, train_y)
+
+    return model
+
+"""c"""
+
+
+
 def FM_FTRL_train(train_X, train_y, isQuickRun):
 
     if isQuickRun:
         model = FTRL(alpha=0.01, beta=0.1, L1=0.00001, L2=1.0, D=train_X.shape[1], iters=12, inv_link="identity", threads=4)
     else:
         model = FM_FTRL(alpha=0.01, beta=0.1, L1=0.00001, L2=0.1, D=train_X.shape[1], alpha_fm=0.01, L2_fm=0.0, init_fm=0.01,
-                    D_fm=200, e_noise=0.0001, iters=18, inv_link="identity", threads=4)
+                    D_fm=200, e_noise=0.0001, iters=2, inv_link="identity", threads=4)
 
     model.fit(train_X, train_y)
 
@@ -515,9 +579,22 @@ def trainAllModels(start_time, X, y, isQuickRun):
     print (psutil.virtual_memory().percent)
     print('[{}] Done FTRL'.format(time.time() - start_time))
 
-    print ("FM...")
+    print ("FM BASELINE ...")
     m_FM = FM_FTRL_train(X, y, isQuickRun)
     lm.append(m_FM)
+
+    gc.collect()
+    print (psutil.virtual_memory().percent)
+    print('[{}] Done FM'.format(time.time() - start_time))
+
+
+    print ("FM EXP ...")
+    m_FM_EXP = FM_FTRL_EXP_train(X, y, isQuickRun)
+    lm.append(m_FM_EXP)
+
+    gc.collect()
+    print (psutil.virtual_memory().percent)
+    print('[{}] Done FM EXP'.format(time.time() - start_time))
 
     gc.collect()
     print (psutil.virtual_memory().percent)
@@ -535,7 +612,7 @@ def trainAllModels(start_time, X, y, isQuickRun):
     print("Done base models.")
     return lm
 
-"""c"""
+
 
 def showRMSLE(lm, X_t, y_valid, isQuickTrain, isQuickPreprocess):
 
@@ -599,6 +676,8 @@ def trainOnline(start_time, X, y, isQuickRun):
     for m in lm:
         p = m.predict(X)
         y_pred.append(p)
+
+    """c"""
 
     X_s = sparse.csr_matrix(np.column_stack((y_pred[0], y_pred[1], y_pred[2])))
 
@@ -818,11 +897,64 @@ def dev_run(isHome, isQuickTrain, isQuickPreprocess):
 
     print (psutil.virtual_memory().percent)
 
+
+
+
+    
+"""c"""
+
+
+print (psutil.virtual_memory().percent)
+print('[{}] Loading train data...'.format(time.time() - start_time))
+    
+df = load_train(True)
+
+y = np.log1p(df["price"])
+y = y.values
+
+
+df_train, df_valid, y_train, y_valid = train_test_split(df, y, test_size=0.2, random_state=42)
+    
+del df
+gc.collect()
+
+d = getXTrain(df_train, False)
+
+X_train = d['X']
+
+print (X_train.shape)
+print (y_train.shape)
+
+start_time = time.time()
+
+m_FM_EXP_base = FM_FTRL_EXP_train(X_train, y_train, False, 0, 37, 200)
+
+print('[{}] Done Baseline'.format(time.time() - start_time))
+
+start_time = time.time()
+
+n_FM_EXP_new =  FM_FTRL_EXP_train(X_train, y_train, False, 0, 27, 200)
+
+print('[{}] Done new'.format(time.time() - start_time))
+
+y_base_pred = m_FM_EXP_base.predict(X_train)
+
+y_new_pred = n_FM_EXP_new.predict(X_train)
+
+o_base = TXTP_rmsle(y_base_pred,y_train)
+o_new = TXTP_rmsle(y_new_pred,y_train)
+
+o_diff = TXTP_rmsle(y_base_pred, y_new_pred)
+
+print(f"RMSLE diff: {o_diff}")
+
+"""c"""
+
 if __name__ == '__main__':
     start_time = time.time()
     isHome = True
-    isQuickTrain = True
-    isQuickPreprocess = False
+    isQuickTrain = False
+    isQuickPreprocess = True
     #dev_run(isHome, isQuickTrain, isQuickPreprocess)
     #deliver_run(start_time, isHome, isQuickTrain, isQuickPreprocess) 
     validate_run(start_time, isHome, True, False)
