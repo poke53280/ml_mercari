@@ -33,9 +33,11 @@ from sklearn.model_selection import train_test_split, cross_val_score, KFold
 from nltk.corpus import stopwords
 import re
 
+import scipy
+
 from scipy import sparse
 
-sys.path.append('C:\\Users\\T149900\\Documents\\Visual Studio 2017\\Projects\\PythonApplication4')
+sys.path.append('D:\\anders\\FM_FTRL_AVX\\')
 
 from hellocython import FM_FTRL_EXP
 
@@ -290,41 +292,39 @@ nRows = 1185328
 nCols = 66904
 nElements = 38431623
 
-fDensity = nElements / (nRows * nCols)
+def genRandomXy (nRows, nCols, nElements):
+    fDensity = nElements / (nRows * nCols)
+    rs = np.random.RandomState(seed = 9)
 
+    l = []
 
-rs = np.random.RandomState(seed = 9)
+    nRowChunk = 30000
 
-r0 = scipy.sparse.rand(nRows//112, nCols, density = fDensity, dtype=np.float64, format = 'csr', random_state = rs)
+    c = []
+    c += (nRows//nRowChunk) * [nRowChunk]
 
-from scipy.sparse import coo_matrix, bmat
+    m = nRows % nRowChunk
+    if m > 0:
+        c.append(m)
 
-l = []
+    for nRowChunk in c:
+        print(f"Processing chunk {nRowChunk}...")
+        A2 = scipy.sparse.rand(nRowChunk, nCols, density = fDensity, dtype=np.float64, format = 'csr', random_state = rs) 
+        l.append(A2)
 
-nRowChunk = 30000
+    D = vstack(l)
+    ys = np.random.rand(nRows)
 
-c = []
-
-c += (nRows//nRowChunk) * [nRowChunk]
-
-m = nRows % nRowChunk
-
-if m > 0:
-    c.append(m)
-
-for nRowChunk in c:
-    print(f"Processing chunk {nRowChunk}...")
-    A2 = scipy.sparse.rand(nRowChunk, nCols, density = fDensity, dtype=np.float64, format = 'csr', random_state = rs) 
-    l.append(A2)
-    iRow = iRow + nRowChunk
+    d = {}
+    d['X'] = D
+    d['y'] = ys
     
-
+    return d
 """c"""
 
-D = vstack(l)
 
-D
-ys = np.random.rand(nRows)
+
+
 
 
 def getXTrain(df, isQuickRun):
@@ -897,30 +897,17 @@ def dev_run(isHome, isQuickTrain, isQuickPreprocess):
 
     print (psutil.virtual_memory().percent)
 
-
-
-
     
 """c"""
 
+nRows = 1185328
+nCols = 66904
+nElements = 38431623
 
-print (psutil.virtual_memory().percent)
-print('[{}] Loading train data...'.format(time.time() - start_time))
-    
-df = load_train(True)
-
-y = np.log1p(df["price"])
-y = y.values
-
-
-df_train, df_valid, y_train, y_valid = train_test_split(df, y, test_size=0.2, random_state=42)
-    
-del df
-gc.collect()
-
-d = getXTrain(df_train, False)
+d = genRandomXy (nRows, nCols, nElements)
 
 X_train = d['X']
+y_train = d['y']
 
 print (X_train.shape)
 print (y_train.shape)
