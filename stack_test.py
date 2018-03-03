@@ -35,11 +35,7 @@ import re
 
 import scipy
 
-from scipy import sparse
 
-sys.path.append('D:\\anders\\FM_FTRL_AVX\\')
-
-from hellocython import FM_FTRL_EXP
 
 
 
@@ -288,40 +284,6 @@ def get_dummies_X(df):
 
 """c"""
 
-nRows = 1185328
-nCols = 66904
-nElements = 38431623
-
-def genRandomXy (nRows, nCols, nElements):
-    fDensity = nElements / (nRows * nCols)
-    rs = np.random.RandomState(seed = 9)
-
-    l = []
-
-    nRowChunk = 30000
-
-    c = []
-    c += (nRows//nRowChunk) * [nRowChunk]
-
-    m = nRows % nRowChunk
-    if m > 0:
-        c.append(m)
-
-    for nRowChunk in c:
-        print(f"Processing chunk {nRowChunk}...")
-        A2 = scipy.sparse.rand(nRowChunk, nCols, density = fDensity, dtype=np.float64, format = 'csr', random_state = rs) 
-        l.append(A2)
-
-    D = vstack(l)
-    ys = np.random.rand(nRows)
-
-    d = {}
-    d['X'] = D
-    d['y'] = ys
-    
-    return d
-"""c"""
-
 
 
 
@@ -466,33 +428,9 @@ def FTRL_train(train_X, train_y, isQuickRun):
 
 
 
-def FM_FTRL_EXP_train(train_X, train_y, isQuickRun, is_use_baseline, nIters, dfm):
-
-    
-    model = FM_FTRL_EXP(alpha=0.01, beta=0.1, L1=0.00001, L2=0.1, D=train_X.shape[1], alpha_fm=0.01, L2_fm=0.0, init_fm=0.01,
-                    D_fm=dfm, e_noise=0.0001, iters=nIters, inv_link="identity", threads=8, verbose=1, use_baseline = is_use_baseline)
-
-    model.fit(train_X, train_y)
-
-    return model
-
-"""c"""
 
 
 
-def FM_FTRL_train(train_X, train_y, isQuickRun):
-
-    if isQuickRun:
-        model = FTRL(alpha=0.01, beta=0.1, L1=0.00001, L2=1.0, D=train_X.shape[1], iters=12, inv_link="identity", threads=4)
-    else:
-        model = FM_FTRL(alpha=0.01, beta=0.1, L1=0.00001, L2=0.1, D=train_X.shape[1], alpha_fm=0.01, L2_fm=0.0, init_fm=0.01,
-                    D_fm=200, e_noise=0.0001, iters=2, inv_link="identity", threads=4)
-
-    model.fit(train_X, train_y)
-
-    return model
-
-"""c"""
 
 def LGB_train(train_X, train_y, isQuickRun):
     params = {
@@ -897,12 +835,91 @@ def dev_run(isHome, isQuickTrain, isQuickPreprocess):
 
     print (psutil.virtual_memory().percent)
 
-    
+
+""" FM FTRL TEST """
+
+
+
+import sys
+import scipy
+import numpy as np
+
+import random
+
+from scipy import sparse
+
+sys.path.append('D:\\anders\\FM_FTRL_AVX\\')
+sys.path.append('C:\\Users\\T149900\\Documents\\Visual Studio 2017\\Projects\\PythonApplication4\\')
+
+from hello9 import FM_FTRL_GITHUB
+
+import time
+
+
+from scipy.sparse import csr_matrix, hstack, vstack
+
+def rmsle_func(y, y0):
+    assert len(y) == len(y0)
+    return np.sqrt(np.mean(np.power(np.log1p(y) - np.log1p(y0), 2)))
+
 """c"""
+    
+def genRandomXy (nRows, nCols, nElements):
+    fDensity = nElements / (nRows * nCols)
+    rs = np.random.RandomState(seed = 9)
+
+    l = []
+
+    nRowChunk = 3000
+
+    c = []
+    c += (nRows//nRowChunk) * [nRowChunk]
+
+    m = nRows % nRowChunk
+    if m > 0:
+        c.append(m)
+
+    for nRowChunk in c:
+        print(f"Processing chunk {nRowChunk}...")
+        A2 = scipy.sparse.rand(nRowChunk, nCols, density = fDensity, dtype=np.float64, format = 'csr', random_state = rs) 
+        l.append(A2)
+
+    D = vstack(l)
+    ys = np.random.rand(nRows)
+
+    d = {}
+    d['X'] = D
+    d['y'] = ys
+    
+    return d
+
+
+
+def FM_FTRL_GITHUB_train(train_X, train_y, is_use_baseline, nIters, dfm, nthreads):
+
+    model = FM_FTRL_GITHUB(alpha=0.01, beta=0.1, L1=0.00001, L2=0.1, D=train_X.shape[1], alpha_fm=0.01, L2_fm=0.0, init_fm=0.01,
+                    D_fm=dfm, e_noise=0.0001, iters=nIters, inv_link="identity", threads=nthreads, verbose=1, use_baseline = is_use_baseline)
+
+    model.fit(train_X, train_y)
+
+    return model
+
+"""c"""
+
+
+nRows = 11858
+nCols = 6694
+nElements = 3843
+
+
+
+nRows = 1185328
+nCols = 366904
+nElements = 983223
 
 nRows = 1185328
 nCols = 66904
-nElements = 38431623
+nElements = 3832623
 
 d = genRandomXy (nRows, nCols, nElements)
 
@@ -912,9 +929,46 @@ y_train = d['y']
 print (X_train.shape)
 print (y_train.shape)
 
-start_time = time.time()
+X_train
 
-m_FM_EXP_base = FM_FTRL_EXP_train(X_train, y_train, False, 0, 37, 200)
+loops = 30
+
+while loops > 0:
+   
+    start_time = time.time()
+
+    num_threads = random.choice([1, 2, 4, 8, 100])
+
+    print(f"loop {loops}. num threads {num_threads}")
+
+    use_baseline = 1
+    m_FM_ORIG0  = FM_FTRL_GITHUB_train(X_train, y_train, use_baseline, 3, 200, num_threads)
+
+    time1 = time.time()
+
+    print('[{}] Done '.format(time1 - start_time))
+
+    use_baseline = 0
+    m_FM_ORIG1  = FM_FTRL_GITHUB_train(X_train, y_train, use_baseline, 3, 200, num_threads)
+
+    time2 = time.time()
+
+    print('[{}] Done '.format(time2 - time1))
+
+    y_0 = m_FM_ORIG0.predict(X_train)
+    y_1 = m_FM_ORIG1.predict(X_train)
+
+    o_0 = rmsle_func(y_0,y_train)
+    o_1 = rmsle_func(y_1,y_train)
+
+    o_diff = rmsle_func(y_0,y_1)
+
+    print(f"{o_0}, {o_1}, {o_diff}")
+
+    loops = loops - 1
+
+"""c"""
+
 
 print('[{}] Done Baseline'.format(time.time() - start_time))
 
