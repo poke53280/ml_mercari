@@ -22,8 +22,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="bucket_price.py" />
+    <Compile Include="class1.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="hashing.py" />
     <Compile Include="Keras_CNN_FastText.py" />
+    <Compile Include="lstm_imdb.py" />
     <Compile Include="ml_mercari.py" />
     <Compile Include="text_processor.py" />
   </ItemGroup>

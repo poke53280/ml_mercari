@@ -849,7 +849,7 @@ import random
 from scipy import sparse
 
 sys.path.append('D:\\anders\\FM_FTRL_AVX\\')
-sys.path.append('C:\\Users\\T149900\\Documents\\Visual Studio 2017\\Projects\\PythonApplication4\\')
+sys.path.append('C:\\tmp2\\FM_FTRL_AVX\\')
 
 from hello9 import FM_FTRL_GITHUB
 

@@ -1,4 +1,267 @@
 
+from keras.preprocessing.text import Tokenizer
+from keras.models import Sequential
+from keras.layers.core import Dense, Activation, Flatten
+
+from keras.layers.embeddings import Embedding
+from keras.layers import LSTM
+
+import numpy as np
+
+from sklearn.model_selection import train_test_split
+
+tokenizer = Tokenizer()
+
+texts = ["The sun is shining in June!","September is grey.","Life is beautiful in August.","I like it","This and other things?"]
+tokenizer.fit_on_texts(texts)
+print(tokenizer.word_index)
+tokenizer.texts_to_sequences(["June is beautiful and I like it!"])
+
+
+tokenizer.texts_to_matrix(["June is beautiful and I like it!","Like August"])
+
+
+tokenizer = Tokenizer(char_level=True, oov_token='x')
+
+texts =["abcd-"]
+tokenizer.fit_on_texts(texts)
+
+print(tokenizer.word_index)
+
+n = tokenizer.texts_to_sequences(["abaa---aa"])
+
+
+# String to binary classification, LSTM network.
+
+
+
+
+
+
+X = tokenizer.texts_to_matrix(texts)
+y = np.array([1.0,0,0,0,0])
+
+
+vocab_size = len(tokenizer.word_index) + 1
+
+model = Sequential()
+
+model.add(Dense(2, input_dim=vocab_size))
+model.add(Dense(1, activation='sigmoid'))
+
+model.compile(loss = 'binary_crossentropy', optimizer='rmsprop')
+
+X = X.astype(np.float32)
+
+model.fit(X, y, epochs=700, validation_split= 0.2)
+
+from keras.utils.np_utils import np as np
+
+model.predict(X)
+
+X_p = tokenizer.texts_to_matrix(["hello", "shining", "shining June", "Overcast August"])
+
+model.predict(X_p)
+
+
+model = Sequential()
+
+model.add(Embedding(2,2, input_length = 7))
+
+model.compile('rmsprop', 'mse')
+model.predict(np.array([[0, 1, 0, 1, 1, 0, 0]]))
+
+######################################################################################
+
+from keras.datasets import imdb
+
+top_words = 5000
+
+(X_train, y_train), (X_test, y_test) = imdb.load_data(num_words=top_words)
+
+type (X_train)
+
+
+y_train
+
+X_Train
+
+
+#######################################################################################################
+#
+#   How to use Different Batch Sizes when Training and Predicting with LSTMs
+
+# https://machinelearningmastery.com/use-different-batch-sizes-training-predicting-python-keras/
+
+
+from pandas import concat
+from pandas import DataFrame
+
+length = 10
+sequence = [i/float(length) for i in range(length)]
+
+df = DataFrame(sequence)
+df = concat([df, df.shift(1)], axis=1)
+df.dropna(inplace=True)
+print(df)
+
+
+
+
+
+
+##################################################################################################
+
+from keras.models import Sequential
+from keras.layers.core import Dense, Activation, Flatten
+
+from keras.layers import LSTM
+
+import numpy as np
+
+from sklearn.model_selection import train_test_split
+
+
+
+def prepare_sequences(X, y, window_length):
+    windows = []
+    windows_y = []
+    for i, sequence in enumerate(X):
+        len_seq = len(sequence)
+        for window_start in range(0, len_seq - window_length + 1):
+            window_end = window_start + window_length
+            window = sequence[window_start:window_end]
+            windows.append(window)
+            windows_y.append(y[i])
+    return np.array(windows), np.array(windows_y)
+
+"""c"""
+
+N_train = 1000
+from numpy.random import choice
+one_indexes = choice(a=N_train, size=N_train // 2, replace=False)
+
+
+X = np.zeros((1200, 20), dtype =np.float)
+
+X[one_indexes, 0] = 1
+
+
+X = X.astype(np.float32)
+
+y = X[:,0]
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 200/1200, random_state = 111)
+
+#X_train, y_train = prepare_sequences(X_train, y_train, 10)
+#X_test, y_test = prepare_sequences(X_test, y_test, 10)
+
+X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], 1)
+X_test = X_test.reshape(X_test.shape[0], X_test.shape[1], 1)
+
+y_train = y_train.reshape(y_train.shape[0], 1)
+y_test = y_test.reshape(y_test.shape[0], 1)
+
+
+
+model = Sequential()
+
+model.add(LSTM(10, batch_input_shape=(1, 1, 1), return_sequences=False, stateful=True))
+model.add(Dense(1, activation='sigmoid'))
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+
+print('Train...')
+for epoch in range(15):
+    mean_tr_acc = []
+    mean_tr_loss = []
+    for i in range(len(X_train)):
+        y_true = y_train[i]
+        for j in range(max_len):
+            tr_loss, tr_acc = model.train_on_batch(np.expand_dims(np.expand_dims(X_train[i][j], axis=1), axis=1),
+                                                   np.array([y_true]))
+            mean_tr_acc.append(tr_acc)
+            mean_tr_loss.append(tr_loss)
+        model.reset_states()
+
+    print('accuracy training = {}'.format(np.mean(mean_tr_acc)))
+    print('loss training = {}'.format(np.mean(mean_tr_loss)))
+    print('___________________________________')
+
+    mean_te_acc = []
+    mean_te_loss = []
+    for i in range(len(X_test)):
+        for j in range(max_len):
+            te_loss, te_acc = model.test_on_batch(np.expand_dims(np.expand_dims(X_test[i][j], axis=1), axis=1),
+                                                  y_test[i])
+            mean_te_acc.append(te_acc)
+            mean_te_loss.append(te_loss)
+        model.reset_states()
+
+        for j in range(max_len):
+            y_pred = model.predict_on_batch(np.expand_dims(np.expand_dims(X_test[i][j], axis=1), axis=1))
+        model.reset_states()
+
+    print('accuracy testing = {}'.format(np.mean(mean_te_acc)))
+    print('loss testing = {}'.format(np.mean(mean_te_loss)))
+    print('___________________________________')
+
+
+
+#max_len  = 10
+#model.add(LSTM(10, input_shape=(max_len, 1), return_sequences=False, stateful=False))
+#model.add(Dense(1, activation='sigmoid'))
+#model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+batch_size=1
+shuffle=False 
+
+model.fit(X_train, y_train, batch_size=batch_size, epochs=1, validation_data=(X_test, y_test), shuffle=False)
+
+
+
+
+
+
+from keras.preprocessing.text import one_hot
+from keras.preprocessing.text import text_to_word_sequence
+
+# define the document
+
+text = 'The quick brown fox jumped over the lazy dog.'
+
+text = 'a a x x x a x x a a x x a a a a'
+
+# estimate the size of the vocabulary
+
+words = set(text_to_word_sequence(text))
+vocab_size = len(words)
+print(vocab_size)
+
+# integer encode the document
+result = one_hot(text, round(vocab_size*1.3))
+print(result)
+
+
+
+
+x = []
+x.append("aaxxxaxxaaxxaaaa")
+x.append("aaxaaaaxaaxxaaaa")
+x.append("xxxxxxxxxxxxxxxx")
+x.append("aaaaaaaaaaaaaaaa")
+
+y = []
+
+for line in l:
+    y.append(line.count('a'))
+
+"""c"""
+
+
+x_p = "aaxxxaxxaaxxaaaa"
+
 
 
 import numpy as np
@@ -33,6 +296,7 @@ def get_model(nWords, input_length, eMatrix, nEmbDim, nClasses):
     num_filters = 64
     weight_decay = 1e-4
     
+
     model = Sequential()
 
     model.add(Embedding(nWords, nEmbDim, weights=[eMatrix], input_length=input_length, trainable=False))
@@ -280,7 +544,6 @@ def mymain():
 
     word_seq_train = sequence.pad_sequences(word_seq_train, maxlen=max_seq_len)
 
-
     embedding_matrix = get_embedding_matrix(embeddings_index, num_words)
 
     model = get_model(num_words, max_seq_len, embedding_matrix, embed_dim, num_classes)
@@ -290,8 +553,8 @@ def mymain():
     print("CV accuracy is " + str(d['score']) + " +/- " + str(d['std']))
 
 
-### Gave LB 0.9542
-# epoch 5: acc 0.9829 val_acc 0.9793
+#   Gave LB 0.9542
+#   epoch 5: acc 0.9829 val_acc 0.9793
 
 ######################################################################################################################
 ######################################################################################################################
@@ -481,7 +744,6 @@ y = np.array(t)
 y = y.reshape(len(t), 1)
 
 y = y.astype(np.float32)
-
 
 m = get_model_regression(2**3, word_length, d, 3, 7)
 
