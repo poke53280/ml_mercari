@@ -34,10 +34,6 @@ n = tokenizer.texts_to_sequences(["abaa---aa"])
 # String to binary classification, LSTM network.
 
 
-
-
-
-
 X = tokenizer.texts_to_matrix(texts)
 y = np.array([1.0,0,0,0,0])
 
