@@ -393,7 +393,6 @@ def create_y_a_first(l):
 
 """c"""
 
-
 #######################################################
 #
 #   create_y_contains_d
@@ -416,7 +415,6 @@ def create_y_contains_d(l):
     return y
 
 """c"""
-
 
 L = len (l[0])
 
@@ -486,4 +484,5 @@ for train_index, valid_index in kf.split(X):
     nFold = nFold + 1
 
 """c"""
+
 
