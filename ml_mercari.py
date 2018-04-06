@@ -811,7 +811,7 @@ def main():
   
     DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\"
     DATA_DIR_BASEMENT = "D:\\mercari\\"
-    DATA_DIR = DATA_DIR_PORTABLE
+    DATA_DIR = DATA_DIR_BASEMENT
 
     df = pd.read_table(DATA_DIR + "train.tsv");
 
