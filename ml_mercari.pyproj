@@ -29,6 +29,9 @@
     <Compile Include="Keras_CNN_FastText.py" />
     <Compile Include="lstm_imdb.py" />
     <Compile Include="ml_mercari.py" />
+    <Compile Include="Talking.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="text_processor.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
