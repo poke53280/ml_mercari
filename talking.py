@@ -2,7 +2,6 @@
 
 import pandas as pd
 import numpy as np
-from sklearn.cluster import KMeans
 import numpy as np
 import datetime
 import pylab as pl
@@ -60,8 +59,7 @@ len(df)
 # 184,903,890
 
 
-CUT_TO_ENTRIES = 10000000   # About 1/18 of full set
-
+CUT_TO_ENTRIES = 10000
 
 
 df = df[:CUT_TO_ENTRIES]
@@ -145,25 +143,64 @@ df = df.drop(['index'], axis = 1)
 
 
 
-lcNCluster = []
 
-print(f"#Values: {len(q)}")
 
-for threshold in lcThreshold:
+def analyse_user_code(df, idx):
 
-    e = Close1D(acData, threshold)
+    print(f"Analyzing user code {idx}...")
+    m = df.user_code == idx
+    q = df[m]
+
+    print(f"#Values: {len(q)}")
+
+    print(q)
+
+    acData = q.time.values
+
+    n = len (acData)
+
+    min = acData.min()
+    max = acData.max() + 1
+
+    print(f" {n} event(s). min: {min} max: {max}. length = {max - min}")
+
+    lcNCluster = []
+    lcClusterChange = []
+
+    e = Close1D(acData, 0)
     nClusters = e.max() + 1
+    lcNCluster.append(nClusters)
+    lcClusterChange.append(0)
 
     fClusterSize = len(q)/nClusters
 
-    lcNCluster.append(nClusters)
+    print(f"Threshold {0} sec: nClusters = {nClusters}. Values per cluster: {fClusterSize:.1f}")
 
-    print(f"Threshold {threshold} sec: nClusters = {nClusters}. Values per cluster: {fClusterSize:.1f}")
+    iThreshold = 1
+
+    while nClusters > 1:
+
+        e = Close1D(acData, iThreshold)
+        nClusters = e.max() + 1
+
+        if nClusters < lcNCluster[-1]:
+            lcNCluster.append(nClusters)
+            lcClusterChange.append(iThreshold)
+
+            fClusterSize = len(q)/nClusters
+
+        iThreshold = iThreshold + 1
+
+    d = dict (zip (lcNCluster, lcClusterChange))
+    print (d)
 
 """c"""
 
 
-pl.plot(lcThreshold,lcNCluster)
+
+
+
+pl.plot(lcClusterChange,lcNCluster)
 pl.xlabel('Slack (secs)')
 pl.ylabel('Clusters')
 pl.title('# clusters' + str(test_id))
