@@ -746,33 +746,9 @@ out = GetTargetInterval(df_m, t_start, t_end)
 
 DisplayTargetInterval(df_m, out)
 
-
-# Init
-
-
-
-
-"""c"""
-
- 
-
-a_str
-
-
-l.append("-")
-
-s = "----------"
-
-s[2] = 'a'
-
-
-
-
 # Applying day filter:
 m = (df.Q > t_d) & (df.F <= t_d)
 q = df[m]
-
-
 
 
 v_counts = pt.C.value_counts()
@@ -829,8 +805,135 @@ df_aa['F'] = se
 df_aa['T'] = te
 
 
-##################################################################################################
+##############################################################################
+#
+#        TimeLineTool_Close1D
+#
 
+def TimeLineTool_Close1D(n, threshold):
+
+    nID = 0
+
+    e = np.zeros(len (n), dtype = np.int)
+
+    last_value = -1     # impossible value
+
+    for idx, x in np.ndenumerate(n):
+        if last_value == -1:
+            pass
+        else:       
+            diff = x - last_value
+
+            if diff <= threshold:
+               pass
+            else:
+                nID = nID + 1
+
+        e[idx] = nID
+    
+        last_value = x
+
+    return e
+
+"""c"""
+
+
+##############################################################################
+#
+#        TimeLineTool_cluster_events
+#
+
+def TimeLineTool_cluster_events(acData):
+
+    n = len (acData)
+
+    min = acData.min()
+    max = acData.max() + 1
+
+    print(f" {n} event(s). min: {min} max: {max}. length = {max - min}")
+
+    lcNCluster = []
+    lcClusterChange = []
+
+    e = TimeLineTool_Close1D(acData, 0)
+    nClusters = e.max() + 1
+    lcNCluster.append(nClusters)
+    lcClusterChange.append(0)
+
+    fClusterSize = n/nClusters
+
+    iThreshold = 1
+
+    while nClusters > 1:
+
+        e = TimeLineTool_Close1D(acData, iThreshold)
+        nClusters = e.max() + 1
+
+        if nClusters < lcNCluster[-1]:
+            lcNCluster.append(nClusters)
+            lcClusterChange.append(iThreshold)
+
+            fClusterSize = n/nClusters
+
+        iThreshold = iThreshold + 1
+
+    d = dict (zip (lcNCluster, lcClusterChange))
+
+    return d
+
+"""c"""
+
+
+##############################################################################
+#
+#   TimeLineTool_analyse_user_code
+#
+
+def TimeLineTool_analyse_user_code(df, idx):
+
+    print(f"Analyzing user code {idx}...")
+    m = df.user_code == idx
+    q = df[m]
+
+    print(f"#Values: {len(q)}")
+
+    print(q)
+
+    acData = q.time.values
+
+    d = TimeLineTool_cluster_events(acData)
+
+    return d
+
+"""c"""
+
+
+
+SESSION_THRESHOLD = 60
+
+user_code = np.array(df.user_code)
+click_time = np.array(df.time)
+
+res = np.empty(len (user_code), dtype = np.int)
+
+
+for u in range(user_code.min(), user_code.max() + 1):
+    begin = np.searchsorted(user_code, u)
+    end   = np.searchsorted(user_code, u+1)
+
+    print(f"For user_code {u}: start index = {begin}, beyond end={end}")
+
+    e = Close1D(click_time[begin:end], SESSION_THRESHOLD)
+
+    if begin == 0:
+        pass
+    else:
+        max_used = np.max(res[:begin])
+        e = e + max_used +1 
+
+    res[begin:end] = e
+
+"""c"""    
 
 
 

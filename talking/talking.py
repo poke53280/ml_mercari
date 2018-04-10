@@ -5,39 +5,6 @@ import numpy as np
 import datetime
 import pylab as pl
 
-##############################################################################
-#
-#        Close1D
-#
-
-def Close1D(n, threshold):
-
-    nID = 0
-
-    e = np.zeros(len (n), dtype = np.int)
-
-    last_value = -1     # impossible value
-
-    for idx, x in np.ndenumerate(n):
-        if last_value == -1:
-            pass
-        else:       
-            diff = x - last_value
-
-            if diff <= threshold:
-               pass
-            else:
-                nID = nID + 1
-
-        e[idx] = nID
-    
-        last_value = x
-
-    return e
-
-"""c"""
-
-
 
 DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\talking-data\\"            
 DATA_DIR_BASEMENT = "c:\\data_talking\\"
@@ -46,6 +13,8 @@ DATA_DIR = DATA_DIR_PORTABLE
 
 print('loading train data...')
 df = pd.read_csv(DATA_DIR + "train.csv")
+
+df = df.drop(['is_attributed'], axis = 1)
 
 
 # Approx two minutes sorting
@@ -66,169 +35,102 @@ df = df[:CUT_TO_ENTRIES]
 m = (df.ip == df.ip.max())
 df = df[~m]
 
+df['time'] = TimeAndDate_GetSecondsSinceEpochSeries(df.click_time)
+MIN_EPOCH = df.time.min()
+df['time'] = df.time - MIN_EPOCH
+df['time'] = pd.to_numeric(df.time, downcast = 'integer')
 
-df['epoch'] = (pd.to_datetime(df.click_time) - datetime.datetime(1970, 1, 1))
+df = df.drop(['click_time'], axis = 1)
 
-df['pim'] = df.epoch/ np.timedelta64(1, 's')
-df['pim2'] = df.pim.astype(np.int64)
+df.attributed_time = df.attributed_time.fillna(0)
+df.attributed_time = TimeAndDate_GetSecondsSinceEpochSeries(df.attributed_time)
+df.attributed_time = df.attributed_time - MIN_EPOCH
+df.attributed_time = df.attributed_time.replace(- MIN_EPOCH, 0)
+df['attributed_time'] = pd.to_numeric(df.attributed_time, downcast = 'integer')
 
-df = df.drop(['epoch', 'pim', 'click_time'], axis = 1)
-
-MIN_EPOCH = df.pim2.min()
-
-df['time'] = df.pim2 - MIN_EPOCH
-
-df = df.drop(['pim2'], axis = 1)
-df = df.drop(['is_attributed'], axis = 1)
-
-df['attrib'] = (pd.to_datetime(df.attributed_time) - datetime.datetime(1970, 1, 1))
-df = df.drop(['attributed_time'], axis = 1)
-
-df['pim'] = df.attrib/ np.timedelta64(1, 's')
-df = df.drop(['attrib'], axis = 1)
-
-df.pim = df.pim.fillna(0)
-
-df['pim2'] = df.pim.astype(np.int64)
-df = df.drop(['pim'], axis = 1)
-
-
-def hello4(x):
-    if x > 0:
-        return x - MIN_EPOCH
-    else:
-        return x
-
-"""c"""
-
-q = df.pim2.apply(hello4)
-
-df = df.assign(a_time = q)
-
-
-m = df.pim2 > 0
+m = df.attributed_time > 0
 df[m]
-
-df = df.drop(['pim2'], axis = 1)
-
 
 df['sys'] = df.device * df.os.max() + df.os
 df['cat_sys'] = pd.Categorical(df.sys)
 df['system'] = df.cat_sys.cat.codes
 
 df = df.drop(['sys', 'cat_sys'], axis = 1)
-
-
 df['ip_and_sys'] = df.ip * df.system.max() + df.system
-
-
 df['user'] = pd.Categorical(df.ip_and_sys)
-
 df['user_code'] = df.user.cat.codes
 
 df = df.drop(['ip_and_sys', 'user'], axis = 1)
-
 df = df.drop(['ip', 'system'], axis = 1)
 
-df['time'] = pd.to_numeric(df.time, downcast = 'integer')
-df['a_time'] = pd.to_numeric(df.a_time, downcast = 'integer')
-
 df = df.sort_values(by = ['user_code', 'time'])
-
 df = df.reset_index()
 df = df.drop(['index'], axis = 1)
 
+import gc
+gc.collect(0)
 
 
+#
+#
+# Cluster analysis in TimeLineTool.py
+#
+#
+
+d = TimeLineTool_analyse_user_code(df, 86)
+
+n_clusters = d.keys()
+n_gap = d.values()
 
 
-def analyse_user_code(df, idx):
-
-    print(f"Analyzing user code {idx}...")
-    m = df.user_code == idx
-    q = df[m]
-
-    print(f"#Values: {len(q)}")
-
-    print(q)
-
-    acData = q.time.values
-
-    n = len (acData)
-
-    min = acData.min()
-    max = acData.max() + 1
-
-    print(f" {n} event(s). min: {min} max: {max}. length = {max - min}")
-
-    lcNCluster = []
-    lcClusterChange = []
-
-    e = Close1D(acData, 0)
-    nClusters = e.max() + 1
-    lcNCluster.append(nClusters)
-    lcClusterChange.append(0)
-
-    fClusterSize = len(q)/nClusters
-
-    print(f"Threshold {0} sec: nClusters = {nClusters}. Values per cluster: {fClusterSize:.1f}")
-
-    iThreshold = 1
-
-    while nClusters > 1:
-
-        e = Close1D(acData, iThreshold)
-        nClusters = e.max() + 1
-
-        if nClusters < lcNCluster[-1]:
-            lcNCluster.append(nClusters)
-            lcClusterChange.append(iThreshold)
-
-            fClusterSize = len(q)/nClusters
-
-        iThreshold = iThreshold + 1
-
-    d = dict (zip (lcNCluster, lcClusterChange))
-    print (d)
-
-"""c"""
-
-
-
-
-
-pl.plot(lcClusterChange,lcNCluster)
-pl.xlabel('Slack (secs)')
+pl.plot(n_gap,n_clusters)
+pl.xlabel('Gap slack')
 pl.ylabel('Clusters')
-pl.title('# clusters' + str(test_id))
+pl.show()
+
+idx = 92
+m = df.user_code == idx
+
+q = df[m]
+
+len (q)
+
+s = q.time
+
+acTime = np.array(s)
+
+acTime = acTime - acTime.min()
+
+min = acTime.min()
+max = acTime.max()
+
+interval_length = max - min
+
+
+pl.hist(acShort, bins = bin_size)
+
+
+
+pl.show()
+
+diff = np.diff(s)
+
+m = diff < 5 * 60
+
+diff = diff[m] 
+
+pl.hist(diff, bins = 5 * 60)
+
 pl.show()
 
 
-SESSION_THRESHOLD = 60
-
-user_code = np.array(df.user_code)
-click_time = np.array(df.time)
-
-res = np.empty(len (user_code), dtype = np.int)
+#!!! Compare with mixed user codes to see if there is a signal
 
 
-for u in range(user_code.min(), user_code.max() + 1):
-    begin = np.searchsorted(user_code, u)
-    end   = np.searchsorted(user_code, u+1)
 
-    print(f"For user_code {u}: start index = {begin}, beyond end={end}")
 
-    e = Close1D(click_time[begin:end], SESSION_THRESHOLD)
 
-    if begin == 0:
-        pass
-    else:
-        max_used = np.max(res[:begin])
-        e = e + max_used +1 
 
-    res[begin:end] = e
-
-"""c"""    
 
 df = df.assign(session=res)
 
@@ -241,6 +143,4 @@ groups.groups
 
 
 pd.pivot_table(q,index=["session"])...
-
-
 

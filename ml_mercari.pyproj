@@ -23,6 +23,9 @@
   <ItemGroup>
     <Compile Include="bucket_price.py" />
     <Compile Include="cython_test.py" />
+    <Compile Include="general\TimeAndDate.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="mercari\study_Lavrikov_Ridge.py">
       <SubType>Code</SubType>
     </Compile>
