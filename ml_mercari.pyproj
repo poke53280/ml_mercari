@@ -21,21 +21,26 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="abstract\cat_processor.py" />
-    <Compile Include="abstract\hashing.py" />
-    <Compile Include="abstract\IDConverter.py" />
-    <Compile Include="abstract\ImportAndPrepare.py" />
-    <Compile Include="abstract\text_processor.py" />
-    <Compile Include="abstract\TimeLineTool.py" />
-    <Compile Include="abstract\WeightDeterminator.py" />
     <Compile Include="bucket_price.py" />
+    <Compile Include="cython_test.py" />
+    <Compile Include="fasttest_keras.py" />
+    <Compile Include="general\cat_processor.py" />
+    <Compile Include="general\hashing.py" />
+    <Compile Include="general\IDConverter.py" />
+    <Compile Include="general\ImportAndPrepare.py" />
+    <Compile Include="general\text_processor.py" />
+    <Compile Include="general\TimeLineTool.py" />
+    <Compile Include="general\WeightDeterminator.py" />
     <Compile Include="Keras_CNN_FastText.py" />
     <Compile Include="lstm_imdb.py" />
     <Compile Include="ml_mercari.py" />
+    <Compile Include="run_analyzer.py" />
+    <Compile Include="stack_test.py" />
     <Compile Include="talking.py" />
+    <Compile Include="wordbatch_fm_ftrl_test.py" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="abstract\" />
+    <Folder Include="general\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
