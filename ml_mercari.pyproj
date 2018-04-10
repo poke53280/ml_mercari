@@ -21,22 +21,21 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="abstract\cat_processor.py" />
+    <Compile Include="abstract\hashing.py" />
+    <Compile Include="abstract\IDConverter.py" />
+    <Compile Include="abstract\ImportAndPrepare.py" />
+    <Compile Include="abstract\text_processor.py" />
+    <Compile Include="abstract\TimeLineTool.py" />
+    <Compile Include="abstract\WeightDeterminator.py" />
     <Compile Include="bucket_price.py" />
-    <Compile Include="class1.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="class2.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="hashing.py" />
     <Compile Include="Keras_CNN_FastText.py" />
     <Compile Include="lstm_imdb.py" />
     <Compile Include="ml_mercari.py" />
     <Compile Include="talking.py" />
-    <Compile Include="text_processor.py" />
-    <Compile Include="WeightDeterminator.py">
-      <SubType>Code</SubType>
-    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="abstract\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
