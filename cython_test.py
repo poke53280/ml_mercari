@@ -1,6 +1,5 @@
 
 
-
 # https://github.com/Technologicat/cython-sse-example/blob/master/sse_demo.pyx
 
 
