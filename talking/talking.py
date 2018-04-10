@@ -2,7 +2,6 @@
 
 import pandas as pd
 import numpy as np
-import numpy as np
 import datetime
 import pylab as pl
 
@@ -40,7 +39,7 @@ def Close1D(n, threshold):
 
 
 
-DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\talking\\"            
+DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\talking-data\\"            
 DATA_DIR_BASEMENT = "c:\\data_talking\\"
 DATA_DIR = DATA_DIR_PORTABLE
 
@@ -48,8 +47,6 @@ DATA_DIR = DATA_DIR_PORTABLE
 print('loading train data...')
 df = pd.read_csv(DATA_DIR + "train.csv")
 
-
-# Reduce dataset to contain all on a few IPs.
 
 # Approx two minutes sorting
 

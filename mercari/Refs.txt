@@ -1,0 +1,9 @@
+
+
+Tensorflow starter with lots of comments:
+https://www.kaggle.com/agrigorev/tensorflow-starter-conv1d-embeddings-0-442-lb/code
+
+Ensemble - description of all parts:
+https://www.kaggle.com/leeyun/ensemble-model?scriptVersionId=2526685/code
+
+
