@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import datetime
 import pylab as pl
-
+import gc
 
 DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\talking-data\\"            
 DATA_DIR_BASEMENT = "c:\\data_talking\\"
@@ -12,30 +12,14 @@ DATA_DIR = DATA_DIR_PORTABLE
 
 
 print('loading train data...')
-df = pd.read_csv(DATA_DIR + "train.csv")
 
+df = pd.read_csv(DATA_DIR + "train.csv")
 df = df.drop(['is_attributed'], axis = 1)
 
 
-# Approx two minutes sorting
-
-df = df.sort_values(by = ['ip'])
-
-len(df)
-# 184,903,890
-
-
-CUT_TO_ENTRIES = 10000
-
-
-df = df[:CUT_TO_ENTRIES]
-
-# Cut away largest IP (possibly chopped in session)
-
-m = (df.ip == df.ip.max())
-df = df[~m]
 
 df['time'] = TimeAndDate_GetSecondsSinceEpochSeries(df.click_time)
+
 MIN_EPOCH = df.time.min()
 df['time'] = df.time - MIN_EPOCH
 df['time'] = pd.to_numeric(df.time, downcast = 'integer')
@@ -48,15 +32,76 @@ df.attributed_time = df.attributed_time - MIN_EPOCH
 df.attributed_time = df.attributed_time.replace(- MIN_EPOCH, 0)
 df['attributed_time'] = pd.to_numeric(df.attributed_time, downcast = 'integer')
 
-m = df.attributed_time > 0
-df[m]
+
+print('loading test data...')
+
+df_s = pd.read_csv(DATA_DIR + "test_supplement.csv")
+
+df_s = df_s.drop(['click_id'], axis = 1)
+
+df_s['time'] = TimeAndDate_GetSecondsSinceEpochSeries(df_s.click_time)
+
+df_s['time'] = df_s.time - MIN_EPOCH
+df_s = df_s.drop(['click_time'], axis = 1)
+
+df_s = df_s.reset_index()
+
+numpy_type = df.attributed_time.dtype
+
+acTestMarker = np.zeros(len (df_s), dtype = numpy_type) -1
+
+df_s = df_s.assign(attributed_time=acTestMarker)
+df_s = df_s.drop(['index'], axis = 1)
+
+df_s = df_s[ ['ip', 'app', 'device', 'os', 'channel', 'attributed_time', 'time']]
+
+
+df = pd.concat([df, df_s], ignore_index=True)
+
+del df_s
+gc.collect(0)
+
+
+print('sorting combined data...')
+
+df = df.sort_values(by = ['time'])
+
+
+m1 = df.time > 59900
+m2 = df.time < 59910
+
+q = df[m1 & m2]
+
+len (q)
+
+q = q.sort_values(['ip', 'os'])
+
+
+
+
+
+
+
+
+qif nCut > 0:
+    df = df[:nCut]
+    # Cut fully away largest IP (possibly partly cut now)
+    m = (df.ip == df.ip.max())
+    df = df[~m]
+
+gc.collect(0)
 
 df['sys'] = df.device * df.os.max() + df.os
+
 df['cat_sys'] = pd.Categorical(df.sys)
 df['system'] = df.cat_sys.cat.codes
 
 df = df.drop(['sys', 'cat_sys'], axis = 1)
+
+
 df['ip_and_sys'] = df.ip * df.system.max() + df.system
+
+
 df['user'] = pd.Categorical(df.ip_and_sys)
 df['user_code'] = df.user.cat.codes
 
@@ -71,13 +116,17 @@ import gc
 gc.collect(0)
 
 
+df.user_code.value_counts()
+
+
+
 #
 #
 # Cluster analysis in TimeLineTool.py
 #
 #
 
-d = TimeLineTool_analyse_user_code(df, 86)
+d = TimeLineTool_analyse_user_code(df, 301)
 
 n_clusters = d.keys()
 n_gap = d.values()
