@@ -63,6 +63,98 @@ def error_func(w, X, y_t):
 
 """c"""
 
+#################################################################
+#
+#  WeightDeterminator_Get_X
+#
+
+def WeightDeterminator_Get_X(x0, x1, x2):
+
+    assert (x0.shape[0] == x1.shape[0])
+    assert (x0.shape[0] == x2.shape[0])
+
+    nRows = x0.shape[0]
+
+    l = []
+
+    s = []
+
+    # Linear in one
+    l.append(x0)
+    s.append("x0")
+
+    l.append(x1)
+    s.append("x1")
+
+    l.append(x2)
+    s.append("x2")
+
+    x_mul_0_1 = x0 * x1
+    x_mul_0_2 = x0 * x2
+    x_mul_1_2 = x1 * x2
+
+    # Linear in two
+    l.append(x_mul_0_1)
+    s.append("x0 * x1")
+    
+    l.append(x_mul_0_2)
+    s.append("x0 * x2")
+
+    l.append(x_mul_1_2)
+    s.append("x1 * x2")
+
+    x_sqr_0 = x0 * x0
+    x_sqr_1 = x1 * x1
+    x_sqr_2 = x2 * x2
+
+    #Quadratic in one
+
+    l.append(x_sqr_0)
+    s.append("x0 * x0")
+
+    l.append(x_sqr_1)
+    s.append("x1 * x1")
+
+    l.append(x_sqr_2)
+    s.append("x2 * x2")
+
+    # Quadratic in 1, linear in the other two:
+
+    l.append (x_sqr_0 * x_mul_1_2)
+    s.append("x0 * x0 * x1 * x2")
+
+    l.append (x_sqr_1 * x_mul_0_2)
+    s.append("x1 * x1 * x0 * x2")
+
+    l.append (x_sqr_2 * x_mul_0_1)
+    s.append("x2 * x2 * x0 * x1")
+
+    # Linear in all:
+    l.append (x0 * x1 * x2)   
+    s.append("x0 * x1 * x2")
+
+    # Linear in log all:
+    l.append (np.log(x0) * np.log(x1) * np.log(x2))   
+    s.append("log(x0) * log(x1) * log(x2)")
+
+
+    # Linear in xlog(x) all
+    l.append (x0 * np.log(x0) * x1 * np.log(x1) *  x2 *np.log(x2) )  
+    s.append("x0 * log(x0) * x1 * log(x1) *  x2 * log(x2)")
+
+    #Quadratic in all
+    l.append (x_sqr_0 * x_sqr_1 * x_sqr_2)
+    s.append("x0 * x0 * x1 * x1 * x2 * x2")
+
+    l.append (np.ones(nRows))
+    s.append("const")
+
+    X = np.stack(l, axis = 1)
+
+    return X, s
+
+"""c"""
+
 
 ##################################################
 #

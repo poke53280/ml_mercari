@@ -16,50 +16,27 @@ from scipy.optimize import minimize
 #
 
 def get_true_value(X):
-    return 3.7 * X[:,5] + 0.1 * X[:,1] + 2
+    x0 = X[:,0]
+    x1 = X[:,1]
+    x2 = X[:,2]
 
-"""c"""
-
-# Linear 
-#
-# Set up model, with secret function
-#
-# f = c0*x0 + c1*x1 + c2*x2 + c3*x3 + c4*x4 + c5*x5
-#
-
-def get_init_X():
-
-    nRows = 1005
-
-    x_in_0 = np.random.uniform(size= nRows)
-    x_in_1 = np.random.uniform(size= nRows)
-    x_in_2 = np.random.uniform(size= nRows)
-
-    l = []
-
-    l.append (x_in_0 * x_in_0 * x_in_0)   # 0
-    l.append (x_in_1 * x_in_1 * x_in_1)   # 1 
-    l.append (x_in_2 * x_in_2 * x_in_2)   # 2
-
-    l.append (x_in_0 * x_in_1 * x_in_2)   # 3
-
-    l.append (np.log(x_in_0) * np.log(x_in_1) * np.log(x_in_2))   # 4
-
-    l.append (x_in_0 * np.log(x_in_0) * x_in_1 * np.log(x_in_1) *  x_in_2 *np.log(x_in_2) )  # 5
-
-    l.append (np.ones(nRows))
-
-    X = np.stack(l, axis = 1)
-
-    return X
+    return 3.7 * x0 * x1 * x2 + 1.9 * x0 * x2 + 0.7
 
 """c"""
 
 
-X = get_init_X()
+
+nRows = 1005
+
+# The three independent variables
+
+x0 = np.random.uniform(size= nRows)
+x1 = np.random.uniform(size= nRows)
+x2 = np.random.uniform(size= nRows)
+
+X, s = WeightDeterminator_Get_X(x0, x1, x2)
 
 y_true = get_true_value(X)
-
 
 d = WeightDeterminator_GetWeigths(X, y_true)
 
