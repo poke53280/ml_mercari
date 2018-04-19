@@ -40,9 +40,13 @@ y_true = get_true_value(X)
 
 d = WeightDeterminator_GetWeigths(X, y_true)
 
+w = d[1]['SLSQP']
 
+for i, x in enumerate(w):
+    if np.abs(x) > 0.01:
+        print (f"{s[i]} w = {x}")
 
-
+"""c"""
 
 
 
