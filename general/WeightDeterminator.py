@@ -9,9 +9,11 @@ def mae_func(weights, predictions, y_true):
     sum = 0
 
     for i in range(len(predictions)):
-        sum +=  weights[i] * predictions[i]
+        sum +=  weights[i] * np.array(predictions[i])
 
-    return mean_absolute_error(y_true, sum)
+    err = mean_absolute_error(y_true, sum)
+
+    return err
 
 """c"""
 
@@ -32,13 +34,44 @@ predictions.append(1.05 * y_true + 1 + 4* np.random.normal(mu - 0.5, sigma * 3, 
 predictions.append(0.95 * y_true - 3  + 3* np.random.normal(mu + 0, sigma * 6, nRows))
 predictions.append(1.0 * np.ones(nRows))
 
+#################################################################
+#
+#  get_predict_value
+#
+
+def get_predict_value(w, X):
+
+    X_p = np.multiply(X, w)
+
+    y_p = X_p.sum(axis = 1)
+
+    return y_p
+
+"""c"""
 
 
+##################################################
+#
+#  error_func
+#
+
+def error_func(w, X, y_t):
+  
+    y_p = get_predict_value(w, X)
+
+    return mean_absolute_error(y_t, y_p)
+
+"""c"""
 
 
-def GetWeigths(predictions, y_true):
+##################################################
+#
+#  WeightDeterminator_GetWeigths
+#
 
-    nPredictions = len (predictions)
+def WeightDeterminator_GetWeigths(X, y_true):
+
+    nFeatures = X.shape[1]
 
     d = {}
     w_out = {}
@@ -47,14 +80,14 @@ def GetWeigths(predictions, y_true):
 
     print("Single...")
 
-    w = np.zeros(nPredictions)
+    w = np.zeros(nFeatures)
     w[0] = 1
 
     min = 100000
 
-    for x in range(len(predictions)):
+    for x in range(nFeatures):
         a = np.roll(w, x)
-        loss = mae_func(a, predictions, y_true)
+        loss = error_func(a, X, y_true)
         min = np.minimum(min, loss)
 
     """c"""
@@ -65,24 +98,24 @@ def GetWeigths(predictions, y_true):
 
     print("Mean...")
 
-    w0 = np.ones(nPredictions)/nPredictions
-    mean = mae_func(w0, predictions, y_true)
+    w0 = np.ones(nFeatures)/nFeatures
+    mean = error_func(w0, X, y_true)
 
     d['mean'] = mean
 
     print("L-BFGS-B...")
 
-    w0 = np.ones(nPredictions)/nPredictions
-    res = minimize(mae_func, w0, (predictions, y_true), method='L-BFGS-B')
-    loss = mae_func(res.x, predictions, y_true)
+    w0 = np.ones(nFeatures)/nFeatures
+    res = minimize(error_func, w0, (X, y_true), method='L-BFGS-B')
+    loss = error_func(res.x, X, y_true)
 
     d['L-BFGS-B'] = loss
     w_out['L-BFGS-B'] = res.x
 
     print("SLSQP...")
-    w0 = np.ones(nPredictions)/nPredictions
-    res = minimize(mae_func, w0, (predictions, y_true), method='SLSQP')
-    loss = mae_func(res.x, predictions, y_true)
+    w0 = np.ones(nFeatures)/nFeatures
+    res = minimize(error_func, w0, (X, y_true), method='SLSQP')
+    loss = error_func(res.x, X, y_true)
 
     d['SLSQP'] = loss
     w_out['SLSQP'] = res.x
@@ -100,9 +133,9 @@ def GetWeigths(predictions, y_true):
 
     for i in range(100):
     
-        starting_values = np.random.uniform(size=len(predictions))
+        starting_values = np.random.uniform(size=nFeatures)
 
-        res = minimize(mae_func, starting_values, (predictions, y_true), bounds=  [(0,1)]*len(predictions), method='SLSQP', options={'disp': False, 'maxiter': 50})
+        res = minimize(error_func, starting_values, (X, y_true), bounds = [(0,1)]*nFeatures, method='SLSQP', options={'disp': False, 'maxiter': 50})
 
         f = res['fun']
         w = res['x']
@@ -113,7 +146,7 @@ def GetWeigths(predictions, y_true):
         if np.min(lls_A) == f:
             print(f"[{i}]0_1: {f}")
 
-        res = minimize(mae_func, starting_values, (predictions, y_true), method='SLSQP', options={'disp': False, 'maxiter': 50})
+        res = minimize(error_func, starting_values, (X, y_true), method='SLSQP', options={'disp': False, 'maxiter': 50})
 
         f = res['fun']
         w = res['x']
@@ -124,7 +157,7 @@ def GetWeigths(predictions, y_true):
         if np.min(lls_B) == f:
             print(f"[{i}]unbound: {f}")
 
-        res = minimize(mae_func, starting_values, (predictions, y_true),  bounds=  [(-1.2,1.2)]*len(predictions), method='SLSQP', options={'disp': False, 'maxiter': 50})
+        res = minimize(error_func, starting_values, (X, y_true),  bounds= [(-1.2,1.2)]*nFeatures, method='SLSQP', options={'disp': False, 'maxiter': 50})
 
         f = res['fun']
         w = res['x']
