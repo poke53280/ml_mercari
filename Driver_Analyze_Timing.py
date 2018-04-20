@@ -59,7 +59,7 @@ DATA_DIR = DATA_DIR_PORTABLE
 
 print('loading train data...')
 
-df = pd.read_csv(DATA_DIR + "synthpop_timing.csv")
+df = pd.read_csv(DATA_DIR + "res300.csv")
 
 df = df.drop(['Unnamed: 0'], axis = 1)
 
