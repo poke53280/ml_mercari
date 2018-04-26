@@ -6,19 +6,31 @@ import datetime
 import pylab as pl
 import gc
 
+import general.TimeLineTool as tl
+import general.TimeAndDate as td
+
+
+isLoadTestSample = False
+
 DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\talking-data\\"            
 DATA_DIR_BASEMENT = "c:\\data_talking\\"
 DATA_DIR = DATA_DIR_PORTABLE
 
+# XXX Configure column sizes on load
 
-print('loading train data...')
+if isLoadTestSample:
+    print('loading test sample data...')
+    df = pd.read_csv(DATA_DIR + "train_sample.csv")
 
-df = pd.read_csv(DATA_DIR + "train.csv")
+else:
+    print('loading train data...')
+    df = pd.read_csv(DATA_DIR + "train.csv")
+
+
+
 df = df.drop(['is_attributed'], axis = 1)
 
-
-
-df['time'] = TimeAndDate_GetSecondsSinceEpochSeries(df.click_time)
+df['time'] = td.TimeAndDate_GetSecondsSinceEpochSeries(df.click_time)
 
 MIN_EPOCH = df.time.min()
 df['time'] = df.time - MIN_EPOCH
@@ -27,21 +39,22 @@ df['time'] = pd.to_numeric(df.time, downcast = 'integer')
 df = df.drop(['click_time'], axis = 1)
 
 df.attributed_time = df.attributed_time.fillna(0)
-df.attributed_time = TimeAndDate_GetSecondsSinceEpochSeries(df.attributed_time)
+df.attributed_time = td.TimeAndDate_GetSecondsSinceEpochSeries(df.attributed_time)
 df.attributed_time = df.attributed_time - MIN_EPOCH
 df.attributed_time = df.attributed_time.replace(- MIN_EPOCH, 0)
 df['attributed_time'] = pd.to_numeric(df.attributed_time, downcast = 'integer')
 
-
-print('loading test data...')
+print('loading test supplement data...')
 
 df_s = pd.read_csv(DATA_DIR + "test_supplement.csv")
 
 df_s = df_s.drop(['click_id'], axis = 1)
 
-df_s['time'] = TimeAndDate_GetSecondsSinceEpochSeries(df_s.click_time)
+df_s['time'] = td.TimeAndDate_GetSecondsSinceEpochSeries(df_s.click_time)
 
 df_s['time'] = df_s.time - MIN_EPOCH
+df_s['time'] = pd.to_numeric(df_s.time, downcast = 'integer')
+
 df_s = df_s.drop(['click_time'], axis = 1)
 
 df_s = df_s.reset_index()
@@ -61,29 +74,40 @@ df = pd.concat([df, df_s], ignore_index=True)
 del df_s
 gc.collect(0)
 
+#df.isnull().sum()
+# No nulls
+
 
 print('sorting combined data...')
 
 df = df.sort_values(by = ['time'])
 
 
+m = df.attributed_time > 0
+
+n = df[m]
+
+n = n.sort_values(by = 'time')
+
+
+
+
+
+
+
+
+
 m1 = df.time > 59900
-m2 = df.time < 59910
+m2 = df.time < 59950
 
 q = df[m1 & m2]
 
 len (q)
 
-q = q.sort_values(['ip', 'os'])
+q = q.sort_values(['ip'])
 
 
-
-
-
-
-
-
-qif nCut > 0:
+if nCut > 0:
     df = df[:nCut]
     # Cut fully away largest IP (possibly partly cut now)
     m = (df.ip == df.ip.max())
@@ -126,7 +150,7 @@ df.user_code.value_counts()
 #
 #
 
-d = TimeLineTool_analyse_user_code(df, 301)
+d = tl.TimeLineTool_analyse_user_code(df, 2182)
 
 n_clusters = d.keys()
 n_gap = d.values()

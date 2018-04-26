@@ -64,6 +64,24 @@ df = pd.read_csv(DATA_DIR + "res300.csv")
 df = df.drop(['Unnamed: 0'], axis = 1)
 
 
+x = df.b
+x = x.tolist()
+
+y = df.t
+y = y.tolist()
+
+
+pl.scatter(x, y)
+
+pl.title('Performance')
+pl.xlabel('cat_size')
+pl.ylabel('time')
+
+pl.show()
+
+
+
+
 def get_X(w, col):
 
     n = col[0]

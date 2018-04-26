@@ -1,5 +1,9 @@
 
 
+import pandas as pd
+import numpy as np
+import datetime
+
 ##############################################################################
 #
 #   TimeLineText
@@ -724,48 +728,46 @@ def AnalyzeTargetCondition(df, out, idx):
 """c"""
 
 
-################## R E S T A R T Portable #######################
+################## DRIVERS #######################
+
+def driver_restart_portable():
 
 
-import pandas as pd
-import numpy as np
-import datetime
+    df = pd.read_csv("data_sm.txt", encoding = "ISO-8859-1")
 
-df = pd.read_csv("data_sm.txt", encoding = "ISO-8859-1")
+    df.C = df.C.astype('category')
+    df.D = df.D.astype('category')
 
-df.C = df.C.astype('category')
-df.D = df.D.astype('category')
+    t_start = (2009 - 1970) * 365  
+    t_end =   (2013 - 1970) * 365  
 
-t_start = (2009 - 1970) * 365  
-t_end =   (2013 - 1970) * 365  
+    m = (df.C == "M")
+    df_m = df[m]
 
-m = (df.C == "M")
-df_m = df[m]
+    out = GetTargetInterval(df_m, t_start, t_end)
 
-out = GetTargetInterval(df_m, t_start, t_end)
+    DisplayTargetInterval(df_m, out)
 
-DisplayTargetInterval(df_m, out)
-
-# Applying day filter:
-m = (df.Q > t_d) & (df.F <= t_d)
-q = df[m]
+    # Applying day filter:
+    m = (df.Q > t_d) & (df.F <= t_d)
+    q = df[m]
 
 
-v_counts = pt.C.value_counts()
+    v_counts = pt.C.value_counts()
 
-i =  (2**0)* (v_counts['A'] != 0) + (2**1)*(v_counts['B'] != 0) + (2**2)*(v_counts['C'] != 0)
+    i =  (2**0)* (v_counts['A'] != 0) + (2**1)*(v_counts['B'] != 0) + (2**2)*(v_counts['C'] != 0)
 
-print(f"IDX: {idx} t_d {t_d} value {i}")
+    print(f"IDX: {idx} t_d {t_d} value {i}")
 
 
-## Many s with same range
-df.sort_values(by =['C', 'IDX', 'F', 'Q'])
+    ## Many s with same range
+    df.sort_values(by =['C', 'IDX', 'F', 'Q'])
 
-m = (df.C == "M")
+    m = (df.C == "M")
 
-q = df[m]
+    q = df[m]
 
-q.sort_values(by = ['IDX', 'F', 'Q'])
+    q.sort_values(by = ['IDX', 'F', 'Q'])
 
 
 #XXX Complete rasterization above.
@@ -785,24 +787,24 @@ q.sort_values(by = ['IDX', 'F', 'Q'])
 # Staging and merge
 #
 
-df_aa.head()
+    df_aa.head()
 
-s = addNoise(df_aa.FRA, 3)
-t = addNoise(df_aa.TIL, 3)
+    s = addNoise(df_aa.FRA, 3)
+    t = addNoise(df_aa.TIL, 3)
 
-s = s.reset_index()
-s.columns = ['i', 'd']
+    s = s.reset_index()
+    s.columns = ['i', 'd']
 
-se = pd.Series(s['d'])
+    se = pd.Series(s['d'])
 
-t = t.reset_index()
-t.columns = ['i', 'd']
-te = pd.Series(t['d'])
+    t = t.reset_index()
+    t.columns = ['i', 'd']
+    te = pd.Series(t['d'])
 
-df_aa = df_aa.reset_index()
+    df_aa = df_aa.reset_index()
 
-df_aa['F'] = se
-df_aa['T'] = te
+    df_aa['F'] = se
+    df_aa['T'] = te
 
 
 ##############################################################################
@@ -907,34 +909,33 @@ def TimeLineTool_analyse_user_code(df, idx):
 
 """c"""
 
+def driver_XXX():
+
+    SESSION_THRESHOLD = 60
+
+    user_code = np.array(df.user_code)
+    click_time = np.array(df.time)
+
+    res = np.empty(len (user_code), dtype = np.int)
 
 
-SESSION_THRESHOLD = 60
+    for u in range(user_code.min(), user_code.max() + 1):
+        begin = np.searchsorted(user_code, u)
+        end   = np.searchsorted(user_code, u+1)
 
-user_code = np.array(df.user_code)
-click_time = np.array(df.time)
+        print(f"For user_code {u}: start index = {begin}, beyond end={end}")
 
-res = np.empty(len (user_code), dtype = np.int)
+        e = Close1D(click_time[begin:end], SESSION_THRESHOLD)
 
+        if begin == 0:
+            pass
+        else:
+            max_used = np.max(res[:begin])
+            e = e + max_used +1 
 
-for u in range(user_code.min(), user_code.max() + 1):
-    begin = np.searchsorted(user_code, u)
-    end   = np.searchsorted(user_code, u+1)
-
-    print(f"For user_code {u}: start index = {begin}, beyond end={end}")
-
-    e = Close1D(click_time[begin:end], SESSION_THRESHOLD)
-
-    if begin == 0:
-        pass
-    else:
-        max_used = np.max(res[:begin])
-        e = e + max_used +1 
-
-    res[begin:end] = e
+        res[begin:end] = e
 
 """c"""    
-
 
 
 
