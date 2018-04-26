@@ -809,10 +809,17 @@ def driver_restart_portable():
 
 ##############################################################################
 #
-#        TimeLineTool_Close1D
+#        TimeLineTool_GetProximityGroups1D
+#
+#   Returns array with indices for each input element in n
+#
+#   TimeLineTool_GetProximityGroups1D(np.array([3,4,5,11]), 3)
+#   => array([0, 0, 0, 1])
 #
 
-def TimeLineTool_Close1D(n, threshold):
+def TimeLineTool_GetProximityGroups1D(n, threshold):
+
+    assert (threshold >= 0)
 
     nID = 0
 
@@ -835,6 +842,8 @@ def TimeLineTool_Close1D(n, threshold):
     
         last_value = x
 
+    assert(len(e)== len(n))
+
     return e
 
 """c"""
@@ -850,14 +859,14 @@ def TimeLineTool_cluster_events(acData):
     n = len (acData)
 
     min = acData.min()
-    max = acData.max() + 1
+    max = acData.max()
 
-    print(f" {n} event(s). min: {min} max: {max}. length = {max - min}")
+    print(f" {n} event(s). min: {min} max: {max}. length = {1 + max - min}")
 
     lcNCluster = []
     lcClusterChange = []
 
-    e = TimeLineTool_Close1D(acData, 0)
+    e = TimeLineTool_GetProximityGroups1D(acData, 0)
     nClusters = e.max() + 1
     lcNCluster.append(nClusters)
     lcClusterChange.append(0)
@@ -868,7 +877,7 @@ def TimeLineTool_cluster_events(acData):
 
     while nClusters > 1:
 
-        e = TimeLineTool_Close1D(acData, iThreshold)
+        e = TimeLineTool_GetProximityGroups1D(acData, iThreshold)
         nClusters = e.max() + 1
 
         if nClusters < lcNCluster[-1]:
@@ -937,6 +946,58 @@ def driver_XXX():
 
 """c"""    
 
+acData = np.array([0, 0, 0, 2, 3, 7, 9 ,9 ,9, 180, 182, 189, 195, 231, 235, 239, 254, 255, 258, 260])
 
+anGroup = TimeLineTool_GetProximityGroups1D(acData, 22)
+
+#
+# https://stackoverflow.com/questions/35094454/how-would-one-use-kernel-density-estimation-as-a-1d-clustering-method-in-scikit
+#
+# https://jakevdp.github.io/PythonDataScienceHandbook/05.13-kernel-density-estimation.html
+#
+#
+
+from numpy import array, linspace
+from sklearn.neighbors.kde import KernelDensity
+import matplotlib.pyplot as plt
+
+
+a = df1.time.values.reshape(-1,1)
+
+a = array([10,11,9,23,21,11,45,20,11,12]).reshape(-1, 1)
+
+a = acData.reshape(-1, 1)
+
+kde = KernelDensity(kernel='linear', bandwidth=3).fit(a)
+
+s = linspace(0, 220000)
+
+e = kde.score_samples(s.reshape(-1,1))
+
+plot(s, e)
+
+plt.show()
+
+from scipy.signal import argrelextrema
+
+mi, ma = argrelextrema(e, np.less)[0], argrelextrema(e, np.greater)[0]
+
+print(f"Minima: {s[mi]}")
+print(f"Maxima: {s[ma]}")
+
+m = a < mi[0]
+a[m]
+
+m = a >= mi[0] & a < mi[1]
+a[m]
+
+m = (a >= mi[1])
+a[m]
+
+plot(s[:mi[0]+1], e[:mi[0]+1], 'r',
+     s[mi[0]:mi[1]+1], e[mi[0]:mi[1]+1], 'g',
+     s[mi[1]:], e[mi[1]:], 'b',
+     s[ma], e[ma], 'go',
+     s[mi], e[mi], 'ro')
 
 

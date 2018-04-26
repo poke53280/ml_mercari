@@ -77,6 +77,26 @@ gc.collect(0)
 #df.isnull().sum()
 # No nulls
 
+# Popular ips:
+
+#
+#    5348      1742881
+# 5314      1619348
+# 5147       252546
+# 114220     210428
+
+m = df.ip == 114220
+
+df1 = df[m]
+
+acData = df1.time.values
+
+# goto TimeLineTool.py with the 114220 data
+
+
+
+
+
 
 print('sorting combined data...')
 
@@ -142,6 +162,9 @@ gc.collect(0)
 
 df.user_code.value_counts()
 
+m = df.user_code == 6896
+
+df1 = df[m]
 
 
 #
@@ -198,10 +221,6 @@ pl.show()
 
 
 #!!! Compare with mixed user codes to see if there is a signal
-
-
-
-
 
 
 
