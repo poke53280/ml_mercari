@@ -1,6 +1,6 @@
 
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 
 ###############################################################
@@ -68,9 +68,6 @@ def GetGroups(acData, anGroup):
 
 """c"""
 
-
-
-
 def Analyze_Cluster(acData, nProximityValue):
 
     anGroup = tl.TimeLineTool_GetProximityGroups1D(acData, nProximityValue)
@@ -90,57 +87,121 @@ def Analyze_Cluster(acData, nProximityValue):
    
 """c"""
 
-# Generate random events in range
-
-df.ip_and_sys.value_counts()
 
 
-m = df.ip_and_sys == 108753
+def GetOptimalGroupSize(acData):
 
-q = df[m]
+    r = range(acData.max())
 
-len (q)
+    acRandomData = np.random.choice(r, len (acData))
+    acRandomData = np.sort(acRandomData)
 
-acData = q.time.values
-acData = np.sort(acData)
+    global_density = len(acData) / (acData.max() - acData.min() + 1)
+    print(f"global_density {global_density}")
 
-r = range(acData.max())
+    global_density_random = len(acRandomData) / (acRandomData.max() - acRandomData.min() + 1)
+    print(f"global_density_random {global_density_random}")
 
-acRandomData = np.random.choice(r, len (acData))
-acRandomData = np.sort(acRandomData)
+    xRange = 2 * 60   # Largest foreseen grouping
+    lcProx = np.array (range(xRange))
+    lcProx = lcProx + 3       # 3 secs min res
+
+    y_real = []
+    y_random = []
+    y_diff = []
+
+    for n, x_value in enumerate(lcProx):
+        score_real = Analyze_Cluster(acData, x_value)
+        score_rand = Analyze_Cluster(acRandomData, x_value)
+
+        y_real.append(score_real)
+        y_random.append(score_rand)
+        y_diff.append(score_real - score_rand)
+
+        # print(f"{n/xRange}")
+
+    """c"""
+
+    acDiff = np.array(y_diff)
+
+    an = np.argsort(acDiff)
+
+    maxIndex = an[-1]  # xxx add offset
+    acDiff[maxIndex]
+
+    print(f"attr {maxIndex} diff {acDiff[maxIndex]}")
+    
+    isGraph = False
+
+    if isGraph:
+        plt.plot(lcProx, y_real)
+        plt.plot(lcProx, y_random)
+        plt.plot(lcProx, y_diff)
+        plt.show()
+
+    return maxIndex
+
+"""c"""    
+
+v = df.ip_app_sys_channel.value_counts()
+
+idx = v.index
+count = v.values
+
+tup = zip(idx, count)
+
+opt = []
+sum_length = 0
 
 
-global_density = len(acData) / (acData.max() - acData.min() + 1)
-print(f"global_density {global_density}")
+for idx, c in tup:
+    if c > 1000:
+        print(f"idx = {idx}, count = {c}")
+        m = df.ip_app_sys_channel == idx
+        q = df[m]
+        print(f"{idx} : length = {len (q)}")
 
-global_density_random = len(acRandomData) / (acRandomData.max() - acRandomData.min() + 1)
-print(f"global_density_random {global_density_random}")
+        acData = q.time.values
+        acData = np.sort(acData)
 
-xRange = 4000
-lcProx = range(xRange)
+        optimal = GetOptimalGroupSize(acData)
 
-y_real = []
-y_random = []
-y_diff = []
+        opt.append(optimal)
 
-for n, x_value in enumerate(lcProx):
-    score_real = Analyze_Cluster(acData, x_value)
-    score_rand = Analyze_Cluster(acRandomData, x_value)
+        sum_length += len (q)
 
-    y_real.append(score_real)
-    y_random.append(score_rand)
-    y_diff.append(score_real - score_rand)
+        factor = sum_length / len(df)
+        print(f"factor is {factor*100:.1f}%")
 
 
-    print(f"{n/xRange}")
 
 """c"""
 
-import matplotlib.pyplot as plt
-plt.plot(lcProx, y_real)
-plt.plot(lcProx, y_random)
-plt.plot(lcProx, y_diff)
-plt.show()
+
+l = [29129833, 29152905, 29135705, 29158771, 29152899, 29129827, 29158765, 29135699, 2198559, 2198553, 60230323, 2158031, 2209611]
+
+opt = []
+
+
+
+for comboID in l:
+    m = df.ip_app_sys_channel == comboID
+    q = df[m]
+    print(f"{comboID} : length = {len (q)}")
+
+    acData = q.time.values
+    acData = np.sort(acData)
+
+    optimal = GetOptimalGroupSize(acData)
+
+    opt.append(optimal)
+
+    sum_length += len (q)
+
+"""c"""
+
+
+
 
 
 #
