@@ -27,7 +27,6 @@ else:
     df = pd.read_csv(DATA_DIR + "train.csv")
 
 
-
 df = df.drop(['is_attributed'], axis = 1)
 
 df['time'] = td.TimeAndDate_GetSecondsSinceEpochSeries(df.click_time)
@@ -85,11 +84,11 @@ gc.collect(0)
 # 5147       252546
 # 114220     210428
 
-m = df.ip == 114220
+#m = df.ip == 114220
 
-df1 = df[m]
+#df1 = df[m]
 
-acData = df1.time.values
+#acData = df1.time.values
 
 # goto TimeLineTool.py with the 114220 data
 
@@ -97,35 +96,12 @@ acData = df1.time.values
 
 
 
+#q = df[m1 & m2]
+#len (q)
 
-print('sorting combined data...')
+#q = q.sort_values(['ip'])
 
-df = df.sort_values(by = ['time'])
-
-
-m = df.attributed_time > 0
-
-n = df[m]
-
-n = n.sort_values(by = 'time')
-
-
-
-
-
-
-
-
-
-m1 = df.time > 59900
-m2 = df.time < 59950
-
-q = df[m1 & m2]
-
-len (q)
-
-q = q.sort_values(['ip'])
-
+nCut = 0
 
 if nCut > 0:
     df = df[:nCut]
@@ -135,37 +111,60 @@ if nCut > 0:
 
 gc.collect(0)
 
-df['sys'] = df.device * df.os.max() + df.os
+# 'system' : [device, os]
+df['temp'] = df.device * df.os.max() + df.os
+df['temp'] = pd.Categorical(df.temp)
+df['system'] = df.temp.cat.codes
 
-df['cat_sys'] = pd.Categorical(df.sys)
-df['system'] = df.cat_sys.cat.codes
+df = df.drop(['temp'], axis = 1)
 
-df = df.drop(['sys', 'cat_sys'], axis = 1)
-
-
-df['ip_and_sys'] = df.ip * df.system.max() + df.system
+# Drop device and os, at least for now
+df = df.drop(['device', 'os'], axis = 1)
 
 
-df['user'] = pd.Categorical(df.ip_and_sys)
-df['user_code'] = df.user.cat.codes
 
-df = df.drop(['ip_and_sys', 'user'], axis = 1)
-df = df.drop(['ip', 'system'], axis = 1)
+# [ip, system]
+df['temp'] = df.ip * df.system.max() + df.system
+df['temp'] = pd.Categorical(df.temp)
+df['ip_and_sys'] = df.temp.cat.codes
+df = df.drop(['temp'], axis = 1)
 
-df = df.sort_values(by = ['user_code', 'time'])
-df = df.reset_index()
-df = df.drop(['index'], axis = 1)
+# [system, channel]
 
-import gc
+df['temp'] = df.channel * df.system.max() + df.system
+df['temp'] = pd.Categorical(df.temp)
+df['channel_and_sys'] = df.temp.cat.codes
+df = df.drop(['temp'], axis = 1)
+
+# [app, system, channel]
+df['temp'] = df.app * df.channel_and_sys.max() + df.channel_and_sys
+df['temp'] = pd.Categorical(df.temp)
+df['app_channel_sys'] = df.temp.cat.codes
+df = df.drop(['temp'], axis = 1)
+
+
+# [ip, system, channel]
+df['temp'] = df.ip * df.channel_and_sys.max() + df.channel_and_sys
+df['temp'] = pd.Categorical(df.temp)
+df['ip_sys_channel'] = df.temp.cat.codes
+df = df.drop(['temp'], axis = 1)
+
+
+# [ip, app, system, channel]
+df['temp'] = df.ip * df.app_channel_sys.max() + df.app_channel_sys
+df['temp'] = pd.Categorical(df.temp)
+df['ip_app_sys_channel'] = df.temp.cat.codes
+df = df.drop(['temp'], axis = 1)
+
+# Drop all elementals for now.
+df = df.drop(['ip', 'app', 'channel', 'system'], axis = 1)
+
 gc.collect(0)
 
+df = df.sort_values(by = ['time'])
 
-df.user_code.value_counts()
 
-m = df.user_code == 6896
-
-df1 = df[m]
-
+df.to_pickle(DATA_DIR + "preprocessed.pkl")
 
 #
 #

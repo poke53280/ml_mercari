@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>cc77cf4b-e52a-4996-852b-eba94c92124b</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>mercari\ml_mercari.py</StartupFile>
+    <StartupFile>Driver_Time_Grouping.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -24,6 +24,9 @@
     <Compile Include="bucket_price.py" />
     <Compile Include="cython_test.py" />
     <Compile Include="Driver_Analyze_Timing.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Driver_Time_Grouping.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="general\TimeAndDate.py">
