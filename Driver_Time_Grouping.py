@@ -89,7 +89,7 @@ def Analyze_Cluster(acData, nProximityValue):
 
 
 
-def GetOptimalGroupSize(acData):
+def GetOptimalGroupSize(acData, isGraph, max_grow):
 
     r = range(acData.max())
 
@@ -102,9 +102,9 @@ def GetOptimalGroupSize(acData):
     global_density_random = len(acRandomData) / (acRandomData.max() - acRandomData.min() + 1)
     print(f"global_density_random {global_density_random}")
 
-    xRange = 2 * 60   # Largest foreseen grouping
+    xRange = max_grow   # Largest foreseen grouping
     lcProx = np.array (range(xRange))
-    lcProx = lcProx + 3       # 3 secs min res
+    lcProx = lcProx       
 
     y_real = []
     y_random = []
@@ -131,8 +131,6 @@ def GetOptimalGroupSize(acData):
 
     print(f"attr {maxIndex} diff {acDiff[maxIndex]}")
     
-    isGraph = False
-
     if isGraph:
         plt.plot(lcProx, y_real)
         plt.plot(lcProx, y_random)
@@ -154,8 +152,25 @@ opt = []
 sum_length = 0
 
 
+cumsum = np.cumsum(count)
+sum = np.sum(count)
+
+cumsum = cumsum/sum
+
+len(idx)
+66451050
+
+test_idx_into_list = int(66451050/950)
+
+cumsum[test_idx_into_list]
+
+count[test_idx_into_list]
+
+test_idx = idx[test_idx_into_list]
+
+
 for idx, c in tup:
-    if c > 1000:
+    if c > 5000:
         print(f"idx = {idx}, count = {c}")
         m = df.ip_app_sys_channel == idx
         q = df[m]
@@ -164,7 +179,7 @@ for idx, c in tup:
         acData = q.time.values
         acData = np.sort(acData)
 
-        optimal = GetOptimalGroupSize(acData)
+        optimal = GetOptimalGroupSize(acData, False, 5 * 60)
 
         opt.append(optimal)
 
@@ -192,13 +207,62 @@ for comboID in l:
     acData = q.time.values
     acData = np.sort(acData)
 
-    optimal = GetOptimalGroupSize(acData)
+    optimal = GetOptimalGroupSize(acData, False, 5 * 60)
 
     opt.append(optimal)
 
     sum_length += len (q)
 
 """c"""
+
+# from count 100 (6940 items)
+
+m = df.ip_app_sys_channel == 57219209
+
+q = df[m]
+
+print(f"{len(q)}")
+
+# seven values, very far away from each other.
+# => seven groups of max density
+
+
+
+acData = q.time.values
+acData = np.sort(acData)
+
+optimal = GetOptimalGroupSize(acData, True, 12* 3600)
+
+
+Analyze_Cluster(acData, 70)
+
+#
+# Isolate single users by grouping, clustering.
+#
+# Gives:
+#
+# u0       c.....c.....c.........c.........c....c.......
+# u1       c......X.......c.......c.......X........c....
+# u2       .....c............c........X........c........
+#
+#
+# Optimally insert Xs in test set, based on c
+#
+#  u0       c.....c.....c.........c.........c....c.......
+#  u1       c.............c.......c................c.....
+#  u2       .....c............c.................c........
+#
+# Cluster test set to train set. Pick test users closest to convert users in train.
+#
+#
+
+u0_c = [223, 400, 500, 600]
+u0_a = [450]
+
+
+
+
+
 
 
 
