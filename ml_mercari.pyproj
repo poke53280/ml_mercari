@@ -69,10 +69,12 @@
   <ItemGroup>
     <Folder Include="general\" />
     <Folder Include="mercari\" />
+    <Folder Include="batch\" />
     <Folder Include="talking\" />
     <Folder Include="toxic\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="batch\description.txt" />
     <Content Include="mercari\Refs.txt" />
     <Content Include="toxic\Refs.txt" />
   </ItemGroup>
