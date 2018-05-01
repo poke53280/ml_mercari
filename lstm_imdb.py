@@ -115,7 +115,6 @@ for i in ai:
 """c"""
 
 
-
 import numpy as np
 from keras.preprocessing.text import Tokenizer
 from sklearn.model_selection import train_test_split, KFold

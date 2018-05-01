@@ -21,6 +21,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="batch\ftrl_basic.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="bucket_price.py" />
     <Compile Include="cython_test.py" />
     <Compile Include="Driver_Analyze_Timing.py">
@@ -74,7 +77,7 @@
     <Folder Include="toxic\" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="batch\description.txt" />
+    <Content Include="batch\description.py" />
     <Content Include="mercari\Refs.txt" />
     <Content Include="toxic\Refs.txt" />
   </ItemGroup>
