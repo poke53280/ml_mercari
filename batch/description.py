@@ -1,4 +1,34 @@
 ﻿
+
+
+# Logistic regression for machine learning:
+# https://machinelearningmastery.com/logistic-regression-for-machine-learning/
+
+# FM somewhat explained and put into recommender system
+# https://dzone.com/articles/factorization-machines-for-recommendation-systems
+
+
+
+#Logistic Regression for Machine Learning
+
+# Logistic function (sigmoid function).
+
+
+# Representation Used for Logistic Regression
+
+# Logistic regression uses an equation as the representation, very much like linear regression.
+
+
+
+# Below is an example logistic regression equation:
+# y = e^(b0 + b1*x) / (1 + e^(b0 + b1*x))
+
+
+
+
+
+#
+#  
 #
 # L1 Normalization for dummies
 # https://medium.com/mlreview/l1-norm-regularization-and-sparsity-explained-for-dummies-5b0e4be3938a
