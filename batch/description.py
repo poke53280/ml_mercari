@@ -1,5 +1,18 @@
 ﻿
+https://github.com/KnetML/Knet-the-Julia-dope/blob/master/chapter02_supervised-learning/section3-logistic-regression.ipynb
 
+# Logistic regression with gradient descent from scratch in Python 
+# https://medium.com/@martinpella/logistic-regression-from-scratch-in-python-124c5636b8ac
+
+=> basic_logistic_regression.py
+
+
+#https://medium.com/unstructured/how-feature-engineering-can-help-you-do-well-in-a-kaggle-competition-part-iii-f67567aaf57c
+# One of the popular approaches for CTR Prediction is Logistic Regression with
+# a Follow-the-Regularized-Leader (FTRL) optimizer, 
+
+# ProximalGradientDescentOptimizer (tensorflow)
+http://papers.nips.cc/paper/3793-efficient-learning-using-forward-backward-splitting.pdf
 
 # Logistic regression for machine learning:
 # https://machinelearningmastery.com/logistic-regression-for-machine-learning/
@@ -22,9 +35,6 @@
 
 # Below is an example logistic regression equation:
 # y = e^(b0 + b1*x) / (1 + e^(b0 + b1*x))
-
-
-
 
 
 #
