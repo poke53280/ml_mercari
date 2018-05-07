@@ -73,6 +73,7 @@ last_grad_b = grad_b_function(X, m, b)
 for i in N:
     C = cost_function(X, m, b)
 
+
     grad_m = grad_m_function(X, m, b)
     grad_b = grad_b_function(X, m, b)
 
