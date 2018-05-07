@@ -1,8 +1,4 @@
 
-#
-# https://medium.com/@martinpella/logistic-regression-from-scratch-in-python-124c5636b8ac
-#
-
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -11,64 +7,119 @@ from sklearn import datasets
 iris = datasets.load_iris()
 
 X = iris.data[:, :2]
-y = (iris.target != 0) * 1
 
-plt.figure(figsize=(10, 6))
-plt.scatter(X[y == 0][:, 0], X[y == 0][:, 1], color='b', label='0')
-plt.scatter(X[y == 1][:, 0], X[y == 1][:, 1], color='r', label='1')
-plt.legend();
 
-plt.show()
+def cost_function(X, m, b):
 
-class LogisticRegression:
-    def __init__(self, lr=0.01, num_iter=100000, fit_intercept=True, verbose=False):
-        self.lr = lr
-        self.num_iter = num_iter
-        self.fit_intercept = fit_intercept
-        self.verbose = verbose
-    
-    def __add_intercept(self, X):
-        intercept = np.ones((X.shape[0], 1))
-        return np.concatenate((intercept, X), axis=1)
-    
-    def __sigmoid(self, z):
-        return 1 / (1 + np.exp(-z))
-    def __loss(self, h, y):
-        return (-y * np.log(h) - (1 - y) * np.log(1 - h)).mean()
-    
-    def fit(self, X, y):
-        if self.fit_intercept:
-            X = self.__add_intercept(X)
-        
-        # weights initialization
-        self.theta = np.zeros(X.shape[1])
-        
-        for i in range(self.num_iter):
-            z = np.dot(X, self.theta)
-            h = self.__sigmoid(z)
-            gradient = np.dot(X.T, (h - y)) / y.size
-            self.theta -= self.lr * gradient
-            
-            z = np.dot(X, self.theta)
-            h = self.__sigmoid(z)
+    sum = 0
 
-            loss = self.__loss(h, y)
-                
-            if(self.verbose ==True and i % 10000 == 0):
-                print(f'loss: {loss} \t')
+    for x in X:
+        y_true = x[1]
+        y_pred = m * x[0] + b
+
+        diff = y_true - y_pred
+        diff2 = diff **2
+        sum = sum + diff2
     
-    def predict_prob(self, X):
-        if self.fit_intercept:
-            X = self.__add_intercept(X)
-    
-        return self.__sigmoid(np.dot(X, self.theta))
-    
-    def predict(self, X):
-        return self.predict_prob(X).round()
+    return sum/len(X)
 
 """c"""
 
-model = LogisticRegression(lr=0.1, num_iter=300000)
+def grad_m_function(X, m, b):
+
+    sum = 0
+
+    for x in X:
+        y_true = x[1]
+        y_pred = m * x[0] + b
+        
+        diff = y_true - y_pred
+
+        value = x[0] * diff
+
+        sum = sum + value
+            
+    return -2 * sum/len(X)
+
+"""c"""
+
+def grad_b_function(X, m, b):
+
+    sum = 0
+
+    for x in X:
+        y_true = x[1]
+        y_pred = m * x[0] + b
+        
+        diff = y_true - y_pred
+
+        sum = sum + diff
+            
+    return -2 * sum/len(X)
+
+"""c"""
+
+m = -11
+b = 23
+
+N = range(50000)
+
+lr_m = 0.01
+lr_b = 0.01
+
+last_grad_m = grad_m_function(X, m, b)
+last_grad_b = grad_b_function(X, m, b)
+
+for i in N:
+    C = cost_function(X, m, b)
+
+    grad_m = grad_m_function(X, m, b)
+    grad_b = grad_b_function(X, m, b)
+
+    m = m - lr_m * grad_m
+    b = b - lr_b * grad_b
+
+    print(f"C= {C}, m= {m}, b= {b}, lr_m = {lr_m}, lr_b = {lr_b}, grad_m = {grad_m}, grad_b = {grad_b}")
+
+    m_sign_const = False
+
+    if grad_m > 0:
+        m_sign_const = last_grad_m > 0
+    else:
+        m_sign_const = last_grad_m < 0
+
+    if m_sign_const:
+        pass
+    else:
+        lr_m = lr_m * 0.5
+
+
+    b_sign_const = False
+    
+    if grad_b > 0:
+        b_sign_const = last_grad_b > 0
+    else:
+        b_sign_const = last_grad_b < 0
+
+    if b_sign_const:
+        pass
+    else:
+        lr_b = lr_b * 0.5
+
+    last_grad_m = grad_m
+    last_grad_b = grad_b            
+
+
+"""c"""
+
+
+
+
+plt.figure(figsize=(10, 6))
+plt.scatter(X[:, 0], X[:, 1], color='b', label='0')
+plt.show()
+
+
 
 model.fit(X,y)
 
