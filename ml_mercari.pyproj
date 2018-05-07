@@ -21,6 +21,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="batch\basic_linear_regression.py" />
     <Compile Include="batch\basic_logistic_regression.py">
       <SubType>Code</SubType>
     </Compile>
