@@ -4,7 +4,6 @@
 #
 #
 
-
 import pandas as pd
 import numpy as np
 import datetime
@@ -18,16 +17,12 @@ DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\talking-data\\"
 DATA_DIR_BASEMENT = "c:\\data_talking\\"
 DATA_DIR = DATA_DIR_PORTABLE
 
-
 # Read pickle
 df = pd.read_pickle(DATA_DIR + "preprocessed.pkl")
-
-
 
 # Create pickle
 
 isLoadTestSample = False
-
 
 
 # XXX Configure column sizes on load

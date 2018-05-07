@@ -7,12 +7,12 @@ https://github.com/KnetML/Knet-the-Julia-dope/blob/master/chapter02_supervised-l
 => basic_logistic_regression.py
 
 
-#https://medium.com/unstructured/how-feature-engineering-can-help-you-do-well-in-a-kaggle-competition-part-iii-f67567aaf57c
+# https://medium.com/unstructured/how-feature-engineering-can-help-you-do-well-in-a-kaggle-competition-part-iii-f67567aaf57c
 # One of the popular approaches for CTR Prediction is Logistic Regression with
 # a Follow-the-Regularized-Leader (FTRL) optimizer, 
 
 # ProximalGradientDescentOptimizer (tensorflow)
-http://papers.nips.cc/paper/3793-efficient-learning-using-forward-backward-splitting.pdf
+# http://papers.nips.cc/paper/3793-efficient-learning-using-forward-backward-splitting.pdf
 
 # Logistic regression for machine learning:
 # https://machinelearningmastery.com/logistic-regression-for-machine-learning/
@@ -21,21 +21,17 @@ http://papers.nips.cc/paper/3793-efficient-learning-using-forward-backward-split
 # https://dzone.com/articles/factorization-machines-for-recommendation-systems
 
 
-
 #Logistic Regression for Machine Learning
 
 # Logistic function (sigmoid function).
-
 
 # Representation Used for Logistic Regression
 
 # Logistic regression uses an equation as the representation, very much like linear regression.
 
 
-
 # Below is an example logistic regression equation:
 # y = e^(b0 + b1*x) / (1 + e^(b0 + b1*x))
-
 
 #
 #  
@@ -43,7 +39,7 @@ http://papers.nips.cc/paper/3793-efficient-learning-using-forward-backward-split
 # L1 Normalization for dummies
 # https://medium.com/mlreview/l1-norm-regularization-and-sparsity-explained-for-dummies-5b0e4be3938a
 #
-#For example, if a vector is [x, y], its L1 norm is |x| + |y|.
+# For example, if a vector is [x, y], its L1 norm is |x| + |y|.
 # FTL. 
 # 
 # track the performance of all experts over all previous time steps
