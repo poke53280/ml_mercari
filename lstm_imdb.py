@@ -421,7 +421,6 @@ L = len (l[0])
 
 y = create_y_contains_d(l)
 
-
 n = tokenizer.texts_to_sequences(l)
 
 X = np.array(n, dtype= np.float32)
