@@ -317,13 +317,17 @@ cdef void FTRL_update_single(int* inds, double* vals, int lenn, double e, double
 				lenn= X_indptr[row+1]-ptr
 				inds= <int*> X_indices.data+ptr
 				vals= <double*> X_data.data+ptr
-				e = FTRL_predict_single(inds, vals, lenn, L1, baL2, ialpha, beta, w, z, n, bias_term)-ys[row]
+				p = FTRL_predict_single(inds, vals, lenn, L1, baL2, ialpha, beta, w, z, n, bias_term)
+
+                p = 1.0 / (1.0 + exp(-fmax(fmin(p, 35.0), -35.0)))
+
+                e = p -ys[row]
 
                 e_total+= fabs(e)
 				
                 # operations on e clip, invert et.c.
 
-				FTRL_update_single(inds, vals, lenn, e, ialpha, w, z, n, bias_term, threads)
+				FTRL_update_single(inds, vals, lenn, e, ialpha, w, z, n, bias_term)
 
 			if self.verbose > 0:  print "Total e:", e_total
 		return self

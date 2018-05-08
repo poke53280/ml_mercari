@@ -28,7 +28,6 @@ class Bucketer():
         closest_indices = np.digitize(my_nums, self.mid_base)
         return self.base[closest_indices]
 
-
 """Class end"""
 
 

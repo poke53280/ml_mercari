@@ -83,7 +83,7 @@ class ftrl_proximal(object):
         self.interaction = interaction
 
         # model
-        # n: squared sum of past gradients  (Used for adaptive adjustment of learning rate as for Adagrad?)
+        # n: squared sum of past gradients
         # z: weights
         # w: lazy weights
         self.n = [0.] * D
