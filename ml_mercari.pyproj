@@ -36,6 +36,9 @@
     <Compile Include="Driver_Time_Grouping.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="general\svd.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="general\TimeAndDate.py">
       <SubType>Code</SubType>
     </Compile>
