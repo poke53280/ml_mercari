@@ -28,7 +28,6 @@
     <Compile Include="batch\ftrl_basic.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="bucket_price.py" />
     <Compile Include="cython_test.py" />
     <Compile Include="Driver_Analyze_Timing.py">
       <SubType>Code</SubType>
@@ -39,6 +38,7 @@
     <Compile Include="Driver_Time_Grouping.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="general\bin_bucket.py" />
     <Compile Include="general\roc_auc.py" />
     <Compile Include="general\svd.py">
       <SubType>Code</SubType>

@@ -1,4 +1,9 @@
 
+#
+# Review of synthpop performance
+# (w. beginning attempts to put data into a regression model.)
+
+
 import pandas as pd
 import numpy as np
 import datetime
@@ -7,46 +12,6 @@ import gc
 
 from sklearn.metrics import mean_absolute_error
 from scipy.optimize import minimize
-
-
-#################################################################
-#
-#  get_true_value
-#
-
-def get_true_value(X):
-    x0 = X[:,0]
-    x1 = X[:,1]
-    x2 = X[:,2]
-
-    return 3.7 * x0 * x1 * x2 + 1.9 * x0 * x2 + 0.7
-
-"""c"""
-
-
-
-nRows = 1005
-
-# The three independent variables
-
-x0 = np.random.uniform(size= nRows)
-x1 = np.random.uniform(size= nRows)
-x2 = np.random.uniform(size= nRows)
-
-X, s = WeightDeterminator_Get_X(x0, x1, x2)
-
-y_true = get_true_value(X)
-
-d = WeightDeterminator_GetWeigths(X, y_true)
-
-w = d[1]['SLSQP']
-
-for i, x in enumerate(w):
-    if np.abs(x) > 0.01:
-        print (f"{s[i]} w = {x}")
-
-"""c"""
-
 
 
 
@@ -79,7 +44,7 @@ pl.ylabel('time')
 pl.show()
 
 
-
+# See also WeightDeterminator.py
 
 def get_X(w, col):
 
@@ -120,8 +85,6 @@ w0 = np.random.uniform(size=4)
 res = minimize(mae_func, w0, (col, t_true), method='SLSQP', options={'disp': False, 'maxiter': 50})
 
 res['fun']
-
-
 
 
 t_p = get_X(res.x, col)

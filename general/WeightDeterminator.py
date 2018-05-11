@@ -1,4 +1,9 @@
 
+# Linear regression function
+#
+# Driver further below.
+
+
 import numpy as np
 from scipy.optimize import minimize
 from sklearn.metrics import mean_absolute_error
@@ -285,6 +290,43 @@ def WeightDeterminator_GetWeigths(X, y_true):
 
 """c"""
 
+#################################################################
+#
+#  get_true_value
+#
+
+def get_true_value(X):
+    x0 = X[:,0]
+    x1 = X[:,1]
+    x2 = X[:,2]
+
+    return 3.7 * x0 * x1 * x2 + 1.9 * x0 * x2 + 0.7
+
+"""c"""
+
+
+
+nRows = 1005
+
+# The three independent variables
+
+x0 = np.random.uniform(size= nRows)
+x1 = np.random.uniform(size= nRows)
+x2 = np.random.uniform(size= nRows)
+
+X, s = WeightDeterminator_Get_X(x0, x1, x2)
+
+y_true = get_true_value(X)
+
+d = WeightDeterminator_GetWeigths(X, y_true)
+
+w = d[1]['SLSQP']
+
+for i, x in enumerate(w):
+    if np.abs(x) > 0.01:
+        print (f"{s[i]} w = {x}")
+
+"""c"""
 
 
 
