@@ -1,4 +1,10 @@
 
+#
+# Class for binning and driver further below.
+#
+# Confer with general theory/ libs. (KDE...)
+#
+
 
 import numpy as np
 import pandas as pd

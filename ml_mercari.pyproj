@@ -39,6 +39,7 @@
     <Compile Include="Driver_Time_Grouping.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="general\roc_auc.py" />
     <Compile Include="general\svd.py">
       <SubType>Code</SubType>
     </Compile>
@@ -69,9 +70,6 @@
     <Compile Include="mercari\stack_test.py" />
     <Compile Include="talking\talking.py" />
     <Compile Include="toxic\wordbatch_fm_ftrl_test.py" />
-    <Compile Include="Train_AUC.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Train_Index_Group.py">
       <SubType>Code</SubType>
     </Compile>
