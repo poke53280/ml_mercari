@@ -1,4 +1,7 @@
 
+# A study on ROC curves and AUC.
+# Worker function and a driver further below.
+
 
 import numpy as np
 import pylab as pl
