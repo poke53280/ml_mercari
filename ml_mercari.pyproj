@@ -64,7 +64,6 @@
     <Compile Include="general\TimeLineTool.py" />
     <Compile Include="general\WeightDeterminator.py" />
     <Compile Include="Keras_CNN_FastText.py" />
-    <Compile Include="lstm_imdb.py" />
     <Compile Include="mercari\ml_mercari.py" />
     <Compile Include="mercari\run_analyzer.py" />
     <Compile Include="mercari\stack_test.py" />

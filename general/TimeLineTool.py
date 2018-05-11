@@ -1,5 +1,7 @@
 
 
+# Note: There is a driver in between functions below.
+
 import pandas as pd
 import numpy as np
 import datetime
@@ -520,6 +522,10 @@ def GetIsInLowRange(i, cMinMax):
 
 """c"""
 
+########################################################
+#
+#    GetItemInRangesCount
+#
 
 def GetItemInRangesCount(s, acMinMax):
 
@@ -544,6 +550,10 @@ def GetItemInRangesCount(s, acMinMax):
 
 """c"""
 
+########################################################
+#
+#    GetSetFromRanges
+#
 
 def GetSetFromRanges(acMinMax):
 
@@ -561,6 +571,10 @@ def GetSetFromRanges(acMinMax):
 
 """c"""
 
+########################################################
+#
+#    describe_intervals
+#
 
 def describe_intervals(acMinMax):
     for row in acMinMax:
@@ -571,6 +585,11 @@ def describe_intervals(acMinMax):
         print(f"Interval size = {nDays}")
 
 """c"""
+
+########################################################
+#
+#    get_m_ranges
+#
 
 def get_m_ranges(df, idx):
     lf1 = []
@@ -589,6 +608,11 @@ def get_m_ranges(df, idx):
 
 """c"""
 
+########################################################
+#
+#    get_l_ranges
+#
+
 def get_l_ranges(df, idx):
     lf = []
     lq = []
@@ -605,6 +629,11 @@ def get_l_ranges(df, idx):
     return np.array((lf,lq)).T
 
 """c"""
+
+########################################################
+#
+#    GetTargetInterval
+#
 
 def GetTargetInterval(df_m, t_start, t_end):
 
@@ -641,6 +670,11 @@ def GetTargetInterval(df_m, t_start, t_end):
     return start_target
 
 """c"""
+
+########################################################
+#
+#    DisplayTargetInterval
+#
 
 def DisplayTargetInterval(df_m, start_target):
     
@@ -685,7 +719,10 @@ def DisplayTargetInterval(df_m, start_target):
 
 """c"""    
 
-#idx = 193
+########################################################
+#
+#    AnalyzeTargetCondition
+#
 
 def AnalyzeTargetCondition(df, out, idx):
 

@@ -1,4 +1,12 @@
 
+#
+# See 
+# https://www.kaggle.com/sudalairajkumar/simple-exploration-baseline-notebook-avito/code
+#
+# for use of SVD in initial problem investigation.
+#
+#
+ 
 
 import numpy as np
 

@@ -1,3 +1,4 @@
+
 #
 # Hub for
 #
@@ -26,6 +27,39 @@
 #
 #
 #
+
+
+# Areas:
+
+
+# Actual text:
+# Spell check. HTML and other cleanings.
+#
+#
+#
+# (Language specific) dictionaries
+# Word2Vec et.c.
+#
+# stemmer. tokenize.
+#
+# parts of speech tagging. Named Entity Recognition.
+#
+
+
+#
+# Sequences. General embeddings. Non-language knowledge dependent comprehension. (char level ngram)
+#
+
+# => Model X/ feature vectors
+
+#
+# From Toxic: 
+# Pseudo labling (PL). 
+# Pretrained embeddings. FastText. Glove.
+# Translations as train/test-time augmentation (TTA) Pavel Ostyakov
+#
+#
+
 
 
 
