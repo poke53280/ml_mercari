@@ -1,6 +1,6 @@
 
 
-# Note: There is a driver in between functions below.
+# Driver included.
 
 import pandas as pd
 import numpy as np
@@ -765,83 +765,7 @@ def AnalyzeTargetCondition(df, out, idx):
 """c"""
 
 
-################## DRIVERS #######################
 
-def driver_restart_portable():
-
-
-    df = pd.read_csv("data_sm.txt", encoding = "ISO-8859-1")
-
-    df.C = df.C.astype('category')
-    df.D = df.D.astype('category')
-
-    t_start = (2009 - 1970) * 365  
-    t_end =   (2013 - 1970) * 365  
-
-    m = (df.C == "M")
-    df_m = df[m]
-
-    out = GetTargetInterval(df_m, t_start, t_end)
-
-    DisplayTargetInterval(df_m, out)
-
-    # Applying day filter:
-    m = (df.Q > t_d) & (df.F <= t_d)
-    q = df[m]
-
-
-    v_counts = pt.C.value_counts()
-
-    i =  (2**0)* (v_counts['A'] != 0) + (2**1)*(v_counts['B'] != 0) + (2**2)*(v_counts['C'] != 0)
-
-    print(f"IDX: {idx} t_d {t_d} value {i}")
-
-
-    ## Many s with same range
-    df.sort_values(by =['C', 'IDX', 'F', 'Q'])
-
-    m = (df.C == "M")
-
-    q = df[m]
-
-    q.sort_values(by = ['IDX', 'F', 'Q'])
-
-
-#XXX Complete rasterization above.
-
-# Consider how to bring in did and d into rasterization. (Embedding?)
-
-
-
-#XXX First find target value (s)
-#
-# Parametrized. On started SYKF, store shift day value (param: amount). param how many days into SYKF
-# For both SYKM and SYKF
-
-# Applying user filter:
-
-#
-# Staging and merge
-#
-
-    df_aa.head()
-
-    s = addNoise(df_aa.FRA, 3)
-    t = addNoise(df_aa.TIL, 3)
-
-    s = s.reset_index()
-    s.columns = ['i', 'd']
-
-    se = pd.Series(s['d'])
-
-    t = t.reset_index()
-    t.columns = ['i', 'd']
-    te = pd.Series(t['d'])
-
-    df_aa = df_aa.reset_index()
-
-    df_aa['F'] = se
-    df_aa['T'] = te
 
 
 ##############################################################################
@@ -1070,3 +994,83 @@ def TimeLineTool_GetOptimalGroupSize(acData, isGraph, max_grow):
     return maxIndex
 
 """c"""    
+
+
+################## DRIVERS #######################
+
+def driver_restart_portable():
+
+
+    df = pd.read_csv("data_sm.txt", encoding = "ISO-8859-1")
+
+    df.C = df.C.astype('category')
+    df.D = df.D.astype('category')
+
+    t_start = (2009 - 1970) * 365  
+    t_end =   (2013 - 1970) * 365  
+
+    m = (df.C == "M")
+    df_m = df[m]
+
+    out = GetTargetInterval(df_m, t_start, t_end)
+
+    DisplayTargetInterval(df_m, out)
+
+    # Applying day filter:
+    m = (df.Q > t_d) & (df.F <= t_d)
+    q = df[m]
+
+
+    v_counts = pt.C.value_counts()
+
+    i =  (2**0)* (v_counts['A'] != 0) + (2**1)*(v_counts['B'] != 0) + (2**2)*(v_counts['C'] != 0)
+
+    print(f"IDX: {idx} t_d {t_d} value {i}")
+
+
+    ## Many s with same range
+    df.sort_values(by =['C', 'IDX', 'F', 'Q'])
+
+    m = (df.C == "M")
+
+    q = df[m]
+
+    q.sort_values(by = ['IDX', 'F', 'Q'])
+
+
+#XXX Complete rasterization above.
+
+# Consider how to bring in did and d into rasterization. (Embedding?)
+
+
+
+#XXX First find target value (s)
+#
+# Parametrized. On started SYKF, store shift day value (param: amount). param how many days into SYKF
+# For both SYKM and SYKF
+
+# Applying user filter:
+
+#
+# Staging and merge
+#
+
+    df_aa.head()
+
+    s = addNoise(df_aa.FRA, 3)
+    t = addNoise(df_aa.TIL, 3)
+
+    s = s.reset_index()
+    s.columns = ['i', 'd']
+
+    se = pd.Series(s['d'])
+
+    t = t.reset_index()
+    t.columns = ['i', 'd']
+    te = pd.Series(t['d'])
+
+    df_aa = df_aa.reset_index()
+
+    df_aa['F'] = se
+    df_aa['T'] = te
+

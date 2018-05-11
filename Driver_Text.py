@@ -44,14 +44,10 @@
 #
 # parts of speech tagging. Named Entity Recognition.
 #
-
-
 #
 # Sequences. General embeddings. Non-language knowledge dependent comprehension. (char level ngram)
 #
-
 # => Model X/ feature vectors
-
 #
 # From Toxic: 
 # Pseudo labling (PL). 

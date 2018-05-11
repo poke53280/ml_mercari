@@ -29,6 +29,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="cython_test.py" />
+    <Compile Include="Driver_SM.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="general\dataset.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Synthpop_perf.py">
       <SubType>Code</SubType>
     </Compile>
@@ -56,19 +62,21 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="toxic\fasttest_keras.py" />
-    <Compile Include="general\cat_processor.py" />
+    <Compile Include="general\txt_quantity_finder.py" />
     <Compile Include="general\hashing.py" />
     <Compile Include="general\IDConverter.py" />
     <Compile Include="general\ImportAndPrepare.py" />
     <Compile Include="general\text_processor.py" />
     <Compile Include="general\TimeLineTool.py" />
     <Compile Include="general\WeightDeterminator.py" />
-    <Compile Include="Keras_CNN_FastText.py" />
     <Compile Include="mercari\ml_mercari.py" />
     <Compile Include="mercari\run_analyzer.py" />
     <Compile Include="mercari\stack_test.py" />
     <Compile Include="talking\talking.py" />
     <Compile Include="toxic\wordbatch_fm_ftrl_test.py" />
+    <Compile Include="Train_Embedding.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Train_Index_Group.py">
       <SubType>Code</SubType>
     </Compile>

@@ -1,5 +1,8 @@
 
-
+#
+# Attempts to find quantities in free text.
+# + Misc other text parsing.
+#
 
 
 
