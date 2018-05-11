@@ -33,6 +33,9 @@
     <Compile Include="Driver_Analyze_Timing.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Driver_Text.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Driver_Time_Grouping.py">
       <SubType>Code</SubType>
     </Compile>
