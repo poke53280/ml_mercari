@@ -3,6 +3,17 @@
 # https://medium.com/@martinpella/logistic-regression-from-scratch-in-python-124c5636b8ac
 #
 
+# model: 
+#
+# h = sigmoid ( sum (theta*xi) + b)
+#
+# c(theta) = sum(-y_true * np.log(h) - (1 - y_true) * np.log(1 - h)) / N
+#
+# del c/ del theta
+
+
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -33,6 +44,7 @@ class LogisticRegression:
     
     def __sigmoid(self, z):
         return 1 / (1 + np.exp(-z))
+
     def __loss(self, h, y):
         return (-y * np.log(h) - (1 - y) * np.log(1 - h)).mean()
     
@@ -42,19 +54,35 @@ class LogisticRegression:
         
         # weights initialization
         self.theta = np.zeros(X.shape[1])
-        
+
+### !!! 
         for i in range(self.num_iter):
-            z = np.dot(X, self.theta)
-            h = self.__sigmoid(z)
-            gradient = np.dot(X.T, (h - y)) / y.size
-            self.theta -= self.lr * gradient
             
+            # Run model at current theta set.
             z = np.dot(X, self.theta)
             h = self.__sigmoid(z)
 
-            loss = self.__loss(h, y)
+            # Calculate gradient with respect to all thetas (vector operation)
+            #gradient = np.dot(X.T, (h - y)) / y.size
+
+            n = 50
+
+            idx = np.random.choice(ar, n, replace = False)
+
+            diff_batch = h[idx] - y[idx]
+
+            xt_batch = X.T[:, idx]
+
+            gradient = np.dot(xt_batch, diff_batch) / n
+            
+            # Reduce cost by stepping downhill in all dimensions
+            
+            self.theta -= self.lr * gradient
                 
             if(self.verbose ==True and i % 10000 == 0):
+                z = np.dot(X, self.theta)
+                h = self.__sigmoid(z)
+                loss = self.__loss(h, y)
                 print(f'loss: {loss} \t')
     
     def predict_prob(self, X):
@@ -68,9 +96,22 @@ class LogisticRegression:
 
 """c"""
 
-model = LogisticRegression(lr=0.1, num_iter=300000)
+# Test interactive:
+
+theta = np.zeros(X.shape[1])
+
+# Run model forward for the full train set:
+z = np.dot(X, theta)
+h = 1 / (1 + np.exp(-z))
+
+# Calculate gradient on full train set
+#gradient = np.dot(X.T, (h - y)) / y.size
+
+
+model = LogisticRegression(lr=0.1, num_iter=300000, verbose=True)
 
 model.fit(X,y)
+
 
 preds = model.predict(X)
 
