@@ -29,7 +29,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="cython_test.py" />
-    <Compile Include="Driver_Analyze_Timing.py">
+    <Compile Include="Synthpop_perf.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Driver_Text.py">

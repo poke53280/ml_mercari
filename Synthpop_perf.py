@@ -1,8 +1,8 @@
 
 #
 # Review of synthpop performance
-# (w. beginning attempts to put data into a regression model.)
-
+# (w. beginning attempts to put data into a regression model. class WeightDeterminator.)
+#
 
 import pandas as pd
 import numpy as np
