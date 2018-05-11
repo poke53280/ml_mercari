@@ -22,7 +22,7 @@
 #
 # Take in code from Kaggle text competitions and CTF predictions.
 #
-# lstm_imdb.py: Sequences, keras, nn attempts. Embeddings on general event/interval sequences.
+# text_processor.py: Sequences, keras, nn attempts. Embeddings on general event/interval sequences.
 #
 #
 #
