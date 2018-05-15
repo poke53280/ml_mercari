@@ -63,7 +63,7 @@ class LogisticRegression:
             h = self.__sigmoid(z)
 
             # Calculate gradient with respect to all thetas (vector operation)
-            #gradient = np.dot(X.T, (h - y)) / y.size
+            # gradient = np.dot(X.T, (h - y)) / y.size
 
             n = 50
 
