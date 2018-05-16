@@ -15,14 +15,15 @@ from keras.layers.core import Dense
 from keras.layers import concatenate
 
 import numpy as np
+import gc
 
 labels = np.array([1,1,1,1,1,0,0,0,0,0])
 
 docs = ['Well done!', 'Good work', 'Great effort', 'nice work', 'Excellent!', 'Weak', 'Poor effort!', 'not good', 'poor work', 'Could have done better.']
 
-num_words = 4
+num_words = 365 *3
 
-vocab_size = 50
+vocab_size = 50000
 
 encoded_docs = [one_hot(d, vocab_size) for d in docs]
   
@@ -31,28 +32,37 @@ padded_docs = pad_sequences(encoded_docs, maxlen= num_words, padding='post')
 print(padded_docs)
 
 input_layer_0 = Input(shape=(num_words,), name = "input_0")
-embedding_layer_0 = Embedding(vocab_size, 8, name = "Emb_0")(input_layer_0)
-
+embedding_layer_0 = Embedding(vocab_size, 32, name = "Emb_0")(input_layer_0)
 
 input_layer_1 = Input(shape=(num_words,), name = "input_1")
-embedding_layer_1 = Embedding(vocab_size, 4, name = "Emb_1")(input_layer_1)
+embedding_layer_1 = Embedding(vocab_size, 16, name = "Emb_1")(input_layer_1)
 
-c_layer = concatenate([embedding_layer_0, embedding_layer_1])
+input_layer_2 = Input(shape=(num_words,), name = "input_2")
+embedding_layer_2 = Embedding(vocab_size, 16, name = "Emb_2")(input_layer_2)
+
+input_layer_3 = Input(shape=(num_words,), name = "input_3")
+embedding_layer_3 = Embedding(vocab_size, 16, name = "Emb_3")(input_layer_3)
+
+
+c_layer = concatenate([embedding_layer_0, embedding_layer_1, embedding_layer_2, embedding_layer_3])
 
 flatten_0 = Flatten() (c_layer)
 
-output_layer = Dense(1, activation='sigmoid') (flatten_0)
+deep_0 = Dense(100) (flatten_0)
 
-m = Model(inputs=[input_layer_0, input_layer_1], outputs=output_layer)
+#deep_1 = Dense(100) (deep_0)
+
+output_layer = Dense(1, activation='sigmoid') (deep_0)
+
+m = Model(inputs=[input_layer_0, input_layer_1, input_layer_2, input_layer_3], outputs=output_layer)
 
 print (m.summary())
 
-
 m.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
 
-m.fit([padded_docs, padded_docs], [labels], epochs=150, verbose=0)
+m.fit([padded_docs, padded_docs, padded_docs, padded_docs], [labels], epochs=150, verbose=0)
 
-loss, accuracy = m.evaluate([padded_docs, padded_docs], labels, verbose=0)
+loss, accuracy = m.evaluate([padded_docs, padded_docs, padded_docs, padded_docs], labels, verbose=0)
 
 print(f"Accuracy: {accuracy*100:.2f}")
 
