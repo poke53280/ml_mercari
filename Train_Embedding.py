@@ -1,8 +1,6 @@
 #
-#
 # https://machinelearningmastery.com/use-word-embedding-layers-deep-learning-keras/
 # https://jovianlin.io/keras-models-sequential-vs-functional/
-#
 #
 
 from keras.preprocessing.text import one_hot
@@ -10,61 +8,51 @@ from keras.preprocessing.sequence import pad_sequences
 
 from keras.layers import Input
 from keras.models import Model
-from keras.models import Flatten
-
+from keras.layers import Flatten
 from keras.layers import Embedding
-
 from keras.layers.core import Dense
-from keras.layers.core import Flatten
+
+from keras.layers import concatenate
 
 import numpy as np
 
-docs = ['Well done!',
-		'Good work',
-		'Great effort',
-		'nice work',
-		'Excellent!',
-		'Weak',
-		'Poor effort!',
-		'not good',
-		'poor work',
-		'Could have done better.']
-
-# define class labels
-
 labels = np.array([1,1,1,1,1,0,0,0,0,0])
+
+docs = ['Well done!', 'Good work', 'Great effort', 'nice work', 'Excellent!', 'Weak', 'Poor effort!', 'not good', 'poor work', 'Could have done better.']
+
+num_words = 4
 
 vocab_size = 50
 
 encoded_docs = [one_hot(d, vocab_size) for d in docs]
-
-print(encoded_docs)
-
-max_length = 4
-
-padded_docs = pad_sequences(encoded_docs, maxlen=max_length, padding='post')
+  
+padded_docs = pad_sequences(encoded_docs, maxlen= num_words, padding='post')
 
 print(padded_docs)
 
-input_layer = Input(shape=(max_length,))
-
-embedding_layer = Embedding(vocab_size, 8)(input_layer)
-
-flat_layer = Flatten() (embedding_layer)
-
-output_layer = Dense(1, activation='sigmoid') (flat_layer)
+input_layer_0 = Input(shape=(num_words,), name = "input_0")
+embedding_layer_0 = Embedding(vocab_size, 8, name = "Emb_0")(input_layer_0)
 
 
-m3 = Model(inputs=[input_layer], outputs=output_layer)
+input_layer_1 = Input(shape=(num_words,), name = "input_1")
+embedding_layer_1 = Embedding(vocab_size, 4, name = "Emb_1")(input_layer_1)
 
-print (m3.summary())
+c_layer = concatenate([embedding_layer_0, embedding_layer_1])
+
+flatten_0 = Flatten() (c_layer)
+
+output_layer = Dense(1, activation='sigmoid') (flatten_0)
+
+m = Model(inputs=[input_layer_0, input_layer_1], outputs=output_layer)
+
+print (m.summary())
 
 
-m3.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+m.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
 
-m3.fit([padded_docs], [labels], epochs=150, verbose=0)
+m.fit([padded_docs, padded_docs], [labels], epochs=150, verbose=0)
 
-loss, accuracy = m3.evaluate([padded_docs], labels, verbose=0)
+loss, accuracy = m.evaluate([padded_docs, padded_docs], labels, verbose=0)
 
 print(f"Accuracy: {accuracy*100:.2f}")
 
