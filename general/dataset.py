@@ -1,12 +1,16 @@
 
 import numpy as np
+import random
+import string
+
 
 #######################################################
 #
 #   dataset_create_y_large_a_regression
 #
 
-def dataset_create_y_large_ac_small_b_regression(l):
+
+def dataset_create_y_on_abc_value_counts(l, a, b, c):
 
     y = []
 
@@ -15,7 +19,7 @@ def dataset_create_y_large_ac_small_b_regression(l):
         count_b = line.count('b')
         count_c = line.count('c')
 
-        secret_score = 1.4 * count_a + 1.9 * count_c - 0.9 * count_b
+        secret_score = a * count_a + b * count_b +  c * count_c 
 
         y.append(secret_score)
 
@@ -315,5 +319,27 @@ def dataset_get_basic_sequence():
     return l
 """c"""
 
+############################################################
+#
+#  get_random_string
+#
 
+def get_random_string(nSize):
+    return ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(nSize))
 
+"""c"""
+
+############################################################
+#
+#  get_random_dataset
+#
+
+def get_random_dataset(nRows, nNumChars):
+    l = []
+    for i in range(0,nRows):
+        generated = get_random_string(nNumChars)
+        l.append(generated)
+
+    return l
+
+"""c"""

@@ -241,37 +241,64 @@ from keras.preprocessing.text import Tokenizer
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.metrics import confusion_matrix
 
+from sklearn.metrics import mean_squared_error
+
+
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.layers.embeddings import Embedding
 from keras.preprocessing import sequence
+from keras.preprocessing.sequence import pad_sequences
+
+from keras.layers import Input
+from keras.models import Model
+from keras.layers import Flatten
+from keras.layers import Embedding
+from keras.layers import concatenate
+
+from keras import optimizers
+
+import gc
+
 
 import general.dataset as data
+
+# See also Train_Embedding.py
 
 tokenizer = Tokenizer(char_level=True, oov_token='x')
 
 # https://machinelearningmastery.com/use-word-embedding-layers-deep-learning-keras/
 
 
+nChars = 1228       #Generated
+num_words = 1228    #Padded
+
+nRows = 100000
 
 
-l = data.dataset_get_basic_sequence()
+l = data.get_random_dataset(nRows, nChars)
 
-y = data.dataset_create_y_large_ac_small_b_regression(l)
+y = data.dataset_create_y_on_abc_value_counts(l, 1.1, -0.9, 1.3)
 
 L = len (l[0])
 
-# Target:
 tokenizer.fit_on_texts(l)
 
 n = tokenizer.texts_to_sequences(l)
 
-X = np.array(n, dtype= np.float32)
+
+padded_docs = pad_sequences(n, maxlen = num_words, padding='post')
+
+X = np.array(padded_docs, dtype= np.int)
+
+print (X.shape)
+
+vocab_size = X.max() - X.min() + 1
 
 np.random.seed(137)
 
-splits = 3
+splits = 10
 
 kf = KFold(n_splits = splits)
     
@@ -279,58 +306,82 @@ nSplits = kf.get_n_splits(X)
 
 nFold = 0
 
-cm_l = np.zeros((2,2), dtype = np.float32)
-
 lSplit = list (kf.split(X))
 
+l_RMS = []
 
-for index, item in enumerate(lSplit):
+train_index = lSplit[0][0]
+valid_index = lSplit[0][1]
 
-    train_index = lSplit[index][0]
-    valid_index = lSplit[index][1]
+print ("FOLD# " + str(index))
 
-    print ("FOLD# " + str(index))
+X_train = X[train_index]  
+y_train = y[train_index]
 
-    X_train = X[train_index]  
-    y_train = y[train_index]
+X_test = X[valid_index]
+y_test = y[valid_index]
 
-    X_test = X[valid_index]
-    y_test = y[valid_index]
+input_layer_0 = Input(shape=(num_words,), name = "input_0")
+embedding_layer_0 = Embedding(vocab_size, 32, name = "Emb_0")(input_layer_0)
 
+input_layer_1 = Input(shape=(num_words,), name = "input_1")
+embedding_layer_1 = Embedding(vocab_size, 16, name = "Emb_1")(input_layer_1)
 
-    model = Sequential()
-    #model.add(Embedding(6, 6, input_length= L ))
+input_layer_2 = Input(shape=(num_words,), name = "input_2")
+embedding_layer_2 = Embedding(vocab_size, 16, name = "Emb_2")(input_layer_2)
 
-    #model.add(LSTM(512, return_sequences=True))
-    model.add(Dense(10, input_shape = (1,9)))
-    model.add(Dense(1))
-    model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
+input_layer_3 = Input(shape=(num_words,), name = "input_3")
+embedding_layer_3 = Embedding(vocab_size, 16, name = "Emb_3")(input_layer_3)
 
+c_layer = concatenate([embedding_layer_0, embedding_layer_1, embedding_layer_2, embedding_layer_3])
 
-    #model.add(Dense(L, input_dim=L, kernel_initializer='normal', activation='relu'))
-    #model.add(Dense(1, kernel_initializer='normal', activation='sigmoid'))
+flatten_0 = Flatten() (c_layer)
 
-    #model.add(Dense(1, activation='sigmoid'))
-    #model.add(Dense(1, kernel_initializer='normal', activation='sigmoid'))
+deep_0 = Dense(64) (flatten_0)
 
-    #model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+deep_1 = Dense(64) (deep_0)
 
-    #print(model.summary())
-    model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=1, batch_size=18)
+deep_2 = Dense(16) (deep_1)
 
-    y_p = model.predict(X_test)
+out = Dense(1)(deep_2)
 
-    y_p = (y_p > 0.5)
+lcInput = [input_layer_0, input_layer_1, input_layer_2, input_layer_3]
 
-    y_p = y_p.astype(float)
-    
-    cm = confusion_matrix(y_test, y_p)
+m = Model(inputs= lcInput, outputs=out)
 
-    cm_l = cm_l + cm
+# print (m.summary())
 
-    nFold = nFold + 1
+opt = optimizers.Adam(lr=0.5e-2)
 
-"""c"""
+m.compile(loss='mean_squared_error', optimizer= opt, metrics=['accuracy', 'mse'])
+
+lcTrainData = [X_train, X_train, X_train, X_train]
+
+lcTestData = [X_test, X_test, X_test, X_test]
+
+m.fit(lcTrainData, [y_train], validation_data=(lcTestData, [y_test]), epochs=6, batch_size=10, verbose=2)
+
+y_p = m.predict([X_test, X_test, X_test, X_test])
+
+error = mean_squared_error(y_test, y_p)
+
+l_RMS.append(error)
+
+anRMS = np.array(l_RMS)
+
+print(f"RMS = {anRMS.mean():.5f} +/- {anRMS.std():.5f}")
+
+#
+#
+# Todo: Validation.
+# https://machinelearningmastery.com/evaluate-performance-deep-learning-models-keras/
+#
+# + early stopping et.c.
+# + varyling lr in study_konstantin_pavel.py
+# + mini batch
+#
+# + expand dictionary from 'a-z+ and digits (37) to  about 30,000, 6,000 and 50
+# + set up separate data sources for three inputs.
 
 
 

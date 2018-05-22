@@ -1,3 +1,5 @@
+
+
 #
 # https://machinelearningmastery.com/use-word-embedding-layers-deep-learning-keras/
 # https://jovianlin.io/keras-models-sequential-vs-functional/
@@ -17,13 +19,27 @@ from keras.layers import concatenate
 import numpy as np
 import gc
 
+#
+#
+# Todo: Take char input
+# Todo: To regression output. See Driver_SM.py
+#
+
+
+#------------------------------------------------------------------- 
+
+# Classification. Word input. Fully connected network.
+
+
+
 labels = np.array([1,1,1,1,1,0,0,0,0,0])
 
-docs = ['Well done!', 'Good work', 'Great effort', 'nice work', 'Excellent!', 'Weak', 'Poor effort!', 'not good', 'poor work', 'Could have done better.']
+docs = ['Well done!', 'Good work', 'Great effort', 'nice work', 'Excellent!',
+                'Weak', 'Poor effort!', 'not good', 'poor work', 'Could have done better.']
 
-num_words = 365 *3
+num_words = 10
 
-vocab_size = 50000
+vocab_size = 50
 
 encoded_docs = [one_hot(d, vocab_size) for d in docs]
   
@@ -48,23 +64,27 @@ c_layer = concatenate([embedding_layer_0, embedding_layer_1, embedding_layer_2, 
 
 flatten_0 = Flatten() (c_layer)
 
-deep_0 = Dense(100) (flatten_0)
+deep_0 = Dense(10) (flatten_0)
 
-#deep_1 = Dense(100) (deep_0)
+deep_1 = Dense(3) (deep_0)
 
-output_layer = Dense(1, activation='sigmoid') (deep_0)
+output_layer = Dense(1, activation='sigmoid') (deep_1)
 
-m = Model(inputs=[input_layer_0, input_layer_1, input_layer_2, input_layer_3], outputs=output_layer)
+lcInput = [input_layer_0, input_layer_1, input_layer_2, input_layer_3]
+
+m = Model(inputs= lcInput, outputs=output_layer)
 
 print (m.summary())
 
 m.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
 
-m.fit([padded_docs, padded_docs, padded_docs, padded_docs], [labels], epochs=150, verbose=0)
+lcInputData = [padded_docs, padded_docs, padded_docs, padded_docs]
 
-loss, accuracy = m.evaluate([padded_docs, padded_docs, padded_docs, padded_docs], labels, verbose=0)
+m.fit(lcInputData, [labels], epochs=4, verbose=0)
 
-print(f"Accuracy: {accuracy*100:.2f}")
+loss, accuracy = m.evaluate(lcInputData, labels, verbose=0)
+
+print(f"Accuracy: {accuracy*100:.1f}")
 
 
 # https://machinelearningmastery.com/predict-sentiment-movie-reviews-using-deep-learning/
@@ -104,7 +124,7 @@ model = Sequential()
 # 
 # The output of this layer will be a 32×500 sized matrix.
 
-model.add(Embedding(top_words, 32f, input_length=max_words))
+model.add(Embedding(top_words, 32, input_length=max_words))
 
 # We will flatten the Embedded layers output to one dimension
 
