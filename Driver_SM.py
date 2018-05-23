@@ -264,37 +264,59 @@ import gc
 
 import general.dataset as data
 
-# See also Train_Embedding.py
-
-tokenizer = Tokenizer(char_level=True, oov_token='x')
-
-# https://machinelearningmastery.com/use-word-embedding-layers-deep-learning-keras/
+def getX(num_tokens, num_cols, num_rows):
+    return np.random.random_integers(0, num_tokens -1, (num_rows, num_cols))
 
 
-nChars = 1228       #Generated
-num_words = 1228    #Padded
+def getY(X):
 
-nRows = 100000
+    y = []
+
+    for row in X:
+        c = np.bincount(row)
+
+        max = len(c)
+
+        tok_a = int (max * 0.24)
+        tok_b = int (max * 0.27)
+        tok_c = int (max * 0.91)
+        tok_d = int (max * 0.13)
+
+        # score = (c[0] < c[1]) * .2 * c[2] + (c[max-1] > c[max-2]) * .5 * c[4] + (c[3] == c[5]) * 1.1 * np.log (1 + c[3]) + 1 * c[tok_c]
+
+        #if (c[tok_a] < c[tok_b]):
+        #    
+        #else:
+        score = (c[3] < c[1]) * .2 * c[2] + (c[max-4] > c[max-2]) * .7 * c[6] + (c[1] == c[5]) * 1.9 * np.log (4 + c[3]) + 1 * c[tok_b]
 
 
-l = data.get_random_dataset(nRows, nChars)
+        y.append(score)
 
-y = data.dataset_create_y_on_abc_value_counts(l, 1.1, -0.9, 1.3)
+    y = np.array(y, dtype = np.float32)
+    #y = y / y.max()
 
-L = len (l[0])
+    return y
 
-tokenizer.fit_on_texts(l)
-
-n = tokenizer.texts_to_sequences(l)
+"""c"""
 
 
-padded_docs = pad_sequences(n, maxlen = num_words, padding='post')
+nCols = 528       
 
-X = np.array(padded_docs, dtype= np.int)
+nRows = 350000
+
+num_tokens = 9000
+
+num_epochs = 6
+
+X = getX(num_tokens, nCols, nRows)
+
+y = getY(X)
 
 print (X.shape)
 
 vocab_size = X.max() - X.min() + 1
+
+assert (vocab_size == num_tokens)
 
 np.random.seed(137)
 
@@ -313,35 +335,33 @@ l_RMS = []
 train_index = lSplit[0][0]
 valid_index = lSplit[0][1]
 
-print ("FOLD# " + str(index))
-
 X_train = X[train_index]  
 y_train = y[train_index]
 
 X_test = X[valid_index]
 y_test = y[valid_index]
 
-input_layer_0 = Input(shape=(num_words,), name = "input_0")
-embedding_layer_0 = Embedding(vocab_size, 32, name = "Emb_0")(input_layer_0)
+input_layer_0 = Input(shape=(nCols,), name = "input_0")
+embedding_layer_0 = Embedding(vocab_size, 8, name = "Emb_0")(input_layer_0)
 
-input_layer_1 = Input(shape=(num_words,), name = "input_1")
-embedding_layer_1 = Embedding(vocab_size, 16, name = "Emb_1")(input_layer_1)
+input_layer_1 = Input(shape=(nCols,), name = "input_1")
+embedding_layer_1 = Embedding(vocab_size, 8, name = "Emb_1")(input_layer_1)
 
-input_layer_2 = Input(shape=(num_words,), name = "input_2")
-embedding_layer_2 = Embedding(vocab_size, 16, name = "Emb_2")(input_layer_2)
+input_layer_2 = Input(shape=(nCols,), name = "input_2")
+embedding_layer_2 = Embedding(vocab_size, 8, name = "Emb_2")(input_layer_2)
 
-input_layer_3 = Input(shape=(num_words,), name = "input_3")
-embedding_layer_3 = Embedding(vocab_size, 16, name = "Emb_3")(input_layer_3)
+input_layer_3 = Input(shape=(nCols,), name = "input_3")
+embedding_layer_3 = Embedding(vocab_size, 8, name = "Emb_3")(input_layer_3)
 
 c_layer = concatenate([embedding_layer_0, embedding_layer_1, embedding_layer_2, embedding_layer_3])
 
 flatten_0 = Flatten() (c_layer)
 
-deep_0 = Dense(64) (flatten_0)
+deep_0 = Dense(64, activation='linear') (flatten_0)
 
-deep_1 = Dense(64) (deep_0)
+deep_1 = Dense(64, activation='linear') (deep_0)
 
-deep_2 = Dense(16) (deep_1)
+deep_2 = Dense(16, activation='linear') (deep_1)
 
 out = Dense(1)(deep_2)
 
@@ -349,42 +369,39 @@ lcInput = [input_layer_0, input_layer_1, input_layer_2, input_layer_3]
 
 m = Model(inputs= lcInput, outputs=out)
 
-# print (m.summary())
+print (m.summary())
 
-opt = optimizers.Adam(lr=0.5e-2)
+opt = optimizers.Adam()
 
-m.compile(loss='mean_squared_error', optimizer= opt, metrics=['accuracy', 'mse'])
+m.compile(loss='mse', optimizer= opt, metrics=['mse'])
 
 lcTrainData = [X_train, X_train, X_train, X_train]
 
 lcTestData = [X_test, X_test, X_test, X_test]
 
-m.fit(lcTrainData, [y_train], validation_data=(lcTestData, [y_test]), epochs=6, batch_size=10, verbose=2)
+m.fit(lcTrainData, [y_train], validation_data=(lcTestData, [y_test]), epochs=num_epochs, batch_size=2048, verbose=1)
 
 y_p = m.predict([X_test, X_test, X_test, X_test])
 
 error = mean_squared_error(y_test, y_p)
 
-l_RMS.append(error)
 
-anRMS = np.array(l_RMS)
+print(f"RMS = {error:.5f}")
 
-print(f"RMS = {anRMS.mean():.5f} +/- {anRMS.std():.5f}")
-
+#
+# confer with embedding approach
+# http://debajyotidatta.github.io/nlp/deep/learning/word-embeddings/2016/11/27/Understanding-Convolutions-In-Text/
+#
 #
 #
 # Todo: Validation.
 # https://machinelearningmastery.com/evaluate-performance-deep-learning-models-keras/
 #
 # + early stopping et.c.
-# + varyling lr in study_konstantin_pavel.py
 # + mini batch
 #
 # + expand dictionary from 'a-z+ and digits (37) to  about 30,000, 6,000 and 50
 # + set up separate data sources for three inputs.
-
-
-
 
 
 
