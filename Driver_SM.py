@@ -1,36 +1,7 @@
 
-
-
-# Diag:
-# Doc : 
-
-# Sparse in time
-
-# Day shift 143
-# Age 45
- 
-
-# DOC   ---------------------------------qqqq-----------qqq-----------------------ff 
-# DIA   ---------------------------------yyyy-----------bbb-----------------------yy 
-
-# DOC is categorical
-# DIA is categorical
-
-# Two categorical values, begin-end.
-
-# Create embedding?
-
-# ------Doc333---Dia323----------------Dia339-----------Doc933-----Dia900----- => 90
-
 #
+# See: https://blog.keras.io/using-pre-trained-word-embeddings-in-a-keras-model.html
 #
-# ~ 10,000 dia
-# ~ 10,000 wrk
-# ~ 10,000 doc
-#
-#
-
-
 
 
 
@@ -151,9 +122,7 @@ def create_target_regression(l):
 
     return n
 
-
 """c"""
-
 
 
 def create_dataset(num_elements, seq_len):
@@ -236,6 +205,9 @@ y_p = m.predict(X)
 
 
 
+
+
+
 import numpy as np
 from keras.preprocessing.text import Tokenizer
 from sklearn.model_selection import train_test_split, KFold
@@ -261,56 +233,92 @@ from keras import optimizers
 
 import gc
 
-
 import general.dataset as data
 
-def getX(num_tokens, num_cols, num_rows):
-    return np.random.random_integers(0, num_tokens -1, (num_rows, num_cols))
+def rle(inarray):
+        """ run length encoding. Partial credit to R rle function. 
+            Multi datatype arrays catered for including non Numpy
+            returns: tuple (runlengths, startpositions, values) """
+        ia = np.asarray(inarray)                  # force numpy
+        n = len(ia)
+        if n == 0: 
+            return (None, None, None)
+        else:
+            y = np.array(ia[1:] != ia[:-1])     # pairwise unequal (string safe)
+            i = np.append(np.where(y), n - 1)   # must include last element posi
+            z = np.diff(np.append(-1, i))       # run lengths
+            p = np.cumsum(np.append(0, z))[:-1] # positions
+            return(z, p, ia[i])
 
 
-def getY(X):
+def generate_sequence(nRows, nCols, nTokens, nRunsPerRow):
+    
+    L = nCols
+
+    row = np.zeros((nRows, L), dtype = int)
+
+    for iRow in range(0, nRows):
+
+        nRunsThisSequence = np.random.randint(1, nRunsPerRow +1 )
+
+        for iRun in range(0, nRunsThisSequence):
+
+            # print (iRun)
+            set_value = np.random.randint(nTokens, size=1)[0]
+
+            offset = np.random.randint(L, size=1)[0]
+            # print (offset)
+
+            length = np.random.randint(1, (L+1)/3)          # 1.. L/3
+
+            # print(f"offset = {offset}, length = {length}")
+
+            row[iRow, offset:offset + length] = set_value
+
+    return row
+
+"""c"""
+
+
+def get_value_score(value):
+    return 1 + np.sin(value/100)
+
+def get_y_row (X):
 
     y = []
 
     for row in X:
-        c = np.bincount(row)
 
-        max = len(c)
+        t = rle(row)
 
-        tok_a = int (max * 0.24)
-        tok_b = int (max * 0.27)
-        tok_c = int (max * 0.91)
-        tok_d = int (max * 0.13)
+        score = 0
+        for run_length, start, value in zip(*t):
+            if run_length < 3:
+                continue
 
-        # score = (c[0] < c[1]) * .2 * c[2] + (c[max-1] > c[max-2]) * .5 * c[4] + (c[3] == c[5]) * 1.1 * np.log (1 + c[3]) + 1 * c[tok_c]
+            if value == 0:
+                continue
 
-        #if (c[tok_a] < c[tok_b]):
-        #    
-        #else:
-        score = (c[3] < c[1]) * .2 * c[2] + (c[max-4] > c[max-2]) * .7 * c[6] + (c[1] == c[5]) * 1.9 * np.log (4 + c[3]) + 1 * c[tok_b]
-
-
+            score = score + run_length * get_value_score(value)
         y.append(score)
 
-    y = np.array(y, dtype = np.float32)
-    #y = y / y.max()
-
+    y = np.array(y)
     return y
 
 """c"""
 
 
-nCols = 528       
+nCols = 1028       
 
-nRows = 350000
+nRows = 950000
 
-num_tokens = 9000
+num_tokens = 5000
 
 num_epochs = 6
 
-X = getX(num_tokens, nCols, nRows)
+X = generate_sequence(nRows, nCols, num_tokens, 4)
 
-y = getY(X)
+y = get_y_row(X)
 
 print (X.shape)
 
@@ -341,29 +349,29 @@ y_train = y[train_index]
 X_test = X[valid_index]
 y_test = y[valid_index]
 
-input_layer_0 = Input(shape=(nCols,), name = "input_0")
-embedding_layer_0 = Embedding(vocab_size, 8, name = "Emb_0")(input_layer_0)
+x = Input(shape=(nCols,), name = "input_0")
+embedding_layer_0 = Embedding(vocab_size, 32, name = "Emb_0")(x)
 
-input_layer_1 = Input(shape=(nCols,), name = "input_1")
-embedding_layer_1 = Embedding(vocab_size, 8, name = "Emb_1")(input_layer_1)
+x = Input(shape=(nCols,), name = "input_1")
+embedding_layer_1 = Embedding(vocab_size, 16, name = "Emb_1")(x)
 
-input_layer_2 = Input(shape=(nCols,), name = "input_2")
-embedding_layer_2 = Embedding(vocab_size, 8, name = "Emb_2")(input_layer_2)
+x = Input(shape=(nCols,), name = "input_2")
+embedding_layer_2 = Embedding(vocab_size, 8, name = "Emb_2")(x)
 
-input_layer_3 = Input(shape=(nCols,), name = "input_3")
-embedding_layer_3 = Embedding(vocab_size, 8, name = "Emb_3")(input_layer_3)
+x = Input(shape=(nCols,), name = "input_3")
+embedding_layer_3 = Embedding(vocab_size, 8, name = "Emb_3")(x)
 
-c_layer = concatenate([embedding_layer_0, embedding_layer_1, embedding_layer_2, embedding_layer_3])
+x = concatenate([embedding_layer_0, embedding_layer_1, embedding_layer_2, embedding_layer_3])
 
-flatten_0 = Flatten() (c_layer)
+x = Flatten() (x)
 
-deep_0 = Dense(64, activation='linear') (flatten_0)
+x = Dense(128, activation='linear') (x)
 
-deep_1 = Dense(64, activation='linear') (deep_0)
+deep_1 = Dense(64, activation='linear') (x)
 
-deep_2 = Dense(16, activation='linear') (deep_1)
+deep_2 = Dense(64, activation='linear') (x)
 
-out = Dense(1)(deep_2)
+out = Dense(1)(x)
 
 lcInput = [input_layer_0, input_layer_1, input_layer_2, input_layer_3]
 
