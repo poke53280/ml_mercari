@@ -308,9 +308,9 @@ def get_y_row (X):
 """c"""
 
 
-nCols = 1028       
+nCols = 428       
 
-nRows = 950000
+nRows = 150000
 
 num_tokens = 5000
 
@@ -349,17 +349,17 @@ y_train = y[train_index]
 X_test = X[valid_index]
 y_test = y[valid_index]
 
-x = Input(shape=(nCols,), name = "input_0")
-embedding_layer_0 = Embedding(vocab_size, 32, name = "Emb_0")(x)
+input_layer_0 = Input(shape=(nCols,), name = "input_0")
+embedding_layer_0 = Embedding(vocab_size, 32, name = "Emb_0")(input_layer_0)
 
-x = Input(shape=(nCols,), name = "input_1")
-embedding_layer_1 = Embedding(vocab_size, 16, name = "Emb_1")(x)
+input_layer_1 = Input(shape=(nCols,), name = "input_1")
+embedding_layer_1 = Embedding(vocab_size, 16, name = "Emb_1")(input_layer_1)
 
-x = Input(shape=(nCols,), name = "input_2")
-embedding_layer_2 = Embedding(vocab_size, 8, name = "Emb_2")(x)
+input_layer_2 = Input(shape=(nCols,), name = "input_2")
+embedding_layer_2 = Embedding(vocab_size, 8, name = "Emb_2")(input_layer_2)
 
-x = Input(shape=(nCols,), name = "input_3")
-embedding_layer_3 = Embedding(vocab_size, 8, name = "Emb_3")(x)
+input_layer_3 = Input(shape=(nCols,), name = "input_3")
+embedding_layer_3 = Embedding(vocab_size, 8, name = "Emb_3")(input_layer_3)
 
 x = concatenate([embedding_layer_0, embedding_layer_1, embedding_layer_2, embedding_layer_3])
 

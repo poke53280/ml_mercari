@@ -35,6 +35,15 @@
     <Compile Include="general\dataset.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="home_credit\oliver_preprocess.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="home_credit\home_credit_main.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="home_credit\oliver_fun_lgbm.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Synthpop_perf.py">
       <SubType>Code</SubType>
     </Compile>
@@ -85,6 +94,7 @@
     <Folder Include="general\" />
     <Folder Include="mercari\" />
     <Folder Include="batch\" />
+    <Folder Include="home_credit\" />
     <Folder Include="talking\" />
     <Folder Include="toxic\" />
   </ItemGroup>
