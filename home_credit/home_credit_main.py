@@ -179,17 +179,11 @@ class BureauLoan:
         sk_id_curr = qLocal.SK_ID_CURR.values[0]
         b_id = qLocal.SK_ID_BUREAU.values[0]
 
-        # Recoded currency of the Credit Bureau credit,recoded
-        # currency 1    1715020
-        # currency 2       1224
-        # currency 3        174
-        # currency 4         10
-
         this_currency = qLocal.CREDIT_CURRENCY.values[0]
 
         fConvertFactor = g_currency_converter[this_currency]
 
-        # Drop currency. Could have been kept as a signature property, but there are very few non 'currency 1.'
+        # Drop currency. Could have been kept as a signature property, but there are very few non 'currency 1's.
 
         self._dict_detail = detail_loan_bureau(b_id)
  
@@ -274,17 +268,18 @@ class BureauLoan:
         return desc
 
     def Desc(self):
+        print("-------------------------------------------")
         print(self._dict_detail)
         
         print(f"Credit type: {self.GetCreditTypeDesc()}")
         print(f"Credit active: {self.GetCreditActiveDesc()}")
        
-        print(f"Days credit: {self._days_credit}")
+        print(f"Application time wrt now: {self._days_credit}")
        
-        print(f"Credit day overdue: {self._credit_day_overdue}")
-        print(f"_days_credit_enddate: {self._days_credit_enddate}")
-        print(f"_days_enddate_fact: {self._days_enddate_fact}")
-        print(f"_days_credit_update: {self._days_credit_update}")
+        print(f"Days overdue now: {self._credit_day_overdue}")
+        print(f"Day still valid now: {self._days_credit_enddate}")
+        print(f"Days since ended wrt now: {self._days_enddate_fact}")
+        print(f"Days since last update wrt now: {self._days_credit_update}")
        
         print(f"_amt_credit_sum: {self._amt_credit_sum}")
         print(f"_amt_credit_sum_debt: {self._amt_credit_sum_debt}")
@@ -399,34 +394,15 @@ q = q_b[0:1]
 
 get_user_data(370747)
 
-
-
-
 """c"""
 
-def Init(qLocal):
+# Start work on current application
 
-    sk_id_curr = qLocal.SK_ID_CURR.values[0]
+df = d['train']
 
-    b_id = qLocal.SK_ID_BUREAU.values[0]
+len(df.dtypes)
+122
 
-    _dict_detail = detail_loan_bureau(b_id)
-    _credit_active = qLocal.CREDIT_ACTIVE.cat.codes.values[0]
-    _credit_currency = qLocal.CREDIT_CURRENCY.cat.codes.values[0]
-    _days_credit = qLocal.DAYS_CREDIT.values[0]
-    _credit_type = qLocal.CREDIT_TYPE.cat.codes.values[0]
-    _credit_day_overdue = qLocal.CREDIT_DAY_OVERDUE.values[0]
-    _days_credit_enddate = qLocal.DAYS_CREDIT_ENDDATE.values[0]
-    _days_enddate_fact = qLocal.DAYS_ENDDATE_FACT.values[0]
-    _amt_credit_max_overdue = qLocal.AMT_CREDIT_MAX_OVERDUE.values[0]
-    _cnt_credit_prolong = qLocal.CNT_CREDIT_PROLONG.values[0]
-    _amt_credit_sum = qLocal.AMT_CREDIT_SUM.values[0]
-    _amt_credit_sum_debt = qLocal.AMT_CREDIT_SUM_DEBT.values[0]
-    _amt_credit_sum_limit = qLocal.AMT_CREDIT_SUM_LIMIT.values[0]
-    _amt_credit_sum_overdue = qLocal.AMT_CREDIT_SUM_OVERDUE.values[0]
-    _days_credit_update = qLocal.DAYS_CREDIT_UPDATE.values[0]
-    _amt_annuity = qLocal.AMT_ANNUITY.values[0]
 
-"""c"""
-
+l = list (df.dtypes.index)
 
