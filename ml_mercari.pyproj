@@ -35,6 +35,9 @@
     <Compile Include="general\dataset.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="home_credit\AutoEncoding.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="home_credit\oliver_preprocess.py">
       <SubType>Code</SubType>
     </Compile>
