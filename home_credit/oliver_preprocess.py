@@ -1,4 +1,6 @@
 
+# Study of https://www.kaggle.com/ogrellier/good-fun-with-ligthgbm
+
 DATA_DIR_PORTABLE = "C:\\home_credit_data\\"
 DATA_DIR_BASEMENT = "D:\\XXX\\"
 DATA_DIR = DATA_DIR_PORTABLE

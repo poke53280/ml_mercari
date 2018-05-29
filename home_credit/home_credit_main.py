@@ -3,11 +3,35 @@ import time
 import pandas as pd
 import numpy as np
 import gc
-
+from category_encoders import *
   
 DATA_DIR_PORTABLE = "C:\\home_credit_data\\"
 DATA_DIR_BASEMENT = "D:\\XXX\\"
 DATA_DIR = DATA_DIR_PORTABLE
+
+def get_bureau_currency_conversion(d):
+    q = d['b']
+
+    f = {}
+
+    m1 = q.CREDIT_CURRENCY == 'currency 1'
+    m2 = q.CREDIT_CURRENCY == 'currency 2'
+    m3 = q.CREDIT_CURRENCY == 'currency 3'
+    m4 = q.CREDIT_CURRENCY == 'currency 4'
+
+    v1 = q[m1].AMT_CREDIT_SUM.mean()
+    v2 = q[m2].AMT_CREDIT_SUM.mean()
+    v3 = q[m3].AMT_CREDIT_SUM.mean()
+    v4 = q[m4].AMT_CREDIT_SUM.mean()
+
+    f['currency 1'] = 1.0
+    f['currency 2'] = v1/v2
+    f['currency 3'] = v1/v3
+    f['currency 4'] = v1/v4
+
+    return f
+
+"""c"""
 
 
 def load_frame(name):
@@ -39,6 +63,25 @@ def load_all():
 
 """c"""
 
+##########################################################################################
+#
+#   BinaryEncodeAllCategoricalColumns
+#
+
+def BinaryEncodeAllCategoricalColumns(q):
+    cols = q.columns
+    num_cols = q._get_numeric_data().columns
+    cat_columns = list(set(cols) - set(num_cols))
+
+    enc = BinaryEncoder(cols=cat_columns)
+    q_new = enc.fit_transform(q)
+
+    print(f"   Done. Encoded {len(cat_columns)} categorical column(s). Num features {q.shape[1]} -> {q_new.shape[1]}")
+
+    return q_new
+
+"""c"""
+
 
 start_time = time.time()
         
@@ -50,26 +93,139 @@ gc.collect()
 
 print('[{}] Data loaded'.format(time.time() - start_time))
 
+y = d['train']['TARGET']
+del d['train']['TARGET']
+
+# g_currency_converter = get_bureau_currency_conversion(d)
+
+
+lRemoveCat = list (d.keys())
+
+# Todo: Fit - not fit_transform on train. Careful handling of unseen.
+
+for x in lRemoveCat:
+    print(f"Binary encoding '{x}'...")
+    d[x] = BinaryEncodeAllCategoricalColumns(d[x])
+
+"""c"""
+
+
 d.keys()
 
-g_Cat = {}
+# Analysing amount of data
 
-d['bb']["STATUS"] = d['bb'].STATUS.astype('category')
-g_Cat["BureauBalance_Status"] = d['bb'].STATUS.cat.categories.values
 
-d['b']["CREDIT_ACTIVE"] =   d['b'].CREDIT_ACTIVE.astype('category')
-g_Cat["Bureau_CreditActive"] = d['b'].CREDIT_ACTIVE.cat.categories.values
 
-d['b']["CREDIT_CURRENCY"] = d['b'].CREDIT_CURRENCY.astype('category')
-g_Cat["Bureau_CreditCurrency"] = d['b'].CREDIT_CURRENCY.cat.categories.values
+num_train = d['train'].shape[0]
+num_test = d['test'].shape[0]
 
-d['b']["CREDIT_TYPE"] =     d['b'].CREDIT_TYPE.astype('category')
-g_Cat["Bureau_CreditType"] = d['b'].CREDIT_TYPE.cat.categories.values
+num_users = num_train + num_test
+
+
+num_features = 0
+
+num_features_base = d['train'].shape[1] -1 
+
+num_features += num_features_base
+
+num_features_prev_app = d['prev'].shape[1]
+
+num_prev_app = d['prev'].shape[0]
+
+num_prev_app_per_user_mean = num_prev_app / num_users
+
+print(f"Number of previous apps per user mean {num_prev_app_per_user_mean:.1f}")
+
+num_featurs_from_previous_apps = num_prev_app_per_user_mean * num_features_prev_app
+
+print(f"Number of features from previous apps: {num_featurs_from_previous_apps:.1f}")
+
+num_features += (num_featurs_from_previous_apps)
+
+
+# CCB
+
+num_ccb = d['ccb'].shape[0]
+
+num_features_ccb = d['ccb'].shape[1]
+
+num_ccb_per_user_mean = num_ccb / num_users
+
+num_features_from_ccb = num_ccb_per_user_mean * num_features_ccb
+
+num_features += (num_features_from_ccb)
+
+# INSTALMENT
+
+num_inst = d['ip'].shape[0]
+
+num_features_inst = d['ip'].shape[1]
+
+num_inst_per_user_mean = num_inst / num_users
+
+num_features_from_inst = num_inst_per_user_mean * num_features_inst
+
+num_features += (num_features_from_inst)
+
+# POS CASH BALANCE
+
+num_pcb = d['pcb'].shape[0]
+
+num_features_pcb = d['pcb'].shape[1]
+
+num_pcb_per_user_mean = num_pcb / num_users
+
+num_features_from_pcb = num_pcb_per_user_mean * num_features_pcb
+
+num_features += num_features_from_pcb
+
+
+# BUREAU
+
+num_bur = d['b'].shape[0]
+
+num_features_bur = d['b'].shape[1]
+
+num_bur_per_user_mean = num_bur / num_users
+
+num_features_from_bur = num_bur_per_user_mean * num_features_bur
+
+num_features += num_features_from_bur
+
+# BUREAU BALANCE
+
+num_bb = d['bb'].shape[0]
+
+num_features_bb = d['bb'].shape[1]
+
+num_bb_per_user_mean = num_bb / num_users
+
+num_features_from_bb = num_bb_per_user_mean * num_features_bb
+
+num_features += num_features_from_bb
+
+print(f" Feature number estimate: {num_features}")
+
+
+
+
+#g_Cat = {}
+#
+#d['bb']["STATUS"] = d['bb'].STATUS.astype('category')
+#g_Cat["BureauBalance_Status"] = d['bb'].STATUS.cat.categories.values
+#
+#d['b']["CREDIT_ACTIVE"] =   d['b'].CREDIT_ACTIVE.astype('category')
+#g_Cat["Bureau_CreditActive"] = d['b'].CREDIT_ACTIVE.cat.categories.values
+#
+#d['b']["CREDIT_CURRENCY"] = d['b'].CREDIT_CURRENCY.astype('category')
+#g_Cat["Bureau_CreditCurrency"] = d['b'].CREDIT_CURRENCY.cat.categories.values
+#
+#d['b']["CREDIT_TYPE"] =     d['b'].CREDIT_TYPE.astype('category')
+#g_Cat["Bureau_CreditType"] = d['b'].CREDIT_TYPE.cat.categories.values
 
 
 gc.collect()
 
-g_currency_converter = get_bureau_currency_conversion(d)
 
 
 def get_on_sk_id_curr(id_list, db_name):
@@ -135,29 +291,6 @@ def detail_loan_bureau(id):
 
 """c"""
 
-def get_bureau_currency_conversion(d):
-    q = d['b']
-
-    f = {}
-
-    m1 = q.CREDIT_CURRENCY == 'currency 1'
-    m2 = q.CREDIT_CURRENCY == 'currency 2'
-    m3 = q.CREDIT_CURRENCY == 'currency 3'
-    m4 = q.CREDIT_CURRENCY == 'currency 4'
-
-    v1 = q[m1].AMT_CREDIT_SUM.mean()
-    v2 = q[m2].AMT_CREDIT_SUM.mean()
-    v3 = q[m3].AMT_CREDIT_SUM.mean()
-    v4 = q[m4].AMT_CREDIT_SUM.mean()
-
-    f['currency 1'] = 1.0
-    f['currency 2'] = v1/v2
-    f['currency 3'] = v1/v3
-    f['currency 4'] = v1/v4
-
-    return f
-
-"""c"""
 
 
 
@@ -404,5 +537,101 @@ len(df.dtypes)
 122
 
 
-l = list (df.dtypes.index)
+#
+#
+# Prepare as feature: 
+#    float w.nan.
+#    integer.
+#    Category.
+#
+# Category to binary label
+#
+#
+# Initialization:
+#
+#
+
+
+from sklearn.datasets import load_boston
+
+bunch = load_boston()
+
+y = bunch.target
+
+X = pd.DataFrame(bunch.data, columns = bunch.feature_names)
+
+enc = BinaryEncoder(cols=['CHAS', 'RAD'])
+
+X_new = enc.fit_transform(X)
+
+
+cat_name = 'Bureau_CreditActive'
+
+assert (cat_name in g_Cat)
+
+nCat = len (g_Cat[cat_name])
+
+l = list (range(nCat))
+
+lb.fit(l)
+
+lb.classes_
+
+b = BureauLoan(q)
+
+
+b.Desc()
+
+##----app curr-------------- app prev slot ------------------ app prev slot ---------------- app prev slot --------------------bureau slot--------------bureau slot-------------bureau slot-----------
+
+
+id = 215354
+
+q = d['b']
+
+m = q.SK_ID_CURR == id
+
+q = q[m]
+
+len (q)
+
+q.shape
+
+# To numpy
+X = np.array(q)
+
+X.shape
+
+data = np.array([['','Col1','Col2'], ['Row1',1,2], ['Row2',3,4], ['Row3',7,9]])
+                
+df = pd.DataFrame(data=data[1:,1:], index=data[1:,0], columns=data[0,1:])
+
+X = np.array(df)
+
+
+# Create row with 10 slots, default at NaN.
+
+X_res = np.empty(shape=(10), dtype="float32")
+X_res[:] = np.nan
+ 
+# 
+# 
+#  Fill in data (0,1,2) at location (4,7,9).
+
+np.copyto(X_res + 4 , X + 0)
+
+X_res[4] = X[0]
+
+# Check sparsity
+
+data_width = X.shape[1]
+
+data_width
+
+
+X.flatten()
+
+
+
+
 
