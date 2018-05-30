@@ -103,6 +103,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="batch\description.py" />
+    <Content Include="home_credit\read.txt" />
     <Content Include="mercari\Refs.txt" />
     <Content Include="toxic\Refs.txt" />
   </ItemGroup>

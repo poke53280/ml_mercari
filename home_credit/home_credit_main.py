@@ -9,31 +9,6 @@ DATA_DIR_PORTABLE = "C:\\home_credit_data\\"
 DATA_DIR_BASEMENT = "D:\\XXX\\"
 DATA_DIR = DATA_DIR_PORTABLE
 
-def get_bureau_currency_conversion(d):
-    q = d['b']
-
-    f = {}
-
-    m1 = q.CREDIT_CURRENCY == 'currency 1'
-    m2 = q.CREDIT_CURRENCY == 'currency 2'
-    m3 = q.CREDIT_CURRENCY == 'currency 3'
-    m4 = q.CREDIT_CURRENCY == 'currency 4'
-
-    v1 = q[m1].AMT_CREDIT_SUM.mean()
-    v2 = q[m2].AMT_CREDIT_SUM.mean()
-    v3 = q[m3].AMT_CREDIT_SUM.mean()
-    v4 = q[m4].AMT_CREDIT_SUM.mean()
-
-    f['currency 1'] = 1.0
-    f['currency 2'] = v1/v2
-    f['currency 3'] = v1/v3
-    f['currency 4'] = v1/v4
-
-    return f
-
-"""c"""
-
-
 def load_frame(name):
     print(f"Loading {name}...")
     return pd.read_table(DATA_DIR + name + ".csv", sep = ",");
@@ -96,7 +71,6 @@ print('[{}] Data loaded'.format(time.time() - start_time))
 y = d['train']['TARGET']
 del d['train']['TARGET']
 
-# g_currency_converter = get_bureau_currency_conversion(d)
 
 
 lRemoveCat = list (d.keys())
@@ -314,8 +288,6 @@ class BureauLoan:
 
         this_currency = qLocal.CREDIT_CURRENCY.values[0]
 
-        fConvertFactor = g_currency_converter[this_currency]
-
         # Drop currency. Could have been kept as a signature property, but there are very few non 'currency 1's.
 
         self._dict_detail = detail_loan_bureau(b_id)
@@ -371,29 +343,25 @@ class BureauLoan:
         # Current amounts.... at application date of loan
 
         #      Maximal overdue on the Credit Bureau credit (so far)
-        self._amt_credit_max_overdue = fConvertFactor * qLocal.AMT_CREDIT_MAX_OVERDUE.values[0]
+        self._amt_credit_max_overdue = qLocal.AMT_CREDIT_MAX_OVERDUE.values[0]
         
         #       Credit amount for the Credit Bureau credit,
-        self._amt_credit_sum = fConvertFactor * qLocal.AMT_CREDIT_SUM.values[0]
+        self._amt_credit_sum = qLocal.AMT_CREDIT_SUM.values[0]
 
         #       Debt on Credit Bureau credit,
-        self._amt_credit_sum_debt = fConvertFactor * qLocal.AMT_CREDIT_SUM_DEBT.values[0]
+        self._amt_credit_sum_debt = qLocal.AMT_CREDIT_SUM_DEBT.values[0]
 
         #       Credit limit of credit card reported in Credit Bureau,
-        self._amt_credit_sum_limit = fConvertFactor * qLocal.AMT_CREDIT_SUM_LIMIT.values[0]
+        self._amt_credit_sum_limit = qLocal.AMT_CREDIT_SUM_LIMIT.values[0]
 
         #       Amount overdue on Credit Bureau credit,
-        self._amt_credit_sum_overdue = fConvertFactor * qLocal.AMT_CREDIT_SUM_OVERDUE.values[0]
+        self._amt_credit_sum_overdue = qLocal.AMT_CREDIT_SUM_OVERDUE.values[0]
 
         # Annuity of the Credit Bureau credit,
-        self._amt_annuity = fConvertFactor * qLocal.AMT_ANNUITY.values[0]
+        self._amt_annuity = qLocal.AMT_ANNUITY.values[0]
 
     def GetCreditActiveDesc(self):
         desc = g_Cat["Bureau_CreditActive"][self._credit_active]
-        return desc
-
-    def GetCreditCurrencyDesc(self):
-        desc = g_Cat["Bureau_CreditCurrency"][self._credit_currency]
         return desc
 
     def GetCreditTypeDesc(self):
@@ -536,7 +504,6 @@ df = d['train']
 len(df.dtypes)
 122
 
-
 #
 #
 # Prepare as feature: 
@@ -550,7 +517,6 @@ len(df.dtypes)
 # Initialization:
 #
 #
-
 
 from sklearn.datasets import load_boston
 
@@ -602,36 +568,110 @@ X = np.array(q)
 
 X.shape
 
-data = np.array([['','Col1','Col2'], ['Row1',1,2], ['Row2',3,4], ['Row3',7,9]])
-                
+# ####################################
+# Checking out combining many rows into one row.
+
+data = np.array([['','ID', 'Col1','Col2'], ['Row1',0, 1, 2], ['Row2',0, 3,4], ['Row3',1, 7,9]])
+                 
 df = pd.DataFrame(data=data[1:,1:], index=data[1:,0], columns=data[0,1:])
 
-X = np.array(df)
-
-
-# Create row with 10 slots, default at NaN.
+X_in = np.array(df, dtype = "float32")
 
 X_res = np.empty(shape=(10), dtype="float32")
 X_res[:] = np.nan
  
-# 
-# 
-#  Fill in data (0,1,2) at location (4,7,9).
 
-np.copyto(X_res + 4 , X + 0)
+####################################################################
+#           
+#                       CopyRow
+#
+# Don't copy first num_skip elements, 0 to copy full row
 
-X_res[4] = X[0]
+def CopyRow(X_in, X_res, sourceRow, destOffset, num_skip):
+    nColumns_in = X_in.shape[1] -num_skip
+    X_res[destOffset: destOffset + nColumns_in] = X_in[sourceRow][num_skip:]
 
-# Check sparsity
+"""c"""
 
-data_width = X.shape[1]
-
-data_width
-
-
-X.flatten()
+CopyRow(X_in, X_res, 0, 4, 0)
 
 
+def test_report_size_Self():
+    return 3
 
+
+def test_Add_Self(X_res, offset):
+    num_A = 90
+    num_B = 11
+    num_C = 92
+
+    X_in = np.empty(shape=(1, 3), dtype="float32")
+
+    X_in[0] = [num_A, num_B, num_C]
+
+    CopyRow(X_in, X_res, 0, offset, 0)
+
+"""c"""
+
+#################################################################
+#
+# Visualise spacing on prev. distribution.
+#
+# Info spacing in time
+#
+# slots... exact... count...A
+#
+# find good compromise...
+#
+
+# distribution - num prevs since app time on day
+
+nApps = len (d['train'])+ len (d['test'])
+
+q = d['prev']
+
+q.SK_ID_CURR.nunique()
+
+nPrev_Per_curr_Mean = len(q) / nApps
+
+freq = q.SK_ID_CURR.value_counts()
+
+s2 = set (d['train'].SK_ID_CURR)
+s3 = set (d['test'].SK_ID_CURR)
+
+s4 = s2.union(s3)
+
+print(f"Number of SK_ID_CURR in user set: {len(s4)}")
+
+
+s_prev = set(freq.index)
+
+print(f"Number of SK_ID_CURR in prev set: {len(s_prev)}")
+
+# Same:
+s_int = s4.intersection(s_prev)
+
+print(f"SK_ID_CURR intersection prev and curr: {len(s_int)}")
+
+# Numbers show that all SK_ID_CURR in prev set are in user set
+
+l = list (freq.values)
+
+nNoPrev = nApps - len (s_int)
+
+l.sum()
+
+# List length - showing number of prev apps for each curr app + curr apps with no prev apps - equal all apps)
+assert (len (l) + nNoPrev == nApps)
+
+from matplotlib import pyplot as plt
+
+plt.hist(l, bins = 50)
+
+plt.show()
+
+np.array(l).min()
+
+# Cut off at 10 - 15 - 20. Try 20 for
 
 
