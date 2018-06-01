@@ -671,4 +671,6 @@ for r in an:
 
 """c"""
 
-
+import matplotlib.pyplot as plt
+plt.scatter(x, y)
+plt.show()
