@@ -518,35 +518,6 @@ len(df.dtypes)
 #
 #
 
-from sklearn.datasets import load_boston
-
-bunch = load_boston()
-
-y = bunch.target
-
-X = pd.DataFrame(bunch.data, columns = bunch.feature_names)
-
-enc = BinaryEncoder(cols=['CHAS', 'RAD'])
-
-X_new = enc.fit_transform(X)
-
-
-cat_name = 'Bureau_CreditActive'
-
-assert (cat_name in g_Cat)
-
-nCat = len (g_Cat[cat_name])
-
-l = list (range(nCat))
-
-lb.fit(l)
-
-lb.classes_
-
-b = BureauLoan(q)
-
-
-b.Desc()
 
 ##----app curr-------------- app prev slot ------------------ app prev slot ---------------- app prev slot --------------------bureau slot--------------bureau slot-------------bureau slot-----------
 
@@ -628,9 +599,12 @@ def test_Add_Self(X_res, offset):
 
 nApps = len (d['train'])+ len (d['test'])
 
+print(f"# applications total: {nApps}")
+
 q = d['prev']
 
-q.SK_ID_CURR.nunique()
+nAppsInPrev = q.SK_ID_CURR.nunique()
+print(f"# applications in prev: {nAppsInPrev}")
 
 nPrev_Per_curr_Mean = len(q) / nApps
 
@@ -673,5 +647,28 @@ plt.show()
 np.array(l).min()
 
 # Cut off at 10 - 15 - 20. Try 20 for
+
+q = q[['SK_ID_CURR', 'DAYS_DECISION']]
+
+an = np.arange(0, 3500, 1)
+
+x = []
+y = []
+
+for r in an:
+    
+    m = q.DAYS_DECISION > -r
+    p = q[m]
+
+    nTotal = len(q)
+    nAcc   = len(p)
+
+    fFac = 100.0 * nAcc/nTotal 
+
+    # print(f"day desc > {r}: {nAcc} prev apps of in total {nTotal} apps. {fFac:.2f}%")
+    x.append(r)
+    y.append(fFac)
+
+"""c"""
 
 
