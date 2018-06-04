@@ -58,22 +58,19 @@ for x in g:
 
 """c"""
 
-
 # https://stackoverflow.com/questions/22219004/grouping-rows-in-list-in-pandas-groupby
 
 df = pd.DataFrame( {'a':np.random.randint(0,60,600), 'b':[1,2,5,5,4,6]*100})
 
 keys, values = df.sort_values('a').values.T
 
-
-ukeys,index=np.unique(keys,True)
+ukeys,index=np.unique(keys, return_index = True)
 
 arrays=np.split(values,index[1:])
 
 df2=pd.DataFrame({'a':ukeys,'b':[list(a) for a in arrays]})
 
 
-df2...
 
 
 
