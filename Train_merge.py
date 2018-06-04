@@ -68,9 +68,11 @@ ukeys,index=np.unique(keys, return_index = True)
 
 arrays=np.split(values,index[1:])
 
-df2=pd.DataFrame({'a':ukeys,'b':[list(a) for a in arrays]})
+df2=pd.DataFrame({'a':ukeys,'b':[list(a) for a in arrays], 'c':[my_procedural_array(a) for a in arrays]})
 
+def my_procedural_array(a):
+    return [9, sum(a)]
 
-
+"""c"""
 
 

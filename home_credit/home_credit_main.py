@@ -682,3 +682,18 @@ for r in an:
 import matplotlib.pyplot as plt
 plt.scatter(x, y)
 plt.show()
+
+
+# Test (from Train_merge.py)
+
+q = d['bb']
+
+q = q[['SK_ID_BUREAU', 'MONTHS_BALANCE']]
+
+
+keys, values = q.sort_values('SK_ID_BUREAU').values.T
+
+ukeys,index=np.unique(keys, return_index = True)
+
+arrays=np.split(values,index[1:])
+
