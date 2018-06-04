@@ -92,6 +92,9 @@
     <Compile Include="Train_Index_Group.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Train_merge.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="general\" />
