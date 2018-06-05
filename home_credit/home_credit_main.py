@@ -72,7 +72,6 @@ y = d['train']['TARGET']
 del d['train']['TARGET']
 
 
-
 lRemoveCat = list (d.keys())
 
 # Todo: Fit - not fit_transform on train. Careful handling of unseen.
@@ -540,15 +539,10 @@ X = np.array(q)
 X.shape
 
 
-
-
-
-# #########################################################
+##########################################################
 #
 # Checking out combining many rows into one row.
 #
-
-
 
 data = np.array([['','ID', 'Col1','Col2'], ['Row1',0, 1, 2], ['Row2',0, 3,4], ['Row3',1, 7,9]])
                  
@@ -594,7 +588,7 @@ def test_Add_Self(X_res, offset):
 
 #################################################################
 #
-# Visualise spacing on prev. distribution.
+# Visualize spacing on prev. distribution.
 #
 # Info spacing in time
 #
@@ -602,8 +596,10 @@ def test_Add_Self(X_res, offset):
 #
 # find good compromise...
 #
-
+#
 # distribution - num prevs since app time on day
+#
+#
 
 nApps = len (d['train'])+ len (d['test'])
 
@@ -679,33 +675,108 @@ for r in an:
 
 """c"""
 
+
 import matplotlib.pyplot as plt
 plt.scatter(x, y)
 plt.show()
 
 
+#
 # Test (from Train_merge.py)
+#
+
+d = load_all()
+
+# Process bureau balance
 
 q = d['bb']
 
-q = q[['SK_ID_BUREAU', 'MONTHS_BALANCE']]
+q.isnull().sum()
 
-keys, values = q.sort_values('SK_ID_BUREAU').values.T
+q.STATUS.value_counts()
+
+q.STATUS = q.STATUS.astype('category')
+
+l_cat_status = q.STATUS.cat.categories.values
+
+q.STATUS = q.STATUS.cat.codes
+
+q.MONTHS_BALANCE = pd.to_numeric(q.MONTHS_BALANCE, downcast = 'signed')
+
+q.dtypes
+
+q_balance = q[['SK_ID_BUREAU', 'MONTHS_BALANCE']]
+
+keys, values_balance = q_balance.sort_values('SK_ID_BUREAU').values.T
+
+q_status = q[['SK_ID_BUREAU', 'STATUS']]
+
+keys_s, values_status = q_status.sort_values('SK_ID_BUREAU').values.T
+
 
 ukeys,index=np.unique(keys, return_index = True)
 
-arrays=np.split(values,index[1:])
+arrays_balance = np.split(values_balance,index[1:])
+arrays_status = np.split(values_status, index[1:])
+
+assert (len (ukeys) == len (arrays_balance))
+assert (len (ukeys) == len (arrays_status))
+
+#########################################################
+#
+#   is_dense()
+#
+
+def is_dense(a):
+
+    if (len(a) != len(np.unique(a))):
+        print("Duplicates found")
+        return
+
+    aMin = a.min()
+    aMax = a.max()
+
+    aDiff = aMax - aMin
+
+    isDense = (aDiff == len(a) -1)
+
+    return isDense
+
+"""c"""
+
+nDense = 0
+nSparse = 0
+
+for a in arrays_balance:
+    if is_dense(a):
+        nDense = nDense + 1
+    else:
+        nSparse = nSparse + 1
+
+"""c"""
+
+print(f"Sparse: {nSparse}, Dense: {nDense}")
 
 
+a = [8,3,4,9]
+
+for ix, x in enumerate(a):
+    print (ix, x)
+
+"""c"""
 
 
-
-
-
-
-
-
-
-
+#
+#
+# => All are dense
+#
+#
+# Todo: Produce:
+# 
+#   SK_ID_BUREAU Start_Month  Length   Status_String
+#
+# Todo: Check characteristics of status string - consider feature engineering
+#
+#
 
 

@@ -41,21 +41,6 @@ m = (q.SK_ID_BUREAU == 5041336) | (q.SK_ID_BUREAU == 5041332)
 q = q[m]
 
 
-pd.pivot_table(q, values='MONTHS_BALANCE', index='SK_ID_BUREAU').reset_index()
-
-
-
-g = q.groupby('SK_ID_BUREAU')
-
-for x in g:
-    print("-----------------------------------")
-
-    s_m = x[0]
-    s_s = x[1]
-
-    print(s_m)
-    print(s_s)
-
 """c"""
 
 # https://stackoverflow.com/questions/22219004/grouping-rows-in-list-in-pandas-groupby
@@ -76,3 +61,8 @@ def my_procedural_array(a):
 """c"""
 
 
+g = q.groupby(by = 'SK_ID_BUREAU')
+
+
+for m, s in g:
+    print(f"balance = {m}, status = {s}")

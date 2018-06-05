@@ -33,21 +33,21 @@ DATA_DIR = DATA_DIR_PORTABLE
 
 
 df_train = pd.read_csv(
-    DATA_DIR + 'train.csv', usecols=[1, 2, 3, 4, 5],
-    dtype={'onpromotion': bool},
-    converters={'unit_sales': lambda u: np.log1p(
-        float(u)) if float(u) > 0 else 0},
-    parse_dates=["date"],
-    skiprows=range(1, 66458909)  # 2016-01-01
+    DATA_DIR + 'train.csv',
+    usecols= [1, 2, 3, 4, 5],
+    dtype = {'onpromotion': bool},
+    converters = {'unit_sales': lambda u: np.log1p(float(u)) if float(u) > 0 else 0},
+    parse_dates = ["date"],
+    skiprows = range(1, 66458909)  # 2016-01-01
 )
 
 df_test = pd.read_csv(
-    DATA_DIR + "test.csv", usecols=[0, 1, 2, 3, 4],
-    dtype={'onpromotion': bool},
-    parse_dates=["date"]  # , date_parser=parser
-).set_index(
-    ['store_nbr', 'item_nbr', 'date']
+    DATA_DIR + "test.csv", usecols = [0, 1, 2, 3, 4],
+    dtype = {'onpromotion': bool},
+    parse_dates = ["date"] 
 )
+
+df_test = df_test.set_index( ['store_nbr', 'item_nbr', 'date'])
 
 items = pd.read_csv(
     DATA_DIR + "items.csv",
