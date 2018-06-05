@@ -32,6 +32,12 @@
     <Compile Include="Driver_SM.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="favorita\favorita.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="favorita\study_weiwei.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="general\dataset.py">
       <SubType>Code</SubType>
     </Compile>
@@ -101,6 +107,7 @@
     <Folder Include="mercari\" />
     <Folder Include="batch\" />
     <Folder Include="home_credit\" />
+    <Folder Include="favorita\" />
     <Folder Include="talking\" />
     <Folder Include="toxic\" />
   </ItemGroup>

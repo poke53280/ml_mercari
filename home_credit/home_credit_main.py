@@ -690,10 +690,22 @@ q = d['bb']
 
 q = q[['SK_ID_BUREAU', 'MONTHS_BALANCE']]
 
-
 keys, values = q.sort_values('SK_ID_BUREAU').values.T
 
 ukeys,index=np.unique(keys, return_index = True)
 
 arrays=np.split(values,index[1:])
+
+
+
+
+
+
+
+
+
+
+
+
+
 
