@@ -21,6 +21,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="avito\avito.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="batch\basic_linear_regression.py" />
     <Compile Include="batch\basic_logistic_regression.py">
       <SubType>Code</SubType>
@@ -108,6 +111,7 @@
     <Folder Include="batch\" />
     <Folder Include="home_credit\" />
     <Folder Include="favorita\" />
+    <Folder Include="avito\" />
     <Folder Include="talking\" />
     <Folder Include="toxic\" />
   </ItemGroup>
