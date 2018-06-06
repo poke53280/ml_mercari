@@ -1,4 +1,20 @@
 
+#
+# This is an original fork from:
+#  https://www.kaggle.com/lopuhin/mercari-golf-0-3875-cv-in-75-loc-1900-s
+#
+# by Konstantin Lopuhin and Pawel
+# published for mercari.
+#
+#
+
+
+# Make work for both at the same time
+
+TRAIN_FILE_AVITO = "C:\\avito_data\\train.csv"
+TRAIN_FILE_MERCARI = "C:\\mercari_data\\train.tsv"
+
+
 
 import os; os.environ['OMP_NUM_THREADS'] = '1'
 from contextlib import contextmanager
@@ -19,28 +35,11 @@ from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from sklearn.metrics import mean_squared_log_error
 from sklearn.model_selection import KFold
 
-# Prev avito winners.
-# stemming, lemmatization, transliteration
-# Distances different similarity features between title-title, title-description, title-json like Cosine distance, Levenshtein, Jaccard, NCD, etc
-#
-# http://blog.kaggle.com/2016/08/24/avito-duplicate-ads-detection-winners-interview-1st-place-team-devil-team-stanislav-dmitrii/
 
-#
-# Mercari - study_konstantin_pavel.py, 
-# 
-# 
-# 
-# study_mercaring_2nd_place.py
-#
-# FM_FTRL - Mercari
-#
-# LGBM from active kernels.
-#
-# Basic image analysis from forums.
-# Toxic?
-#
-#
-# From pavel/konstantin : https://www.kaggle.com/lopuhin/mercari-golf-0-3875-cv-in-75-loc-1900-s
+def preprocess(df: pd.DataFrame) -> pd.DataFrame:
+    df['name'] = df['name'].fillna('') + ' ' + df['brand_name'].fillna('')
+    df['text'] = (df['item_description'].fillna('') + ' ' + df['name'] + ' ' + df['category_name'].fillna(''))
+    return df[['name', 'text', 'shipping', 'item_condition_id']]
 
 def on_field(f: str, *vec) -> Pipeline:
     return make_pipeline(FunctionTransformer(itemgetter(f), validate=False), *vec)
@@ -66,97 +65,42 @@ def fit_predict(xs, y_train) -> np.ndarray:
         return model.predict(X_test)[:, 0]
 
 
-# one hot category_name et.c.
-
-# understand numericals and categories, such as item_condition and shipping in the mercari version.
-
-def preprocess(df: pd.DataFrame) -> pd.DataFrame:
-    df['name'] = df['title'].fillna('') # + ' ' + df['brand_name'].fillna('')
-
-    l = ['name', 'user_id', 'region', 'city', 'parent_category_name', 'category_name', 'param_1', 'param_2', 'param_3', 'user_type']
-
-    df['text'] = df['description'].fillna('')
-
-    for c in l:
-        df['text'] = df['text'] + ' ' + df[c].fillna('')
-    
-    return df[['name', 'text', 'price']]
-
-
-DATA_DIR_PORTABLE = "C:\\avito_data\\"
-DATA_DIR_BASEMENT = "D:\\XXX\\"
-DATA_DIR = DATA_DIR_PORTABLE
-
-train = pd.read_csv(DATA_DIR + 'train.csv', index_col = "item_id", parse_dates = ["activation_date"])
 
 vectorizer = make_union(on_field('name', Tfidf(max_features=100000, token_pattern='\w+')),
-                        on_field('text', Tfidf(max_features=300000, token_pattern='\w+', ngram_range=(1, 3))),
-                        on_field(['price'], FunctionTransformer(to_records, validate=False), DictVectorizer()))
+                        on_field('text', Tfidf(max_features=100000, token_pattern='\w+', ngram_range=(1, 2))),
+                        on_field(['shipping', 'item_condition_id'], FunctionTransformer(to_records, validate=False), DictVectorizer())
 
 y_scaler = StandardScaler()
-
+    
+    
+train = pd.read_table(TRAIN_FILE_MERCARI)
+train = train[train['price'] > 0].reset_index(drop=True)
 cv = KFold(n_splits=20, shuffle=True, random_state=42)
 train_ids, valid_ids = next(cv.split(train))
 train, valid = train.iloc[train_ids], train.iloc[valid_ids]
 
-y_train = y_scaler.fit_transform(train['deal_probability'].values.reshape(-1, 1))
+y_train = y_scaler.fit_transform(np.log1p(train['price'].values.reshape(-1, 1)))
 
 X_train = vectorizer.fit_transform(preprocess(train)).astype(np.float32)
 
-print(f'X_train: {X_train.shape} of {X_train.dtype}')
 
+print(f'X_train: {X_train.shape} of {X_train.dtype}')
 del train
     
 X_valid = vectorizer.transform(preprocess(valid)).astype(np.float32)
-
+    
 with ThreadPool(processes=1) as pool:
     Xb_train, Xb_valid = [x.astype(np.bool).astype(np.float32) for x in [X_train, X_valid]]
     xs = [[Xb_train, Xb_valid], [X_train, X_valid]] * 2
     y_pred = np.mean(pool.map(partial(fit_predict, y_train=y_train), xs), axis=0)
 
 
-y_pred = y_scaler.inverse_transform(y_pred.reshape(-1, 1))[:, 0]
+y_pred = np.expm1(y_scaler.inverse_transform(y_pred.reshape(-1, 1))[:, 0])
 
-from sklearn.metrics import mean_squared_error
+print('Valid RMSLE: {:.4f}'.format(np.sqrt(mean_squared_log_error(valid['price'], y_pred))))
 
-print('Valid RMSE: {:.4f}'.format(np.sqrt(mean_squared_error(valid['deal_probability'], y_pred))))
-
-# No tweaks. Few inputs.
-# => 0.2326
-#
-#
-# Fix exp on pred
-
-# => Valid RMSE: 0.2341
-#
-# Added many fields to text.
-#
-#
-# => 
-#
-# error    float() argument must be a string or a number, not 'Timestamp'
-#
-# => Scale and process float (price). propery handle category
-#
-# removed date since trouble.
-# 
-# => X_train: (1428252, 400001) of float32
-#
-# => 0.2338
-#
-
-
-
-
-
-
-
-
-
-
-
-
-
+if __name__ == '__main__':
+    main()
 
 
 

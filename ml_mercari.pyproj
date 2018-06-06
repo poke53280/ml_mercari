@@ -24,6 +24,12 @@
     <Compile Include="avito\avito.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="avito\avito_kernel_lgbm.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="avito\_from_konstantin_pavel.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="batch\basic_linear_regression.py" />
     <Compile Include="batch\basic_logistic_regression.py">
       <SubType>Code</SubType>
@@ -102,6 +108,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Train_merge.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Train_Pipeline.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Train_Stemmer.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
