@@ -19,9 +19,14 @@ from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from sklearn.metrics import mean_squared_log_error
 from sklearn.model_selection import KFold
 
-# Prev avito winners.
+# Prev avito winners:
 # stemming, lemmatization, transliteration
-# Distances different similarity features between title-title, title-description, title-json like Cosine distance, Levenshtein, Jaccard, NCD, etc
+# Distances different similarity features between title-title, title-description, title-json like:
+# Cosine distance,
+# Levenshtein (see: study_Lavrikov_Ridge.py)
+# Jaccard,
+# NCD,
+# etc
 #
 # http://blog.kaggle.com/2016/08/24/avito-duplicate-ads-detection-winners-interview-1st-place-team-devil-team-stanislav-dmitrii/
 
@@ -67,7 +72,6 @@ def fit_predict(xs, y_train) -> np.ndarray:
 
 
 # one hot category_name et.c.
-
 # understand numericals and categories, such as item_condition and shipping in the mercari version.
 
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
@@ -89,8 +93,8 @@ DATA_DIR = DATA_DIR_PORTABLE
 
 train = pd.read_csv(DATA_DIR + 'train.csv', index_col = "item_id", parse_dates = ["activation_date"])
 
-vectorizer = make_union(on_field('name', Tfidf(max_features=100000, token_pattern='\w+')),
-                        on_field('text', Tfidf(max_features=300000, token_pattern='\w+', ngram_range=(1, 3))),
+vectorizer = make_union(on_field('name', Tfidf(max_features=100000, token_pattern='\w+'),   ngram_range=(1, 3)),
+                        on_field('text', Tfidf(max_features=100000, token_pattern='\w+',    ngram_range=(1, 3))),
                         on_field(['price'], FunctionTransformer(to_records, validate=False), DictVectorizer()))
 
 y_scaler = StandardScaler()

@@ -59,7 +59,6 @@ data1 = "продам свитер из англии, фирма Wооловер
 
 data3 = "Продаётся Daewoo nexia 1999 год.вып."
 
-
 from sklearn.feature_extraction.text import CountVectorizer
 from nltk.stem.snowball import RussianStemmer
 
