@@ -43,9 +43,15 @@ from sklearn.model_selection import KFold
 #
 # Basic image analysis from forums.
 # Toxic?
+
+
+# https://github.com/alexeygrigorev/avito-duplicates-kaggle
+
 #
 #
 # From pavel/konstantin : https://www.kaggle.com/lopuhin/mercari-golf-0-3875-cv-in-75-loc-1900-s
+#
+#
 
 def on_field(f: str, *vec) -> Pipeline:
     return make_pipeline(FunctionTransformer(itemgetter(f), validate=False), *vec)
@@ -67,12 +73,30 @@ def fit_predict(xs, y_train) -> np.ndarray:
         model = ks.Model(model_in, out)
         model.compile(loss='mean_squared_error', optimizer=ks.optimizers.Adam(lr=3e-3))
         for i in range(3):
+            print(f"Epoch {i + 1}...")
             model.fit(x=X_train, y=y_train, batch_size=2**(11 + i), epochs=1, verbose=0)
         return model.predict(X_test)[:, 0]
 
 
 # one hot category_name et.c.
 # understand numericals and categories, such as item_condition and shipping in the mercari version.
+
+
+def create_name_pipeline():
+    l = []
+    l.append ( ('ss', StemmerStage('r') ) )
+    l.append( ('td_name', Tfidf(max_features=100000, token_pattern='\w+')))
+    return Pipeline(l)
+
+
+def create_text_pipeline():
+    l = []
+    l.append ( ('ss', StemmerStage('r') ) )
+    l.append ( ('td_text', Tfidf(max_features=100000, token_pattern='\w+',    ngram_range=(1, 3))))
+
+    return Pipeline(l)
+
+
 
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
     df['name'] = df['title'].fillna('') # + ' ' + df['brand_name'].fillna('')
@@ -93,9 +117,6 @@ DATA_DIR = DATA_DIR_PORTABLE
 
 train = pd.read_csv(DATA_DIR + 'train.csv', index_col = "item_id", parse_dates = ["activation_date"])
 
-vectorizer = make_union(on_field('name', Tfidf(max_features=100000, token_pattern='\w+'),   ngram_range=(1, 3)),
-                        on_field('text', Tfidf(max_features=100000, token_pattern='\w+',    ngram_range=(1, 3))),
-                        on_field(['price'], FunctionTransformer(to_records, validate=False), DictVectorizer()))
 
 y_scaler = StandardScaler()
 
@@ -104,6 +125,10 @@ train_ids, valid_ids = next(cv.split(train))
 train, valid = train.iloc[train_ids], train.iloc[valid_ids]
 
 y_train = y_scaler.fit_transform(train['deal_probability'].values.reshape(-1, 1))
+
+vectorizer = make_union(on_field('name', create_name_pipeline()),
+                        on_field('text', create_text_pipeline()),
+                        on_field(['price'], FunctionTransformer(to_records, validate=False), DictVectorizer()))
 
 X_train = vectorizer.fit_transform(preprocess(train)).astype(np.float32)
 

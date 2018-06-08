@@ -9,7 +9,14 @@ from sklearn.feature_extraction.text import CountVectorizer
 
 from sklearn.tree import DecisionTreeClassifier
 
+from sklearn.base import BaseEstimator
+from sklearn.pipeline import make_pipeline, make_union, Pipeline
+
+from nltk.corpus import stopwords
+
 import regex as re
+
+from operator import itemgetter
 
 
 df = pd.DataFrame(np.random.randint(0,100,size=(100, 4)), columns=list('ABCD'))
@@ -105,60 +112,8 @@ class AverageWordLengthExtractor(BaseEstimator, TransformerMixin):
 
 
 from nltk.corpus import stopwords
+from nltk.stem.snowball import EnglishStemmer, RussianStemmer
 
-
-###################################################################################################
-#
-#    SplitAndStemStage
-#
-#
-
-class SplitAndStemStage(BaseEstimator, TransformerMixin):
-
-    def do_something_to(self, X):
-
-        out = []
-
-        for s in X:
-            l = _p.split(s)
-
-            nWords = len(l)
-
-            if nWords == 0:
-                return 0
-
-            this_str = ""
-
-            for x in l:
-
-                # print(f"Checking '{x}'")
-                if x in self._stopWords:
-                    continue
-
-                x = self._stemmer.stem(x)
-                
-                if len(this_str) == 0:
-                    this_str = this_str + x
-                else:
-                    this_str = this_str + "," + x
-
-            out.append(this_str)
-        
-        return out
-
-    def __init__(self):
-        self._p = re.compile(r'\W+')
-        self._stemmer = EnglishStemmer()
-
-        self._stopWords = stopwords.words('english')
-
-    def transform(self, X, y=None):
-        return self.do_something_to(X)
-
-    def fit(self, X, y=None):
-        return self 
-
-"""c"""
 
 
 ###################################################################################################
@@ -238,9 +193,21 @@ l_stem.append ( ('cv', CountVectorizer()  ))
 
 stem_pipeline = Pipeline(l_stem)
 
-x_stem = stem_pipeline.fit_transform(df.item_description[9000:9002])
+q = df[9000:9010]
+
+x_stem = stem_pipeline.fit_transform(q.item_description)
 
 x_stem
+
+
+def on_field(f: str, *vec) -> Pipeline:
+    return make_pipeline(FunctionTransformer(itemgetter(f), validate=False), *vec)
+
+"""c"""
+
+pipe = on_field('item_description', stem_pipeline)
+
+pipe.fit_transform(q)
 
 
 #
