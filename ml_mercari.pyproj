@@ -91,6 +91,9 @@
     <Compile Include="mercari\study_mercaring_2nd_place.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="textblob.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="toxic\fasttest_keras.py" />
     <Compile Include="general\txt_quantity_finder.py" />
     <Compile Include="general\hashing.py" />

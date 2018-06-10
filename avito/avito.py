@@ -19,6 +19,8 @@ from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from sklearn.metrics import mean_squared_log_error
 from sklearn.model_selection import KFold
 
+import general.StemmerStage
+
 # Prev avito winners:
 # stemming, lemmatization, transliteration
 # Distances different similarity features between title-title, title-description, title-json like:
@@ -101,7 +103,8 @@ def create_text_pipeline():
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
     df['name'] = df['title'].fillna('') # + ' ' + df['brand_name'].fillna('')
 
-    l = ['name', 'user_id', 'region', 'city', 'parent_category_name', 'category_name', 'param_1', 'param_2', 'param_3', 'user_type']
+    #l = ['name', 'user_id', 'region', 'city', 'parent_category_name', 'category_name', 'param_1', 'param_2', 'param_3', 'user_type']
+    l = ['name']
 
     df['text'] = df['description'].fillna('')
 
@@ -125,6 +128,7 @@ train_ids, valid_ids = next(cv.split(train))
 train, valid = train.iloc[train_ids], train.iloc[valid_ids]
 
 y_train = y_scaler.fit_transform(train['deal_probability'].values.reshape(-1, 1))
+
 
 vectorizer = make_union(on_field('name', create_name_pipeline()),
                         on_field('text', create_text_pipeline()),
@@ -167,12 +171,21 @@ print('Valid RMSE: {:.4f}'.format(np.sqrt(mean_squared_error(valid['deal_probabi
 #
 # => Scale and process float (price). propery handle category
 #
-# removed date since trouble.
+# * removed date since trouble.
 # 
 # => X_train: (1428252, 400001) of float32
 #
 # => 0.2338
 #
+# => With stemmer
+# => 0.2331
+#
+#
+# Back to description, name only. With stemmer
+#
+# => Valid RMSE: 0.2360
+
+
 
 
 
