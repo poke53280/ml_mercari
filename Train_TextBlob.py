@@ -1,8 +1,6 @@
 
 #
 #
-# Check out: https://pythonhosted.org/goslate/
-#
 # and googletrans
 #
 #

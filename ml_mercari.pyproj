@@ -91,6 +91,9 @@
     <Compile Include="mercari\study_mercaring_2nd_place.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Train_FastText.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Train_TextBlob.py">
       <SubType>Code</SubType>
     </Compile>

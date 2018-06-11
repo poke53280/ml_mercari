@@ -31,7 +31,8 @@ import general.StemmerStage
 # etc
 #
 # http://blog.kaggle.com/2016/08/24/avito-duplicate-ads-detection-winners-interview-1st-place-team-devil-team-stanislav-dmitrii/
-
+#
+#
 #
 # Mercari - study_konstantin_pavel.py, 
 # 
@@ -45,10 +46,10 @@ import general.StemmerStage
 #
 # Basic image analysis from forums.
 # Toxic?
-
-
+#
+#
 # https://github.com/alexeygrigorev/avito-duplicates-kaggle
-
+#
 #
 #
 # From pavel/konstantin : https://www.kaggle.com/lopuhin/mercari-golf-0-3875-cv-in-75-loc-1900-s
@@ -80,10 +81,6 @@ def fit_predict(xs, y_train) -> np.ndarray:
         return model.predict(X_test)[:, 0]
 
 
-# one hot category_name et.c.
-# understand numericals and categories, such as item_condition and shipping in the mercari version.
-
-
 def create_name_pipeline():
     l = []
     l.append ( ('ss', StemmerStage('r') ) )
@@ -99,17 +96,16 @@ def create_text_pipeline():
     return Pipeline(l)
 
 
-
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
     df['name'] = df['title'].fillna('') # + ' ' + df['brand_name'].fillna('')
 
     #l = ['name', 'user_id', 'region', 'city', 'parent_category_name', 'category_name', 'param_1', 'param_2', 'param_3', 'user_type']
-    l = ['name']
+    #l = ['name']
 
     df['text'] = df['description'].fillna('')
 
-    for c in l:
-        df['text'] = df['text'] + ' ' + df[c].fillna('')
+    #for c in l:
+        #df['text'] = df['text'] + ' ' + df[c].fillna('')
     
     return df[['name', 'text', 'price']]
 
