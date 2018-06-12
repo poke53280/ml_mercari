@@ -102,7 +102,7 @@ def rmse(y, y0):
     return np.sqrt(np.mean(np.power((y - y0), 2)))
 
 print("\nData Load Stage")
-training = pd.read_csv(DATA_DIR + 'train.csv', index_col = "item_id", parse_dates = ["activation_date"])
+training = pd.read_csv(DATA_DIR + 'train_w_pred_NN', index_col = "item_id", parse_dates = ["activation_date"], encoding='cp1252')
 
 traindex = training.index
 

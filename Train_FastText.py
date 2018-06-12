@@ -86,7 +86,7 @@ word_index = tokenizer.word_index
 
 nb_words = min(max_features, len(word_index))   # len word_index: 692156, with title: 752760
 
-embedding_matrix = np.zeros((nb_words, embed_size))
+embedding_matrix = np.zeros((nb_words, embed_size))  # start randomized (train init)?
 
 # Fill embedding matrix with vectors from idx 0 to nb_words
 
@@ -155,10 +155,10 @@ def build_model():
     model.summary()
     return model
 
-EPOCHS = 4
+EPOCHS = 2
 
 model = build_model()
-file_path = "model.hdf5"
+file_path = DATA_DIR + "model.hdf5"
 
 check_point = ModelCheckpoint(file_path, monitor = "val_loss", mode = "min", save_best_only = True, verbose = 1)
 
@@ -171,6 +171,9 @@ prediction = model.predict(X_valid)
 print('RMSE:', np.sqrt(metrics.mean_squared_error(y_valid, prediction)))
 
 test = pd.read_csv(TEST_CSV, index_col = 0)
+
+test['description'] = test['title'].fillna('NA') + ' ' + test['description'].fillna('NA')
+
 test = test[['description']].copy()
 
 test['description'] = test['description'].astype(str)
@@ -181,13 +184,20 @@ print('padding')
 X_test = sequence.pad_sequences(X_test, maxlen=maxlen)
 prediction = model.predict(X_test,batch_size = 128, verbose = 1)
 
-sample_submission = pd.read_csv('../input/avito-demand-prediction/sample_submission.csv', index_col = 0)
+sample_submission = pd.read_csv(DATA_DIR + 'sample_submission.csv', index_col = 0)
 submission = sample_submission.copy()
 submission['deal_probability'] = prediction
-submission.to_csv('submission.csv')
+submission.to_csv(DATA_DIR + 'submission.csv')
+
+# no stem, no stop. features: 150,000 GRU 64, wikipedia, batch size 16, mean + 1 std 
+# RMSE: 0.233171126161
+# LB : 0.2375
 
 
+# Predict on full train set (should have been oof):
 
+train.to_pickle(DATA_DIR + 'train_w_pred_NN')
 
+train.to_csv(DATA_DIR + 'train_w_pred_NN')
 
 

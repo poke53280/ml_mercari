@@ -56,6 +56,15 @@ import general.StemmerStage
 #
 #
 
+# Todo: What to trian long. Logging along the way. Stop on key or file. Partial fit. Validation, 
+# cross validation along the way, alternate between models.
+# 'break into' and reconfigure and train on with new parameters.
+#
+#
+
+
+
+
 def on_field(f: str, *vec) -> Pipeline:
     return make_pipeline(FunctionTransformer(itemgetter(f), validate=False), *vec)
 
