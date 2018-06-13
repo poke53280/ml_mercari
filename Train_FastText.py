@@ -2,12 +2,12 @@
 # Based on: https://www.kaggle.com/christofhenkel/fasttext-starter-description-only
 # by: https://www.kaggle.com/christofhenkel
 #
-
+#
 # See also:
 # https://www.kaggle.com/christofhenkel/using-train-active-for-training-word-embeddings
-
-
+#
 # http://rusvectores.org/en/models/#models
+#
 
 
 import pandas as pd
@@ -32,7 +32,7 @@ EMBEDDING_FILE = DATA_DIR + 'wiki.ru.vec'
 TRAIN_CSV = DATA_DIR + 'train.csv'
 TEST_CSV = DATA_DIR + 'test.csv'
 
-max_features = 150000
+max_features = 100000
 
 embed_size = 300
 
@@ -51,7 +51,7 @@ print('fitting tokenizer')
 train['description'] =  train['description'].astype(str)
 
 
-maxlen = train['description'].str.len().mean() + train['description'].str.len().std()
+maxlen = train['description'].str.len().mean() + 3 * train['description'].str.len().std()
 
 maxlen = int (maxlen) + 1
 
@@ -143,10 +143,10 @@ def build_model():
     inp = Input(shape = (maxlen, ))
     emb = Embedding(nb_words, embed_size, weights = [embedding_matrix],
                     input_length = maxlen, trainable = True)(inp)
-    main = SpatialDropout1D(0.2)(emb)
-    main = Bidirectional(CuDNNGRU(64,return_sequences = True))(main)
+    main = SpatialDropout1D(0.3)(emb)
+    main = Bidirectional(CuDNNGRU(32,return_sequences = True))(main)
     main = GlobalAveragePooling1D()(main)
-    main = Dropout(0.2)(main)
+    main = Dropout(0.3)(main)
     out = Dense(1, activation = "sigmoid")(main)
 
     model = Model(inputs = inp, outputs = out)
@@ -158,7 +158,7 @@ def build_model():
 EPOCHS = 2
 
 model = build_model()
-file_path = DATA_DIR + "model.hdf5"
+file_path = DATA_DIR + "model7.hdf5"
 
 check_point = ModelCheckpoint(file_path, monitor = "val_loss", mode = "min", save_best_only = True, verbose = 1)
 
