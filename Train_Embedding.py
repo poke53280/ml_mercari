@@ -37,6 +37,25 @@ labels = np.array([1,1,1,1,1,0,0,0,0,0])
 docs = ['Well done!', 'Good work', 'Great effort', 'nice work', 'Excellent!',
                 'Weak', 'Poor effort!', 'not good', 'poor work', 'Could have done better.']
 
+
+# 
+# Embeddings for categorical data
+#
+# http://flovv.github.io/Embeddings_with_keras/
+#
+#
+
+cats = [3, 2, 0, 2, 2, 0, 1, 1, 1, 7]
+
+num_cats = 1 + np.array(cats).max() - np.array(cats).min()
+
+embedding_size_cat = int (0.5 + np.min([50, num_cats/ 2]))
+
+acCat = np.array(cats)
+acCat = acCat.reshape(10, 1)
+
+print (acCat)
+
 num_words = 10
 
 vocab_size = 50
@@ -48,29 +67,35 @@ padded_docs = pad_sequences(encoded_docs, maxlen= num_words, padding='post')
 print(padded_docs)
 
 input_layer_0 = Input(shape=(num_words,), name = "input_0")
-embedding_layer_0 = Embedding(vocab_size, 32, name = "Emb_0")(input_layer_0)
+embedding_layer_0 = Embedding(vocab_size, 3, name = "Emb_0")(input_layer_0)
 
 input_layer_1 = Input(shape=(num_words,), name = "input_1")
-embedding_layer_1 = Embedding(vocab_size, 16, name = "Emb_1")(input_layer_1)
+embedding_layer_1 = Embedding(vocab_size, 2, name = "Emb_1")(input_layer_1)
 
 input_layer_2 = Input(shape=(num_words,), name = "input_2")
-embedding_layer_2 = Embedding(vocab_size, 16, name = "Emb_2")(input_layer_2)
+embedding_layer_2 = Embedding(vocab_size, 2, name = "Emb_2")(input_layer_2)
 
 input_layer_3 = Input(shape=(num_words,), name = "input_3")
-embedding_layer_3 = Embedding(vocab_size, 16, name = "Emb_3")(input_layer_3)
-
+embedding_layer_3 = Embedding(vocab_size, 2, name = "Emb_3")(input_layer_3)
 
 c_layer = concatenate([embedding_layer_0, embedding_layer_1, embedding_layer_2, embedding_layer_3])
 
 flatten_0 = Flatten() (c_layer)
 
-deep_0 = Dense(10) (flatten_0)
+input_layer_cat = Input(shape=(1,), name = "input_cat")
+embedding_layer_cat = Embedding(num_cats, embedding_size_cat, name = "Emb_cat")(input_layer_cat)
+
+flatten_cat = Flatten() (embedding_layer_cat)
+
+d_layer = concatenate([flatten_0, flatten_cat])
+
+deep_0 = Dense(10) (d_layer)
 
 deep_1 = Dense(3) (deep_0)
 
 output_layer = Dense(1, activation='sigmoid') (deep_1)
 
-lcInput = [input_layer_0, input_layer_1, input_layer_2, input_layer_3]
+lcInput = [input_layer_0, input_layer_1, input_layer_2, input_layer_3, input_layer_cat]
 
 m = Model(inputs= lcInput, outputs=output_layer)
 
@@ -78,7 +103,7 @@ print (m.summary())
 
 m.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
 
-lcInputData = [padded_docs, padded_docs, padded_docs, padded_docs]
+lcInputData = [padded_docs, padded_docs, padded_docs, padded_docs, acCat]
 
 m.fit(lcInputData, [labels], epochs=4, verbose=0)
 

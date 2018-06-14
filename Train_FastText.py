@@ -127,7 +127,6 @@ X_train, X_valid, y_train, y_valid = train_test_split(train['description'].value
 del train
 
 
-
 print('convert to sequences')
 X_train = tokenizer.texts_to_sequences(X_train)
 X_valid = tokenizer.texts_to_sequences(X_valid)
@@ -143,10 +142,10 @@ def build_model():
     inp = Input(shape = (maxlen, ))
     emb = Embedding(nb_words, embed_size, weights = [embedding_matrix],
                     input_length = maxlen, trainable = True)(inp)
-    main = SpatialDropout1D(0.3)(emb)
+    main = SpatialDropout1D(0.2)(emb)
     main = Bidirectional(CuDNNGRU(32,return_sequences = True))(main)
     main = GlobalAveragePooling1D()(main)
-    main = Dropout(0.3)(main)
+    main = Dropout(0.2)(main)
     out = Dense(1, activation = "sigmoid")(main)
 
     model = Model(inputs = inp, outputs = out)

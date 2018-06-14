@@ -260,18 +260,103 @@ unlabeled = unlabeled.set_index('idx')
 unlabeled.drop(["idx"],axis=1,inplace=True)
 
 
-
-unlabeled
-
+# SAVE. NOTE COLUMNS ARE PREPROCESSED
 unlabeled.to_csv(DATA_DIR + 'unlabeled_w_pred.csv')
 
-# Combine with train
+# DEL ALL
+
+# LOAD ORIGINALS
+test_active = pd.read_csv(DATA_DIR + 'test_active.csv',      index_col = "item_id", parse_dates = ["activation_date"])
+training =    pd.read_csv(DATA_DIR + 'train.csv',            index_col = "item_id", parse_dates = ["activation_date"])
+
+# LOAD PREPROCESSED SET WITH PSEUDO LABEL
+unlabeled = pd.read_csv(DATA_DIR + 'unlabeled_w_pred.csv',  index_col = "item_id")
 
 
+# Get test active set with deal_probability.
 
+test_active['deal_probability'] = unlabeled['deal_probability']
+
+# Drop image and image_top_1 on training
+training.drop(['image_top_1'], axis=1,inplace=True)
+training.drop(['image'], axis=1,inplace=True)
+
+nTraining = len (training)
+nPseudo = int (1 + 0.3 * nTraining)
+
+pl_train = test_active.sample(nPseudo)
+
+# Fit on combined set
+train = pd.concat([training,pl_train])
+
+train = preprocess(train)
+
+_categorical = const_categorical
+
+
+y = train.deal_probability.copy()
+
+train.drop("deal_probability",axis=1, inplace=True)
+
+
+# FIT
+
+_c = fit_categorical(train, _categorical)
+_vectorizer.fit(train.to_dict('records'))
+
+# TRANSFORM
+
+X = transform(train, _c, _vectorizer, _categorical)
+
+X_csr = csr_matrix(X)
+
+X_train = X_csr[:nTraining]
+X_pl    = X_csr[nTraining:]
+
+y_train = y[:nTraining]
+y_pl    = y[nTraining:]
+
+
+tfvocab = _vectorizer.get_feature_names() + train.columns.tolist()
+
+del train
+gc.collect()
+
+X_t, X_v, y_t, y_v = train_test_split(X_train, y_train, test_size=0.10, random_state=23)
+
+# Add the pl data. Never part of validation.
+
+from scipy.sparse import vstack
+
+X = vstack([X_t, X_pl])
+y = pd.concat([y_t, y_pl])
+
+        
+# LGBM Dataset Formatting 
+
+lgtrain = lgb.Dataset(X, y, feature_name=tfvocab, categorical_feature = _categorical)
+
+lgvalid = lgb.Dataset(X_v, y_v, feature_name=tfvocab, categorical_feature = _categorical)
+
+del X, X_train; gc.collect()
+    
+lgb_clf = lgb.train(const_lgbm_params, lgtrain, num_boost_round=3000, valid_sets=[lgtrain, lgvalid], valid_names=['train','valid'], early_stopping_rounds=50, verbose_eval=50)
+
+
+print('RMSE:', np.sqrt(metrics.mean_squared_error(y_v, lgb_clf.predict(X_v))))
+
+del X_valid
+gc.collect()
+
+# [3000]	train's rmse: 0.168191	valid's rmse: 0.219891
 
 
 testing  = pd.read_csv(DATA_DIR + 'test.csv',  index_col = "item_id", parse_dates = ["activation_date"])
+
+testing.drop(['image_top_1'], axis=1,inplace=True)
+testing.drop(['image'], axis=1,inplace=True)
+
+
 testing = preprocess(testing)
 X_test = transform(testing, _c, _vectorizer, _categorical)
 lgpred = lgb_clf.predict(X_test)
@@ -283,17 +368,23 @@ submission = sample_submission.copy()
 submission['deal_probability'] = lgpred
 submission['deal_probability'] = submission['deal_probability'].clip(0.0, 1.0)
 
-submission.to_csv(DATA_DIR + 'lgsub_mod.csv')
+submission.to_csv(DATA_DIR + 'lgsub_mod_pseudo.csv')
 
+# 1. basic lgbm from kernel.
 # 'CV': 0.222061209741
 # => LB: 2257
+#
+# 2. pseudo label to 3000
+# RMSE: 0.21989061734
+# => LB: 2244
+
+#
+#
+# Levehnstein distance
+#
+#
 
 
-
-
-# X_unlabeled = transform(unlabeled, _c, _vectorizer)
-# __main__:3: RuntimeWarning: Values and categories have different dtypes. Did you mean to use
-# 'Categorical.from_codes(codes, categories)'?
 
 
 

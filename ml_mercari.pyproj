@@ -53,6 +53,9 @@
     <Compile Include="general\StemmerStage.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="general\SymSpell.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="home_credit\AutoEncoding.py">
       <SubType>Code</SubType>
     </Compile>

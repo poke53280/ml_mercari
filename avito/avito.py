@@ -14,12 +14,13 @@ import numpy as np
 import tensorflow as tf
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer as Tfidf
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.pipeline import make_pipeline, make_union, Pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from sklearn.metrics import mean_squared_log_error
 from sklearn.model_selection import KFold
 
-import general.StemmerStage
+from nltk.corpus import stopwords 
 
 # Prev avito winners:
 # stemming, lemmatization, transliteration
@@ -56,7 +57,7 @@ import general.StemmerStage
 #
 #
 
-# Todo: What to trian long. Logging along the way. Stop on key or file. Partial fit. Validation, 
+# Todo: What to train for long. Logging along the way. Stop on key or file. Partial fit. Validation, 
 # cross validation along the way, alternate between models.
 # 'break into' and reconfigure and train on with new parameters.
 #
@@ -81,7 +82,7 @@ def fit_predict(xs, y_train) -> np.ndarray:
         out = ks.layers.Dense(192, activation='relu')(model_in)
         out = ks.layers.Dense(64, activation='relu')(out)
         out = ks.layers.Dense(64, activation='relu')(out)
-        out = ks.layers.Dense(1)(out)
+        out = ks.layers.Dense(1)(out)  # Sigmoid gives poorer CV.
         model = ks.Model(model_in, out)
         model.compile(loss='mean_squared_error', optimizer=ks.optimizers.Adam(lr=3e-3))
         for i in range(3):
@@ -92,15 +93,13 @@ def fit_predict(xs, y_train) -> np.ndarray:
 
 def create_name_pipeline():
     l = []
-    l.append ( ('ss', StemmerStage('r') ) )
-    l.append( ('td_name', Tfidf(max_features=100000, token_pattern='\w+')))
+    l.append( ('td_name', CountVectorizer(max_features=17000, stop_words = const_russian_stop, ngram_range=(1, 2))))
     return Pipeline(l)
 
 
 def create_text_pipeline():
     l = []
-    l.append ( ('ss', StemmerStage('r') ) )
-    l.append ( ('td_text', Tfidf(max_features=100000, token_pattern='\w+',    ngram_range=(1, 3))))
+    l.append ( ('td_text', Tfidf(max_features=170000, token_pattern='\w+',    ngram_range=(1, 2))))
 
     return Pipeline(l)
 
@@ -108,13 +107,15 @@ def create_text_pipeline():
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
     df['name'] = df['title'].fillna('') # + ' ' + df['brand_name'].fillna('')
 
-    #l = ['name', 'user_id', 'region', 'city', 'parent_category_name', 'category_name', 'param_1', 'param_2', 'param_3', 'user_type']
-    #l = ['name']
+    l = ['name', 'user_id', 'region', 'city', 'parent_category_name', 'category_name', 'param_1', 'param_2', 'param_3', 'user_type']
 
     df['text'] = df['description'].fillna('')
 
-    #for c in l:
-        #df['text'] = df['text'] + ' ' + df[c].fillna('')
+    for c in l:
+        df['text'] = df['text'] + ' ' + df[c].fillna('')
+
+    df["price"] = np.log(df["price"]+0.001)
+    df["price"].fillna(df.price.mean(),inplace=True)
     
     return df[['name', 'text', 'price']]
 
@@ -122,6 +123,8 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
 DATA_DIR_PORTABLE = "C:\\avito_data\\"
 DATA_DIR_BASEMENT = "D:\\XXX\\"
 DATA_DIR = DATA_DIR_PORTABLE
+
+const_russian_stop = set(stopwords.words('russian'))
 
 train = pd.read_csv(DATA_DIR + 'train.csv', index_col = "item_id", parse_dates = ["activation_date"])
 
@@ -189,7 +192,19 @@ print('Valid RMSE: {:.4f}'.format(np.sqrt(mean_squared_error(valid['deal_probabi
 # Back to description, name only. With stemmer
 #
 # => Valid RMSE: 0.2360
+#
+#
+# Adding cats as text and increase dictionary size
+# No activation on last:
+# => Valid RMSE: 0.2269
+#
+# With sigmoid:
+# => Valid RMSE: 0.2363
+# 
+# 
+# 
 
+ 
 
 
 
