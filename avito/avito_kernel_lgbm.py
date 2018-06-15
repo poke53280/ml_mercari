@@ -281,28 +281,37 @@ test_active['deal_probability'] = unlabeled['deal_probability']
 training.drop(['image_top_1'], axis=1,inplace=True)
 training.drop(['image'], axis=1,inplace=True)
 
+
+y_train = training.deal_probability.copy()
+training.drop("deal_probability",axis=1, inplace=True)
+
+y_pl    = test_active.deal_probability.copy()
+test_active.drop("deal_probability",axis=1, inplace=True)
+
 nTraining = len (training)
 nPseudo = int (1 + 0.3 * nTraining)
 
 pl_train = test_active.sample(nPseudo)
+pl_train = preprocess(pl_train)
 
-# Fit on combined set
-train = pd.concat([training,pl_train])
+train = preprocess(training)
 
-train = preprocess(train)
+X_t, X_v, y_t, y_v = train_test_split(train, y_train, test_size=0.10, random_state=23)
+
+# Combine train split and pseudo labeled data. Keep validation chunk apart.
+
+
+
+# Fit on train split and pseudo labeled data
+X_train = pd.concat([X_t,pl_train])
+y_train = pd.concat([y_t, y_pl])
+
 
 _categorical = const_categorical
 
 
-y = train.deal_probability.copy()
-
-train.drop("deal_probability",axis=1, inplace=True)
-
-
-# FIT
-
-_c = fit_categorical(train, _categorical)
-_vectorizer.fit(train.to_dict('records'))
+_c = fit_categorical(X_train, _categorical)
+_vectorizer.fit(X_train.to_dict('records'))
 
 # TRANSFORM
 
@@ -322,7 +331,7 @@ tfvocab = _vectorizer.get_feature_names() + train.columns.tolist()
 del train
 gc.collect()
 
-X_t, X_v, y_t, y_v = train_test_split(X_train, y_train, test_size=0.10, random_state=23)
+
 
 # Add the pl data. Never part of validation.
 
