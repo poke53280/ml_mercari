@@ -18,6 +18,8 @@ import regex as re
 
 from operator import itemgetter
 
+from sklearn.base import BaseEstimator, TransformerMixin
+
 
 df = pd.DataFrame(np.random.randint(0,100,size=(100, 4)), columns=list('ABCD'))
 
@@ -71,7 +73,6 @@ from sklearn.base import BaseEstimator, TransformerMixin
 ###################################################################################################
 #
 #    AverageWordLengthExtractor
-#
 #
 
 class AverageWordLengthExtractor(BaseEstimator, TransformerMixin):
@@ -274,12 +275,62 @@ ax = ax.reshape(-1,1)
 p.transform(ax)
 
 
+
+###################################################################################################
+#
+#    PlussOneStage
+#
+
+class PlussOneStage(BaseEstimator, TransformerMixin):
+
+    def do_something(self, X):
+
+        out = []
+
+        for n in X:
+            out.append(n +1 + self._max)
+        
+        return np.matrix(out).T
+
+    def __init__(self):
+        self._max = 0       
+
+    def transform(self, X, y=None):
+        return self.do_something(X)  # where the actual feature extraction happens
+
+    def fit(self, X, y=None):
+
+        current_max = 0
+
+        for n in X:
+            current_max = np.max([current_max, n])
+
+        self._max = current_max
+        return self  # generally does nothing
+
+"""c"""
+
 ############################################################################################################
 #
-#  Setup pipeline taking uncleaned sentences. To lower, remove comma, punctuations and stem.
+# Test pipeline, one for each column  
 #
-#  Return stemmed content. Test on English. Test on mercari description.
 #
+
+
+from sklearn.pipeline import make_pipeline, make_union, Pipeline
+from typing import List, Dict
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.feature_extraction import DictVectorizer
+from operator import itemgetter
+
+def to_records(df: pd.DataFrame) -> List[Dict]:
+    return df.to_dict(orient='records')
+
+def on_field(f: str, *vec) -> Pipeline:
+    return make_pipeline(FunctionTransformer(itemgetter(f), validate=False), *vec)
+
+def preprocess(df: pd.DataFrame) -> pd.DataFrame:
+    return df[['shipping', 'item_condition_id']]
 
 
 DATA_DIR_PORTABLE = "C:\\Users\\T149900\\ml_mercari\\"
@@ -290,15 +341,29 @@ DATA_DIR = DATA_DIR_PORTABLE
 df = pd.read_table(DATA_DIR + "train.tsv");
 
 
-df.item_description[9000]
+q = df[:10]
+q_test = df[10:13]
 
-stemmer.stem("complicated")
+q.price.isnull().sum()
+q_test.price.isnull().sum()
+
+vectorizer = make_union(
+        on_field(['shipping', 'item_condition_id'], PlussOneStage() ),
+        n_jobs=1)
+
+p = on_field('item_condition_id', PlussOneStage())
+
+p.fit(q)
+
+X = p.transform(q)
+
+X_test = p.transform(q_test)
 
 
+X_train = vectorizer.fit_transform(preprocess(q)).astype(np.float32)
 
 
-
-
+X_test = vectorizer.transform(preprocess(q_test)).astype(np.float32)
 
 
 

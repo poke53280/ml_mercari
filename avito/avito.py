@@ -128,21 +128,21 @@ def fit_predict(xs, y_train) -> np.ndarray:
         out = ks.layers.Dense(1)(out)  # Sigmoid gives poorer CV.
         model = ks.Model(model_in, out)
         model.compile(loss='mean_squared_error', optimizer=ks.optimizers.Adam(lr=3e-3))
-        for i in range(7):
+        for i in range(9):
             print(f"Epoch {i + 1}...")
-            model.fit(x=X_train, y=y_train, batch_size=2**(7 + i), epochs=1, verbose=0)
+            model.fit(x=X_train, y=y_train, batch_size=2**(6 + i), epochs=1, verbose=0)
         return model.predict(X_test)[:, 0]
 
 
 def create_name_pipeline():
     l = []
-    l.append( ('td_name', CountVectorizer(max_features=170000, stop_words = const_russian_stop, ngram_range=(1, 2))))
+    l.append( ('td_name', CountVectorizer(max_features=200000, ngram_range=(1, 2))))
     return Pipeline(l)
 
 
 def create_text_pipeline():
     l = []
-    l.append ( ('td_text', Tfidf(max_features=170000, token_pattern='\w+', ngram_range=(1, 3))))
+    l.append ( ('td_text', Tfidf(max_features=200000, token_pattern='\w+', ngram_range=(1, 3))))
 
     return Pipeline(l)
 """c"""
@@ -177,6 +177,15 @@ const_russian_stop = set(stopwords.words('russian'))
 train = pd.read_csv(DATA_DIR + 'train.csv', index_col = "item_id", parse_dates = ["activation_date"])
 
 y_scaler = StandardScaler()
+
+print(f"len train = {len(train)}")
+
+nTrainSamples = 300000
+
+train = train[:nTrainSamples]
+
+print(f"len train = {len(train)}")
+
 
 cv = KFold(n_splits=20, shuffle=True, random_state=42)
 train_ids, valid_ids = next(cv.split(train))
@@ -223,7 +232,7 @@ X_valid = sparse.load_npz(DATA_DIR + "X_valid_avitopy.npz")
 with ThreadPool(processes=1) as pool:
     Xb_train, Xb_valid = [x.astype(np.bool).astype(np.float32) for x in [X_train, X_valid]]
     xs = [[Xb_train, Xb_valid], [X_train, X_valid]] * 2
-    y_pred = np.mean(pool.map(partial(fit_predict_LGBM, y_train=y_train), xs), axis=0)
+    y_pred = np.mean(pool.map(partial(fit_predict, y_train=y_train), xs), axis=0)
 
 
 y_pred = y_scaler.inverse_transform(y_pred.reshape(-1, 1))[:, 0]
@@ -280,7 +289,7 @@ print('Valid RMSE: {:.4f}'.format(np.sqrt(mean_squared_error(valid['deal_probabi
 # => BEST 0.2259  three epochs
 #
 #
-# 7 epochs:
+# 9 epochs:
 #
 # => 
 

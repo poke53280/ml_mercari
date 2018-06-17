@@ -27,6 +27,9 @@
     <Compile Include="avito\avito_kernel_lgbm.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="avito\fasttext_tutorial.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="avito\_from_konstantin_pavel.py">
       <SubType>Code</SubType>
     </Compile>

@@ -310,8 +310,9 @@ class SymSpell:
 
 ss1 = SymSpell(max_edit_distance=1)
 
-data = ['cake', 'cak', 'dog', 'dogs']
+data = ['cake', 'cak', 'dog', 'plane']
 
 ss1.create_dictionary_from_arr(data, token_pattern=r'.+')
 
 
+ss1.get_suggestions('dogg')

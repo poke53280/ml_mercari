@@ -38,6 +38,8 @@ embed_size = 300
 
 train = pd.read_csv(TRAIN_CSV, index_col = 0)
 
+train = train[:1000]
+
 
 train['description'] = train['title'].fillna('NA') + ' ' + train['description'].fillna('NA')
 
@@ -83,6 +85,32 @@ f.close()
 
 word_index = tokenizer.word_index
 
+print(f"num words tokenzied from texts: {len(word_index)}")
+
+
+
+
+
+
+# Продам детскую стенку с кроватью Продам Сапожки весна-осень Продам сапожки
+# Audi A1, 2013 Продам свою любимую машину!!"
+
+
+# car автомобиль
+# cars автомобилей
+
+# eat есть
+# ate ели
+
+
+v_singular = embeddings_index['есть']
+v_plural   = embeddings_index['ели']
+
+
+
+
+v = embeddings_index['кроватью']
+
 
 nb_words = min(max_features, len(word_index))   # len word_index: 692156, with title: 752760
 
@@ -107,7 +135,12 @@ for word, i in tqdm(word_index.items()):
 """c"""
 
 
-print(f"Found: {nFound}. Not found: {nNotFound}")
+print(f"text words with embedding: {nFound}. without: {nNotFound}")
+
+rMissingPct = 100.0 * nNotFound/ (nFound + nNotFound)
+
+print(f"text words with no embedding: {rMissingPct:.1f}%")
+
 
 #
 # max_features 100.000. no stem    - about 90% found, 10% missing.
@@ -198,5 +231,4 @@ submission.to_csv(DATA_DIR + 'submission.csv')
 train.to_pickle(DATA_DIR + 'train_w_pred_NN')
 
 train.to_csv(DATA_DIR + 'train_w_pred_NN')
-
 

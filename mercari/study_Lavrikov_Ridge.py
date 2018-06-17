@@ -27,8 +27,6 @@ os.environ['MKL_NUM_THREADS'] = '4'
 os.environ['OMP_NUM_THREADS'] = '4'
 os.environ['JOBLIB_START_METHOD'] = 'forkserver'
 
-INPUT_PATH = r'../input'
-
 
 def dameraulevenshtein(seq1, seq2):
     """Calculate the Damerau-Levenshtein distance between sequences.
@@ -467,10 +465,9 @@ def preprocess_pandas(train, test, start_time=time()):
     merge['has_category'] = (merge['category_name'].notnull()).astype('category')
     print(f'[{time() - start_time}] Has_category filled.')
 
-    merge['category_name'] = merge['category_name'] \
-        .fillna('other/other/other') \
-        .str.lower() \
-        .astype(str)
+    merge['category_name'] = merge['category_name'].fillna('other/other/other').str.lower().astype(str)
+    
+    
     merge['general_cat'], merge['subcat_1'], merge['subcat_2'], merge['gen_subcat1'] = \
         zip(*merge['category_name'].apply(lambda x: split_cat(x)))
     print(f'[{time() - start_time}] Split categories completed.')
