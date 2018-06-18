@@ -1,3 +1,10 @@
+#
+#
+# Image features.  https://www.kaggle.com/shivamb/ideas-for-image-features-and-image-quality
+#
+# Add res of nn to lgbm. add image, nn-out, fe to lgbm.
+#
+#
 
 
 import os; os.environ['OMP_NUM_THREADS'] = '1'
@@ -22,8 +29,6 @@ from sklearn.model_selection import KFold
 
 from nltk.corpus import stopwords 
 import lightgbm as lgb
-
-# from wordbatch.models import FM_FTRL
 
 const_lgbm_params =  {
     'task': 'train',
@@ -128,9 +133,9 @@ def fit_predict(xs, y_train) -> np.ndarray:
         out = ks.layers.Dense(1)(out)  # Sigmoid gives poorer CV.
         model = ks.Model(model_in, out)
         model.compile(loss='mean_squared_error', optimizer=ks.optimizers.Adam(lr=3e-3))
-        for i in range(9):
+        for i in range(6):
             print(f"Epoch {i + 1}...")
-            model.fit(x=X_train, y=y_train, batch_size=2**(6 + i), epochs=1, verbose=0)
+            model.fit(x=X_train, y=y_train, batch_size=2**(8 + i), epochs=1, verbose=0)
         return model.predict(X_test)[:, 0]
 
 

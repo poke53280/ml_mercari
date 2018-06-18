@@ -30,6 +30,9 @@
     <Compile Include="avito\fasttext_tutorial.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="avito\image.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="avito\_from_konstantin_pavel.py">
       <SubType>Code</SubType>
     </Compile>
