@@ -25,7 +25,7 @@ _embeddings_index = {}
 ################################################################################################
 
 DATA_DIR_PORTABLE = "C:\\avito_data\\"
-DATA_DIR_BASEMENT = "D:\\XXX\\"
+DATA_DIR_BASEMENT = "C:\\avito_data\\"
 DATA_DIR = DATA_DIR_PORTABLE
 
 TRAIN_CSV = DATA_DIR + 'train.csv'
@@ -164,10 +164,10 @@ def preprocess(df):
 
 
 train = pd.read_csv(TRAIN_CSV, index_col = 0)
-test = pd.read_csv(TEST_CSV, index_col = 0)
+# test = pd.read_csv(TEST_CSV, index_col = 0)
 
 train = preprocess(train)
-test = preprocess(test)
+# test = preprocess(test)
 
 
 
@@ -175,7 +175,7 @@ labels = train[['deal_probability']].copy()
 train = train[['description']].copy()
 
 
-# FIT ON TRAIN
+# FIT ON TRAIN - !!! ERROR - FITTING ALSO ON VALIDATION
 
 tokenizer = text.Tokenizer()
 
@@ -266,7 +266,7 @@ file_path = DATA_DIR + "model.hdf5"
 
 check_point = ModelCheckpoint(file_path, monitor = "val_loss", mode = "min", save_best_only = True, verbose = 1)
 
-history = model.fit(X_train, y_train, batch_size = 256, epochs = 2, validation_data = (X_valid, y_valid), verbose = 1, callbacks = [check_point])
+history = model.fit(X_train, y_train, batch_size = 128, epochs = 2, validation_data = (X_valid, y_valid), verbose = 1, callbacks = [check_point])
 
 #model.load_weights(file_path)
 
