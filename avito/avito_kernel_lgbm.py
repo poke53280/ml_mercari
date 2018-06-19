@@ -70,15 +70,7 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
 
     df.drop(["activation_date"],axis=1,inplace=True)
 
-    if "image" in df:
-        df.drop(["image"],axis=1,inplace=True)
-
-    if "image_top_1" in df:  
-        if "image_top_1" in _categorical:
-            pass
-        else:
-            df.drop(["image_top_1"],axis=1,inplace=True)
-   
+    df.drop(["image"],axis=1,inplace=True)
 
     df['desc_punc'] = df['description'].apply(lambda x: len([c for c in str(x) if c in string.punctuation]))
 
@@ -95,6 +87,10 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
         df[cols + '_num_unique_words'] = df[cols].apply(lambda comment: len(set(w for w in comment.split())))
         df[cols + '_words_vs_unique'] = df[cols+'_num_unique_words'] / df[cols+'_num_words'] * 100 # Count Unique Words
         df[cols + '_num_letters'] = df[cols].apply(lambda comment: len(comment)) # Count number of Letters
+        df[cols + '_num_alphabets'] = df[cols].apply(lambda comment: (comment.count(r'[a-zA-Z]'))) # Count number of Alphabets
+        df[cols + '_num_alphanumeric'] = df[cols].apply(lambda comment: (comment.count(r'[A-Za-z0-9]'))) # Count number of AlphaNumeric
+        df[cols + '_num_digits'] = df[cols].apply(lambda comment: (comment.count('[0-9]'))) # Count number of Digits
+    
     
     # Extra Feature Engineering
     df['title_desc_len_ratio'] = df['title_num_letters']/df['description_num_letters']
@@ -104,7 +100,7 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
 """c"""
 
 def fit_categorical(df, categorical):
-    # Fit
+    
     cats = {}
 
     for col in categorical:
@@ -130,7 +126,7 @@ def get_col(col_name):
 """c"""
 
 
-const_categorical = ["user_id","region","city","parent_category_name","category_name","user_type", "param_1","param_2","param_3"]
+const_categorical = ["image_top_1", "user_id","region","city","parent_category_name","category_name","user_type", "param_1","param_2","param_3"]
 
 const_russian_stop = set(stopwords.words('russian'))
 
@@ -181,23 +177,15 @@ _vectorizer = FeatureUnion([
         ('title',CountVectorizer(
             ngram_range=(1, 2),
             stop_words = const_russian_stop,
+            #max_features=7000,
             preprocessor=get_col('title')))
     ])
 
 
 _c = {}
 
-_categorical = []
-
-_is_use_image_top = False
-
 
 training = pd.read_csv(DATA_DIR + 'train.csv', index_col = "item_id", parse_dates = ["activation_date"])
-
-_categorical = const_categorical
-
-if "image_top_1" in training and _is_use_image_top:
-    _categorical.append("image_top_1")
 
 y = training.deal_probability.copy()
 training.drop("deal_probability",axis=1, inplace=True)
@@ -207,12 +195,12 @@ training = preprocess(training)
 
 # FIT
 
-_c = fit_categorical(training, _categorical)
+_c = fit_categorical(training, const_categorical)
 _vectorizer.fit(training.to_dict('records'))
 
 # TRANSFORM
 
-X = transform(training, _c, _vectorizer, _categorical)
+X = transform(training, _c, _vectorizer, const_categorical)
 
 tfvocab = _vectorizer.get_feature_names() + training.columns.tolist()
 
@@ -222,8 +210,8 @@ gc.collect()
 X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.10, random_state=23)
         
 # LGBM Dataset Formatting 
-lgtrain = lgb.Dataset(X_train, y_train, feature_name=tfvocab, categorical_feature = _categorical)
-lgvalid = lgb.Dataset(X_valid, y_valid, feature_name=tfvocab, categorical_feature = _categorical)
+lgtrain = lgb.Dataset(X_train, y_train, feature_name=tfvocab, categorical_feature = const_categorical)
+lgvalid = lgb.Dataset(X_valid, y_valid, feature_name=tfvocab, categorical_feature = const_categorical)
 
 del X, X_train; gc.collect()
     
@@ -236,138 +224,18 @@ del X_valid
 gc.collect()
 
 
-### ---------------------------------- CHECKING OUT PSEUDO LABELING -------------------------------------------------------
 
-unlabeled = pd.read_csv(DATA_DIR + 'test_active.csv',  index_col = "item_id", parse_dates = ["activation_date"])
-unlabeled = preprocess(unlabeled)
-X_unlabeled = transform(unlabeled, _c, _vectorizer, _categorical)
-
-unlabeled_gpred = lgb_clf.predict(X_unlabeled)
-
-
-unlabeled['idx'] = unlabeled.index
-
-unlabeled.reset_index(inplace=True)
-
-# add column
-
-unlabeled['deal_probability'] = unlabeled_gpred
-
-
-unlabeled = unlabeled.set_index('idx')
-
-# Drop if exists
-unlabeled.drop(["idx"],axis=1,inplace=True)
-
-
-# SAVE. NOTE COLUMNS ARE PREPROCESSED
-unlabeled.to_csv(DATA_DIR + 'unlabeled_w_pred.csv')
-
-# DEL ALL
-
-# LOAD ORIGINALS
-test_active = pd.read_csv(DATA_DIR + 'test_active.csv',      index_col = "item_id", parse_dates = ["activation_date"])
-training =    pd.read_csv(DATA_DIR + 'train.csv',            index_col = "item_id", parse_dates = ["activation_date"])
-
-# LOAD PREPROCESSED SET WITH PSEUDO LABEL
-unlabeled = pd.read_csv(DATA_DIR + 'unlabeled_w_pred.csv',  index_col = "item_id")
-
-
-# Get test active set with deal_probability.
-
-test_active['deal_probability'] = unlabeled['deal_probability']
-
-# Drop image and image_top_1 on training
-training.drop(['image_top_1'], axis=1,inplace=True)
-training.drop(['image'], axis=1,inplace=True)
-
-
-y_train = training.deal_probability.copy()
-training.drop("deal_probability",axis=1, inplace=True)
-
-y_pl    = test_active.deal_probability.copy()
-test_active.drop("deal_probability",axis=1, inplace=True)
-
-nTraining = len (training)
-nPseudo = int (1 + 0.3 * nTraining)
-
-pl_train = test_active.sample(nPseudo)
-pl_train = preprocess(pl_train)
-
-train = preprocess(training)
-
-X_t, X_v, y_t, y_v = train_test_split(train, y_train, test_size=0.10, random_state=23)
-
-# Combine train split and pseudo labeled data. Keep validation chunk apart.
-
-
-
-# Fit on train split and pseudo labeled data
-X_train = pd.concat([X_t,pl_train])
-y_train = pd.concat([y_t, y_pl])
-
-
-_categorical = const_categorical
-
-
-_c = fit_categorical(X_train, _categorical)
-_vectorizer.fit(X_train.to_dict('records'))
-
-# TRANSFORM
-
-X = transform(train, _c, _vectorizer, _categorical)
-
-X_csr = csr_matrix(X)
-
-X_train = X_csr[:nTraining]
-X_pl    = X_csr[nTraining:]
-
-y_train = y[:nTraining]
-y_pl    = y[nTraining:]
-
-
-tfvocab = _vectorizer.get_feature_names() + train.columns.tolist()
-
-del train
-gc.collect()
-
-
-
-# Add the pl data. Never part of validation.
-
-from scipy.sparse import vstack
-
-X = vstack([X_t, X_pl])
-y = pd.concat([y_t, y_pl])
-
-        
-# LGBM Dataset Formatting 
-
-lgtrain = lgb.Dataset(X, y, feature_name=tfvocab, categorical_feature = _categorical)
-
-lgvalid = lgb.Dataset(X_v, y_v, feature_name=tfvocab, categorical_feature = _categorical)
-
-del X, X_train; gc.collect()
-    
-lgb_clf = lgb.train(const_lgbm_params, lgtrain, num_boost_round=3000, valid_sets=[lgtrain, lgvalid], valid_names=['train','valid'], early_stopping_rounds=50, verbose_eval=50)
-
-
-print('RMSE:', np.sqrt(metrics.mean_squared_error(y_v, lgb_clf.predict(X_v))))
-
-del X_valid
-gc.collect()
 
 # [3000]	train's rmse: 0.168191	valid's rmse: 0.219891
 
 
 testing  = pd.read_csv(DATA_DIR + 'test.csv',  index_col = "item_id", parse_dates = ["activation_date"])
 
-testing.drop(['image_top_1'], axis=1,inplace=True)
 testing.drop(['image'], axis=1,inplace=True)
 
 
 testing = preprocess(testing)
-X_test = transform(testing, _c, _vectorizer, _categorical)
+X_test = transform(testing, _c, _vectorizer, const_categorical)
 lgpred = lgb_clf.predict(X_test)
 
 
@@ -379,19 +247,6 @@ submission['deal_probability'] = submission['deal_probability'].clip(0.0, 1.0)
 
 submission.to_csv(DATA_DIR + 'lgsub_mod_pseudo.csv')
 
-# 1. basic lgbm from kernel.
-# 'CV': 0.222061209741
-# => LB: 2257
-#
-# 2. pseudo label to 3000
-# RMSE: 0.21989061734
-# => LB: 2244
-
-#
-#
-# Levehnstein distance
-#
-#
 
 
 

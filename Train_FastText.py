@@ -39,6 +39,43 @@ def get_coefs(word, *arr):
     return word, np.asarray(arr, dtype='float32')
 """c"""
 
+def root_mean_squared_error(y_true, y_pred):
+    return K.sqrt(K.mean(K.square(y_pred - y_true)))
+
+def build_model():
+    inp = Input(shape = (maxlen, ))
+    emb = Embedding(nb_words, 300, weights = [embedding_matrix],
+                    input_length = maxlen, trainable = True)(inp)
+    main = SpatialDropout1D(0.2)(emb)
+    main = Bidirectional(CuDNNGRU(128,return_sequences = True))(main)
+    main = GlobalAveragePooling1D()(main)
+    main = Dropout(0.2)(main)
+    out = Dense(1, activation = "sigmoid")(main)
+
+    model = Model(inputs = inp, outputs = out)
+
+    model.compile(optimizer = Adam(lr=0.001), loss = 'mean_squared_error', metrics =[root_mean_squared_error])
+    model.summary()
+    return model
+
+
+def build_model_DENSE():
+    inp = Input(shape = (maxlen, ))
+    emb = Embedding(nb_words, 300, weights = [embedding_matrix],
+                    input_length = maxlen, trainable = True)(inp)
+
+    main = Flatten()(emb)
+
+    main = Dense(192)(main)
+    main = Dense(64) (main)
+    out = Dense(1, activation = "sigmoid")(main)
+
+    model = Model(inputs = inp, outputs = out)
+
+    model.compile(optimizer = Adam(lr=0.001), loss = 'mean_squared_error', metrics =[root_mean_squared_error])
+    model.summary()
+    return model
+
 
 
 ########################################################################
@@ -92,10 +129,6 @@ def preprocess_description(s, isRemoveOOV):
 """c"""
 
 
-
-
-
-
 f = open(EMBEDDING_FILE, encoding="utf8")
 
 next(f) # skip header
@@ -109,75 +142,52 @@ for o in tqdm(f):
 f.close()
 
 
-# Train from scratch or load - see below
+def preprocess(df):
+    df_desc = preprocess_description(df.description.fillna('NA'), True)
+    df_title = preprocess_description(df.title.fillna('NA'), True)
+
+    #train['d0'] = df_desc[0]
+    #train['d1'] = df_desc[1]
+    #train['d2'] = df_desc[2]
+    #train['d3'] = df_desc[3]
+
+    #train['t0'] = df_title[0]
+    #train['t1'] = df_title[1]
+    #train['t2'] = df_title[2]
+    #train['t3'] = df_title[3]
+
+    df['description'] = df_title[4] + ' ' + df_desc[4]
+
+    return df
+
+"""c"""
+
 
 train = pd.read_csv(TRAIN_CSV, index_col = 0)
+test = pd.read_csv(TEST_CSV, index_col = 0)
 
-train = train[:350000]
-
-df_desc = preprocess_description(train.description.fillna('NA'), True)
-df_title = preprocess_description(train.title.fillna('NA'), True)
-
-train['d0'] = df_desc[0]
-train['d1'] = df_desc[1]
-train['d2'] = df_desc[2]
-train['d3'] = df_desc[3]
-
-train['t0'] = df_title[0]
-train['t1'] = df_title[1]
-train['t2'] = df_title[2]
-train['t3'] = df_title[3]
-
-train['description'] = df_title[4] + ' ' + df_desc[4]
-
-del df_desc
-del df_title
-
-gc.collect()
-
-
-###################################################################################
-#
-#
-# SAVE POINT - PREPROCESSED TRAIN SET
-#  
-
-
-
-train.to_pickle(DATA_DIR + "train_preprocessed_350000.pkl")
-
-
-# train = pd.read_pickle(DATA_DIR + "train_preprocessed.pkl")
-
-
-max_features = 100000
-
-embed_size = 300
+train = preprocess(train)
+test = preprocess(test)
 
 
 
 labels = train[['deal_probability']].copy()
 train = train[['description']].copy()
 
-tokenizer = text.Tokenizer(num_words=max_features)
-print('fitting tokenizer')
 
-maxlen = train['description'].str.len().mean() + 1 * train['description'].str.len().std()
+# FIT ON TRAIN
 
-maxlen = int (maxlen) + 1
+tokenizer = text.Tokenizer()
 
-print(f"Setting text length to mean + 1 std which is: {maxlen}")
-
+maxlen = 100  # !!!train['description'].str.len().mean() + 1 * train['description'].str.len().std()
 
 tokenizer.fit_on_texts(list(train['description'].values))
 
 word_index = tokenizer.word_index
 
-print(f"num words tokenized from texts: {len(word_index)}")
+nb_words = len(word_index)
 
-nb_words = min(max_features, len(word_index))   
-
-embedding_matrix = np.zeros((nb_words, embed_size))
+embedding_matrix = np.zeros((nb_words, 300))
 
 # Fill embedding matrix with vectors from idx 0 to nb_words
 
@@ -204,13 +214,41 @@ rMissingPct = 100.0 * nNotFound/ (nFound + nNotFound)
 print(f"text words with embedding: {nFound}. Without: {nNotFound}. Missing {rMissingPct:.1f}%")
 
 
+# Preprocess and translate test
+# XXXXXXX
+
+
+
+test['description'] = test['title'].fillna('NA') + ' ' + test['description'].fillna('NA')
+
+test = test[['description']].copy()
+
+test['description'] = test['description'].astype(str)
+
+
+
+
+X_test = test['description'].values
+X_test = tokenizer.texts_to_sequences(X_test)
+
+print('padding')
+X_test = sequence.pad_sequences(X_test, maxlen=maxlen)
+
+
+
+
+
 del _embeddings_index
+
+l = list (KFold(n_splits=7, shuffle=True, random_state=42).split(train))
+
+y_pred = np.zeros(len(train))
+Y_test = np.zeros(len(test))
+
 
 
 X_train, X_valid, y_train, y_valid = train_test_split(train['description'].values, labels['deal_probability'].values, test_size = 0.1, random_state = 23)
 
-
-del train
 
 
 print('convert to sequences')
@@ -221,87 +259,16 @@ print('padding')
 X_train = sequence.pad_sequences(X_train, maxlen=maxlen)
 X_valid = sequence.pad_sequences(X_valid, maxlen=maxlen)
 
-def root_mean_squared_error(y_true, y_pred):
-    return K.sqrt(K.mean(K.square(y_pred - y_true)))
-
-def build_model():
-    inp = Input(shape = (maxlen, ))
-    emb = Embedding(nb_words, embed_size, weights = [embedding_matrix],
-                    input_length = maxlen, trainable = True)(inp)
-    main = SpatialDropout1D(0.2)(emb)
-    main = Bidirectional(CuDNNGRU(128,return_sequences = True))(main)
-    main = GlobalAveragePooling1D()(main)
-    main = Dropout(0.2)(main)
-    out = Dense(1, activation = "sigmoid")(main)
-
-    model = Model(inputs = inp, outputs = out)
-
-    model.compile(optimizer = Adam(lr=0.001), loss = 'mean_squared_error', metrics =[root_mean_squared_error])
-    model.summary()
-    return model
-
-
-def build_model_DENSE():
-    inp = Input(shape = (maxlen, ))
-    emb = Embedding(nb_words, embed_size, weights = [embedding_matrix],
-                    input_length = maxlen, trainable = True)(inp)
-
-    main = Flatten()(emb)
-
-    main = Dense(192)(main)
-    main = Dense(64) (main)
-    out = Dense(1, activation = "sigmoid")(main)
-
-    model = Model(inputs = inp, outputs = out)
-
-    model.compile(optimizer = Adam(lr=0.001), loss = 'mean_squared_error', metrics =[root_mean_squared_error])
-    model.summary()
-    return model
-
-# MODEL 1
-# 70,000 2 min per epoch at batch 256    0.2 64 0.2
-
-# two epochs. 4 minutes. 
-#
-# RMSE on valid set: 0.239195896537
-#
-# Two more - overtraining
-#
-# RMSE on valid set: 0.240922911258
-#----------------------------------------------------------------
-#
-# MODEL 1 
-# 70,000 0.2 128 0.2 batch 256, trainable emb
-#
-# e1: 2470
-# e2: 2381
-# RMS valid 0.2387
-#
-# ------------------------------------------------------
-#
-#  MODEL 1 
-#  350,000 0.2 128 0.2, batch 256, trainable emb
-# ETA 15 min/epoch
-#
-#  e1 2340
-# **BEST**  e2 (on btch 2281 const)   VAL RMS: 0.2328
-#
-# ...Extra Add epoch with batch 1024 => MEM ERROR
-#
-
-
-EPOCHS = 2
 
 model = build_model()
-
 
 file_path = DATA_DIR + "model.hdf5"
 
 check_point = ModelCheckpoint(file_path, monitor = "val_loss", mode = "min", save_best_only = True, verbose = 1)
 
-history = model.fit(X_train, y_train, batch_size = 256, epochs = EPOCHS, validation_data = (X_valid, y_valid), verbose = 1, callbacks = [check_point])
+history = model.fit(X_train, y_train, batch_size = 256, epochs = 2, validation_data = (X_valid, y_valid), verbose = 1, callbacks = [check_point])
 
-# model.load_weights(file_path)
+#model.load_weights(file_path)
 
 prediction = model.predict(X_valid)
 
@@ -336,4 +303,3 @@ submission.to_csv(DATA_DIR + 'submission.csv')
 train.to_pickle(DATA_DIR + 'train_w_pred_NN')
 
 train.to_csv(DATA_DIR + 'train_w_pred_NN')
-

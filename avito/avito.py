@@ -2,9 +2,22 @@
 #
 # Image features.  https://www.kaggle.com/shivamb/ideas-for-image-features-and-image-quality
 #
-# Add res of nn to lgbm. add image, nn-out, fe to lgbm.
+# Add res of nn to lgbm. add image, nn-out, to lgbm.
 #
 #
+#
+# 
+#  Train active set vs price.
+#  Predict price on full train and full test
+#
+#
+#  Train RNN on 9 parts train, predict on full test and 1 part train.
+#
+#  * Run LGBM on original data, + fe + rnn_pred
+#
+#
+
+
 
 
 import os; os.environ['OMP_NUM_THREADS'] = '1'
