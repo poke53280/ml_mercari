@@ -17,6 +17,7 @@ import re
 import gc
 
 from keras.layers import Flatten
+from sklearn.cross_validation import KFold
 
 ######################################### CONFIGURATION #######################################
 
@@ -55,28 +56,8 @@ def build_model():
     model = Model(inputs = inp, outputs = out)
 
     model.compile(optimizer = Adam(lr=0.001), loss = 'mean_squared_error', metrics =[root_mean_squared_error])
-    model.summary()
+    # model.summary()
     return model
-
-
-def build_model_DENSE():
-    inp = Input(shape = (maxlen, ))
-    emb = Embedding(nb_words, 300, weights = [embedding_matrix],
-                    input_length = maxlen, trainable = True)(inp)
-
-    main = Flatten()(emb)
-
-    main = Dense(192)(main)
-    main = Dense(64) (main)
-    out = Dense(1, activation = "sigmoid")(main)
-
-    model = Model(inputs = inp, outputs = out)
-
-    model.compile(optimizer = Adam(lr=0.001), loss = 'mean_squared_error', metrics =[root_mean_squared_error])
-    model.summary()
-    return model
-
-
 
 ########################################################################
 #
@@ -110,7 +91,10 @@ def clean_desc(input, isRemoveOOV):
     numbers_out.append('0')
     numbers_out.append('0')
 
-    return ( numbers_out[0], numbers_out[1], numbers_out[2], numbers_out[3], words)
+    results = np.array((list(map(float, numbers_out))))
+    results[::-1].sort()
+
+    return ( results[0], results[1], results[2], results[3], words)
 
 """c"""
 
@@ -128,165 +112,192 @@ def preprocess_description(s, isRemoveOOV):
 
 """c"""
 
-
-f = open(EMBEDDING_FILE, encoding="utf8")
-
-next(f) # skip header
-
-for o in tqdm(f):
-    key, coefs = get_coefs(*o.rstrip().rsplit(' '))
-    _embeddings_index[key] = coefs
-
-"""c"""
-
-f.close()
-
-
 def preprocess(df):
     df_desc = preprocess_description(df.description.fillna('NA'), True)
     df_title = preprocess_description(df.title.fillna('NA'), True)
 
-    #train['d0'] = df_desc[0]
-    #train['d1'] = df_desc[1]
-    #train['d2'] = df_desc[2]
-    #train['d3'] = df_desc[3]
+    df['d0'] = df_desc[0]
+    df['d1'] = df_desc[1]
+    df['d2'] = df_desc[2]
+    df['d3'] = df_desc[3]
 
-    #train['t0'] = df_title[0]
-    #train['t1'] = df_title[1]
-    #train['t2'] = df_title[2]
-    #train['t3'] = df_title[3]
+    df['t0'] = df_title[0]
+    df['t1'] = df_title[1]
+    df['t2'] = df_title[2]
+    df['t3'] = df_title[3]
 
-    df['description'] = df_title[4] + ' ' + df_desc[4]
+    df['title'] = df_title[4]
+
+    df['description'] = df_desc[4]
 
     return df
 
 """c"""
 
+def load_embedding():
 
-train = pd.read_csv(TRAIN_CSV, index_col = 0)
-test = pd.read_csv(TEST_CSV, index_col = 0)
+    e = {}
 
-train = preprocess(train)
-test = preprocess(test)
+    f = open(EMBEDDING_FILE, encoding="utf8")
+
+    next(f) # skip header
+
+    for o in tqdm(f):
+        key, coefs = get_coefs(*o.rstrip().rsplit(' '))
+        e[key] = coefs
+
+    f.close()
+    return e
+"""c"""
 
 
+_embeddings_index = load_embedding()
+
+training = pd.read_csv(TRAIN_CSV, index_col = "item_id", parse_dates = ["activation_date"])
+
+# training = training[:110]
+
+testing = pd.read_csv(TEST_CSV, index_col = "item_id", parse_dates = ["activation_date"])
+
+# testing = testing[:90]
+
+
+training = preprocess(training)
+testing = preprocess(testing)
+
+training.to_pickle(DATA_DIR + "tr_fast_vec_V1.pkl")
+testing.to_pickle(DATA_DIR + "te_fast_vec_V1.pkl")
+
+
+
+###
+train = training.copy()
+test = testing.copy()
 
 labels = train[['deal_probability']].copy()
 train = train[['description']].copy()
 
+test = test[['description']].copy()
 
-# FIT ON TRAIN
+NFOLDS = 4
+
+ntrain = len (train)
+ntest  = len (test)
+
+#kf = KFold(ntrain, n_folds=NFOLDS, shuffle=True, random_state=121) - out of cuda memory on 2nd fold. 
+
+x_train = train['description'].values
+y_train = labels['deal_probability'].values
+x_test_const = test['description'].values
+
+oof_train = np.zeros((ntrain,))
+oof_test =  np.zeros((ntest,))
+oof_test_skf = np.empty((NFOLDS, ntest))
+
+x_tr, x_te, y_tr, y_te = train_test_split(x_train, y_train, test_size=0.10, random_state=23)
+
+#for iLoop, (train_index, test_index) in enumerate(kf):
+    
+#    print(f"--------------------- Fold {iLoop} ---------------------------")
+
+    #x_tr = x_train[train_index]
+    #y_tr = y_train[train_index]
+    #x_te = x_train[test_index]
+    #y_te = y_train[test_index]
+x_test = x_test_const
 
 tokenizer = text.Tokenizer()
-
-maxlen = 100  # !!!train['description'].str.len().mean() + 1 * train['description'].str.len().std()
-
-tokenizer.fit_on_texts(list(train['description'].values))
-
+maxlen = 60
+tokenizer.fit_on_texts(x_tr)
 word_index = tokenizer.word_index
-
 nb_words = len(word_index)
-
 embedding_matrix = np.zeros((nb_words, 300))
 
-# Fill embedding matrix with vectors from idx 0 to nb_words
-
-nFound = 0
-nNotFound = 0
-
-
-for word, i in tqdm(word_index.items()):
-    if i >= nb_words:
+for word, iEmb in tqdm(word_index.items()):
+    if iEmb >= nb_words:
         continue
     
     embedding_vector = _embeddings_index.get(word)
 
     if embedding_vector is None:
         print(f"Unknown word:'{word}'")
-        nNotFound = nNotFound + 1
     else:
-        embedding_matrix[i] = embedding_vector
-        nFound = nFound + 1
+        embedding_matrix[iEmb] = embedding_vector
 
-"""c"""
+x_tr = tokenizer.texts_to_sequences(x_tr)
+x_te = tokenizer.texts_to_sequences(x_te)
+x_test = tokenizer.texts_to_sequences(x_test)
+
+x_tr = sequence.pad_sequences(x_tr, maxlen=maxlen)
+x_te = sequence.pad_sequences(x_te, maxlen=maxlen)
+x_test = sequence.pad_sequences(x_test, maxlen=maxlen)
+
+model = build_model()
+
+history = model.fit(x_tr, y_tr, batch_size = 256, epochs = 2, validation_data = (x_te, y_te), verbose = 1)
+
+
+x_train = tokenizer.texts_to_sequences(x_train)
+x_train = sequence.pad_sequences(x_train, maxlen=maxlen)
+
+y_p_TEST = model.predict(x_test)
+y_p_TEST = y_p_TEST.ravel()
+
+y_p_TRAIN = model.predict(x_train)
+y_p_TRAIN = y_p_TRAIN.ravel()
+
+
+training['y_nn'] = y_p_TRAIN
+testing['y_nn'] = y_p_TEST
+
+training.to_pickle(DATA_DIR + 'train_w_nn_2.pkl')
+testing.to_pickle(DATA_DIR + 'test_w_nn_2.pkl')
+
+
+# EXIT
+
+
+
+
+    y_p_X = model.predict(x_te)
+
+    y_p_X = y_p_X.ravel()
+
+    oof_train[test_index] = y_p_X
+
+    y_p_TEST = model.predict(x_test)
+
+    y_p_TEST = y_p_TEST.ravel()
+     
+    oof_test_skf[iLoop, :] = y_p_TEST
+
+oof_test[:] = oof_test_skf.mean(axis=0)
+r0 = oof_train.reshape(-1, 1)
+r1 = oof_test.reshape(-1, 1)
+    
+train['pred_nn'] = r0
+test['pred_nn'] = r1
+
+
+
+    
+
 
 rMissingPct = 100.0 * nNotFound/ (nFound + nNotFound)
 print(f"text words with embedding: {nFound}. Without: {nNotFound}. Missing {rMissingPct:.1f}%")
 
 
-# Preprocess and translate test
-# XXXXXXX
 
+prediction_te = model.predict(X_valid)
 
+print('RMSE:', np.sqrt(metrics.mean_squared_error(y_valid, prediction_te)))
 
-test['description'] = test['title'].fillna('NA') + ' ' + test['description'].fillna('NA')
-
-test = test[['description']].copy()
-
-test['description'] = test['description'].astype(str)
-
-
-
-
-X_test = test['description'].values
-X_test = tokenizer.texts_to_sequences(X_test)
-
-print('padding')
-X_test = sequence.pad_sequences(X_test, maxlen=maxlen)
+prediction_Xtest = model.predict(X_test,batch_size = 128, verbose = 1)
 
 
 
 
 
-del _embeddings_index
-
-l = list (KFold(n_splits=7, shuffle=True, random_state=42).split(train))
-
-y_pred = np.zeros(len(train))
-Y_test = np.zeros(len(test))
-
-
-
-X_train, X_valid, y_train, y_valid = train_test_split(train['description'].values, labels['deal_probability'].values, test_size = 0.1, random_state = 23)
-
-
-
-print('convert to sequences')
-X_train = tokenizer.texts_to_sequences(X_train)
-X_valid = tokenizer.texts_to_sequences(X_valid)
-
-print('padding')
-X_train = sequence.pad_sequences(X_train, maxlen=maxlen)
-X_valid = sequence.pad_sequences(X_valid, maxlen=maxlen)
-
-
-model = build_model()
-
-file_path = DATA_DIR + "model.hdf5"
-
-check_point = ModelCheckpoint(file_path, monitor = "val_loss", mode = "min", save_best_only = True, verbose = 1)
-
-history = model.fit(X_train, y_train, batch_size = 256, epochs = 2, validation_data = (X_valid, y_valid), verbose = 1, callbacks = [check_point])
-
-#model.load_weights(file_path)
-
-prediction = model.predict(X_valid)
-
-print('RMSE:', np.sqrt(metrics.mean_squared_error(y_valid, prediction)))
-
-test = pd.read_csv(TEST_CSV, index_col = 0)
-
-test['description'] = test['title'].fillna('NA') + ' ' + test['description'].fillna('NA')
-
-test = test[['description']].copy()
-
-test['description'] = test['description'].astype(str)
-X_test = test['description'].values
-X_test = tokenizer.texts_to_sequences(X_test)
-
-print('padding')
-X_test = sequence.pad_sequences(X_test, maxlen=maxlen)
-prediction = model.predict(X_test,batch_size = 128, verbose = 1)
 
 sample_submission = pd.read_csv(DATA_DIR + 'sample_submission.csv', index_col = 0)
 submission = sample_submission.copy()

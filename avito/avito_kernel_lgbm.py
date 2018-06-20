@@ -37,8 +37,7 @@ from scipy.sparse import hstack, csr_matrix
 from nltk.corpus import stopwords 
 
 # Viz
-import seaborn as sns
-import matplotlib.pyplot as plt
+
 import re
 import string
 
@@ -62,7 +61,18 @@ def rmse(y, y0):
     assert len(y) == len(y0)
     return np.sqrt(np.mean(np.power((y - y0), 2)))
 
-def preprocess(df: pd.DataFrame) -> pd.DataFrame:
+def preprocessLGBM(df: pd.DataFrame) -> pd.DataFrame:
+   
+    df["d0"] = df["d0"].fillna(0).astype(np.float64)
+    df["d1"] = df["d1"].fillna(0).astype(np.float64)
+    df["d2"] = df["d2"].fillna(0).astype(np.float64)
+    df["d3"] = df["d3"].fillna(0).astype(np.float64)
+
+    df["t0"] = df["t0"].fillna(0).astype(np.float64)
+    df["t1"] = df["t1"].fillna(0).astype(np.float64)
+    df["t2"] = df["t2"].fillna(0).astype(np.float64)
+    df["t3"] = df["t3"].fillna(0).astype(np.float64)
+
     df["price"] = np.log(df["price"]+0.001)
     df["price"].fillna(df.price.mean(),inplace=True)
 
@@ -185,15 +195,21 @@ _vectorizer = FeatureUnion([
 _c = {}
 
 
-training = pd.read_csv(DATA_DIR + 'train.csv', index_col = "item_id", parse_dates = ["activation_date"])
+# training = pd.read_csv(DATA_DIR + 'train.csv', index_col = "item_id", parse_dates = ["activation_date"])
+
+
+training = pd.read_pickle(DATA_DIR + "tr_fast_vec.pkl")
+
+
+
 
 y = training.deal_probability.copy()
 training.drop("deal_probability",axis=1, inplace=True)
 
-training = preprocess(training)
+training = preprocessLGBM(training)
 
 
-# FIT
+# FIT - ERROR: FITTING ON VALIDATION
 
 _c = fit_categorical(training, const_categorical)
 _vectorizer.fit(training.to_dict('records'))
@@ -215,7 +231,7 @@ lgvalid = lgb.Dataset(X_valid, y_valid, feature_name=tfvocab, categorical_featur
 
 del X, X_train; gc.collect()
     
-lgb_clf = lgb.train(const_lgbm_params, lgtrain, num_boost_round=300, valid_sets=[lgtrain, lgvalid], valid_names=['train','valid'], early_stopping_rounds=50, verbose_eval=50)
+lgb_clf = lgb.train(const_lgbm_params, lgtrain, num_boost_round=3000, valid_sets=[lgtrain, lgvalid], valid_names=['train','valid'], early_stopping_rounds=50, verbose_eval=50)
 
 
 print('RMSE:', np.sqrt(metrics.mean_squared_error(y_valid, lgb_clf.predict(X_valid))))
@@ -229,12 +245,12 @@ gc.collect()
 # [3000]	train's rmse: 0.168191	valid's rmse: 0.219891
 
 
-testing  = pd.read_csv(DATA_DIR + 'test.csv',  index_col = "item_id", parse_dates = ["activation_date"])
+#testing  = pd.read_csv(DATA_DIR + 'test.csv',  index_col = "item_id", parse_dates = ["activation_date"])
 
-testing.drop(['image'], axis=1,inplace=True)
+testing = pd.read_pickle(DATA_DIR + 'te_fast_vec.pkl')
 
 
-testing = preprocess(testing)
+testing = preprocessLGBM(testing)
 X_test = transform(testing, _c, _vectorizer, const_categorical)
 lgpred = lgb_clf.predict(X_test)
 
@@ -245,7 +261,7 @@ submission = sample_submission.copy()
 submission['deal_probability'] = lgpred
 submission['deal_probability'] = submission['deal_probability'].clip(0.0, 1.0)
 
-submission.to_csv(DATA_DIR + 'lgsub_mod_pseudo.csv')
+submission.to_csv(DATA_DIR + 'lgsub_mod_nn.csv')
 
 
 
