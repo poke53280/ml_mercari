@@ -198,16 +198,16 @@ _c = {}
 # training = pd.read_csv(DATA_DIR + 'train.csv', index_col = "item_id", parse_dates = ["activation_date"])
 
 
-training = pd.read_pickle(DATA_DIR + "tr_fast_vec.pkl")
-
-
-
+training = pd.read_pickle(DATA_DIR + "train_w_nn_2.pkl")
 
 y = training.deal_probability.copy()
 training.drop("deal_probability",axis=1, inplace=True)
 
 training = preprocessLGBM(training)
 
+
+testing = pd.read_pickle(DATA_DIR + 'test_w_nn_2.pkl')
+testing = preprocessLGBM(testing)
 
 # FIT - ERROR: FITTING ON VALIDATION
 
@@ -219,6 +219,8 @@ _vectorizer.fit(training.to_dict('records'))
 X = transform(training, _c, _vectorizer, const_categorical)
 
 tfvocab = _vectorizer.get_feature_names() + training.columns.tolist()
+
+X_test = transform(testing, _c, _vectorizer, const_categorical)
 
 del training
 gc.collect()
@@ -233,13 +235,10 @@ del X, X_train; gc.collect()
     
 lgb_clf = lgb.train(const_lgbm_params, lgtrain, num_boost_round=3000, valid_sets=[lgtrain, lgvalid], valid_names=['train','valid'], early_stopping_rounds=50, verbose_eval=50)
 
-
 print('RMSE:', np.sqrt(metrics.mean_squared_error(y_valid, lgb_clf.predict(X_valid))))
 
 del X_valid
 gc.collect()
-
-
 
 
 # [3000]	train's rmse: 0.168191	valid's rmse: 0.219891
@@ -247,11 +246,8 @@ gc.collect()
 
 #testing  = pd.read_csv(DATA_DIR + 'test.csv',  index_col = "item_id", parse_dates = ["activation_date"])
 
-testing = pd.read_pickle(DATA_DIR + 'te_fast_vec.pkl')
 
 
-testing = preprocessLGBM(testing)
-X_test = transform(testing, _c, _vectorizer, const_categorical)
 lgpred = lgb_clf.predict(X_test)
 
 

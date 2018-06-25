@@ -26,7 +26,7 @@ _embeddings_index = {}
 ################################################################################################
 
 DATA_DIR_PORTABLE = "C:\\avito_data\\"
-DATA_DIR_BASEMENT = "D:\\XXX\\"
+DATA_DIR_BASEMENT = "C:\\avito_data\\"
 DATA_DIR = DATA_DIR_PORTABLE
 
 TRAIN_CSV = DATA_DIR + 'train.csv'
@@ -151,6 +151,7 @@ def load_embedding():
 """c"""
 
 
+<<<<<<< HEAD
 _embeddings_index = load_embedding()
 
 training = pd.read_csv(TRAIN_CSV, index_col = "item_id", parse_dates = ["activation_date"])
@@ -161,6 +162,13 @@ testing = pd.read_csv(TEST_CSV, index_col = "item_id", parse_dates = ["activatio
 
 # testing = testing[:90]
 
+=======
+train = pd.read_csv(TRAIN_CSV, index_col = 0)
+# test = pd.read_csv(TEST_CSV, index_col = 0)
+
+train = preprocess(train)
+# test = preprocess(test)
+>>>>>>> b7c4baa63ca47c4f574e80a69097b38b5db667b9
 
 training = preprocess(training)
 testing = preprocess(testing)
@@ -179,7 +187,11 @@ train = train[['description']].copy()
 
 test = test[['description']].copy()
 
+<<<<<<< HEAD
 NFOLDS = 4
+=======
+# FIT ON TRAIN - !!! ERROR - FITTING ALSO ON VALIDATION
+>>>>>>> b7c4baa63ca47c4f574e80a69097b38b5db667b9
 
 ntrain = len (train)
 ntest  = len (test)
@@ -287,6 +299,10 @@ rMissingPct = 100.0 * nNotFound/ (nFound + nNotFound)
 print(f"text words with embedding: {nFound}. Without: {nNotFound}. Missing {rMissingPct:.1f}%")
 
 
+<<<<<<< HEAD
+=======
+history = model.fit(X_train, y_train, batch_size = 128, epochs = 2, validation_data = (X_valid, y_valid), verbose = 1, callbacks = [check_point])
+>>>>>>> b7c4baa63ca47c4f574e80a69097b38b5db667b9
 
 prediction_te = model.predict(X_valid)
 
