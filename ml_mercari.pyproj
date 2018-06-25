@@ -74,6 +74,9 @@
     <Compile Include="home_credit\oliver_fun_lgbm.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="santander_3\fm_ftrl.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Synthpop_perf.py">
       <SubType>Code</SubType>
     </Compile>
@@ -142,6 +145,7 @@
     <Folder Include="home_credit\" />
     <Folder Include="favorita\" />
     <Folder Include="avito\" />
+    <Folder Include="santander_3\" />
     <Folder Include="talking\" />
     <Folder Include="toxic\" />
   </ItemGroup>
