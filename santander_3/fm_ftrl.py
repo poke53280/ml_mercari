@@ -1,41 +1,34 @@
 
-from wordbatch.models import FM_FTRL
+import lightgbm as lgb
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 
 from scipy.sparse import csr_matrix
-import lightgbm as lgb
 from sklearn.preprocessing import MaxAbsScaler
 from sklearn import metrics
 
-def run_lgb(train_X, train_y, val_X, val_y, test_X):
-    params = {
-        "boosting_type":'gbdt',
-        "objective" : "regression",
-        "metric" : "rmse",
-        "num_leaves" : 40,
-        "learning_rate" : 0.005,
-        "bagging_fraction" : 0.7,
-        "feature_fraction" : 0.5,
-        "bagging_frequency" : 5,
-        "bagging_seed" : 42,
-        "verbosity" : -1,
-        "random_seed": 42
-    }
-    
-    lgtrain = lgb.Dataset(train_X, label=train_y)
-    lgval = lgb.Dataset(val_X, label=val_y)
-    evals_result = {}
-    model = lgb.train(params, lgtrain, 5000, 
-                      valid_sets=[lgval], 
-                      early_stopping_rounds=100, 
-                      verbose_eval=50, 
-                      evals_result=evals_result)
-    
-    pred_test_y = np.expm1(model.predict(test_X, num_iteration=model.best_iteration))
-    return pred_test_y, model, evals_result
-"""c"""
+from sklearn.model_selection import KFold
+
+
+
+lgbm_params =  {
+    'task': 'train',
+    'boosting_type': 'gbdt',
+    'objective': 'regression',
+    'metric': 'rmse',
+    "learning_rate": 0.01,
+    "num_leaves": 180,
+    "feature_fraction": 0.50,
+    "bagging_fraction": 0.50,
+    'bagging_freq': 4,
+    "max_depth": -1,
+    "reg_alpha": 0.3,
+    "reg_lambda": 0.1,
+    #"min_split_gain":0.2,
+    "min_child_weight":10,
+    'zero_as_missing':True
+                }
 
 
 def preprocess(df):
@@ -45,46 +38,102 @@ def preprocess(df):
 """c"""
 
 
-def transform(X, scaler, nz_columns):
-    X = _scaler.transform(X)
-    X = X[:,_non_zero_columns]
-    return X
+
+class LGBMTrainer:
+
+    _non_zero_columns = {}
+    _scaler = MaxAbsScaler()    
+
+    _clf = 0
+
+
+    def fit (self, X):
+        self._non_zero_columns = X_train.getnnz(0) > 0
+        self._scaler = MaxAbsScaler()
+        self._scaler.fit(X_train)
+
+    def transform(self, X):
+        X = self._scaler.transform(X)
+        X = X[:,self._non_zero_columns]
+        return X
+
+    def __init__(self):
+        pass
+
+    def train_with_validation(self, X_train, y_train, X_test, y_test):
+
+        lgtrain = lgb.Dataset(X_train, y_train, feature_name = "auto")
+        lgvalid = lgb.Dataset(X_test, y_test, feature_name = "auto")
+
+        self._clf = lgb.train(lgbm_params, lgtrain, 100000, early_stopping_rounds=100, valid_sets= [lgvalid], verbose_eval=30)
+
+
+    def trainXXX(self, X_train, y_train):
+        lgtrain = lgb.Dataset(X_train, y_train, feature_name = "auto")
+        self._clf = lgb.train(lgbm_params, lgtrain, num_boost_round = 20)
+
+
+    def predict(self, X_test):
+        return self._clf.predict(X_test)
 
 """c"""
 
 
 DATA_DIR_PORTABLE = "C:\\santander_3_data\\"
-DATA_DIR_BASEMENT = "D:\\XXX\\"
+DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
 DATA_DIR = DATA_DIR_PORTABLE
 
 
 train = pd.read_csv(DATA_DIR + 'train.csv')
 
-y_train = np.log1p(train.target)
+y_trainFull = np.log1p(train.target)
 
 train = train.drop(['target', 'ID'], axis = 1)
 
-X_train = preprocess(train)
+X_trainFull = preprocess(train)
 
-non_zero_rows = X_train.getnnz(1)>0
-assert( (non_zero_rows == True).sum() == X_train.shape[0])
+non_zero_rows = X_trainFull.getnnz(1)>0
+assert( (non_zero_rows == True).sum() == X_trainFull.shape[0])
 
-
-dev_X, val_X, dev_y, val_y = train_test_split(X_train, y_train, test_size = 0.2, random_state = 42)
-
-
-# Fit
-_non_zero_columns = dev_X.getnnz(0) > 0
-_scaler = MaxAbsScaler()
-_scaler.fit(dev_X)
+# Input to training:
+kf = KFold(n_splits=5, shuffle=True, random_state=114514)
 
 
-# Transform
-dev_X = transform(dev_X, _scaler, _non_zero_columns)
-val_X = transform(val_X, _scaler, _non_zero_columns)
+for iLoop, (train_index, test_index) in enumerate(kf.split(X_trainFull)):
+
+    print(f"--- Fold: {iLoop} ---")
+
+    #train_index = [1,2,4, 40, 41, 44, 49]
+    #test_index = [9,10, 11, 12, 100]    
+
+
+    X_train = X_trainFull[train_index]
+    y_train = y_trainFull[train_index]
+    
+    X_valid = X_trainFull[test_index]
+    y_valid = y_trainFull[test_index]
+
+    l = LGBMTrainer()
+
+    l.fit(X_train)
+
+    X_train = l.transform(X_train)
+    X_valid = l.transform(X_valid)
+
+    l.trainXXX(X_train, y_train)
+
+    l.train_with_validation(X_train, y_train, X_valid, y_valid)
+
+    y_p = l.predict(X_valid)
+
+    rmsle_error = np.sqrt(metrics.mean_squared_error(y_p, y_valid))
+    print(f"Rmsle: {rmsle_error2}")
+    
+"""c"""
+
 
 # Train
-model = FM_FTRL(alpha=0.1, beta=0.09, L1=2.6, L2=2.4, D=val_X.shape[1], alpha_fm=0.05, L2_fm=0.01, init_fm=0.01, D_fm=64, weight_fm=1.0, e_noise=0.0, iters=4, verbose=1)
+model = FTRL(verbose=1)
    
 model.fit(dev_X, dev_y)
 
