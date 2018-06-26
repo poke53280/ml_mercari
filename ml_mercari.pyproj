@@ -44,6 +44,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="cython_test.py" />
+    <Compile Include="dae\dae.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Driver_SM.py">
       <SubType>Code</SubType>
     </Compile>
@@ -145,6 +148,7 @@
     <Folder Include="home_credit\" />
     <Folder Include="favorita\" />
     <Folder Include="avito\" />
+    <Folder Include="dae\" />
     <Folder Include="santander_3\" />
     <Folder Include="talking\" />
     <Folder Include="toxic\" />

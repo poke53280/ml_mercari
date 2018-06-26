@@ -124,6 +124,10 @@ for doc in tagger.pipe(texts, batch_size=50):
 
 
 doc = nlp(u'Apple is looking at buying U.K. startup for $1 billion')
+for token in doc:
+    print(token.text, token.pos_, token.dep_)
+
+
 
 nouns = []
 
@@ -131,8 +135,6 @@ nlp.remove_pipe('ner')
 nlp.remove_pipe('parser')
 
 nlp.pipe_names;
-
-q = 90
 
 def pos_tag_spacy(str):
     doc = nlp(str)
@@ -175,6 +177,8 @@ def noun_ify_spacy(series, type_list):
 q = 324
 
 s = "moving can not take with me..... Over 200 silver name rare..... Over 100 holographic....Gold master collection box with original 6 holo cards...."
+
+
 
 #Count vectorizer, count 200
 
