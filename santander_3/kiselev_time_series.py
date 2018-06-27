@@ -72,3 +72,72 @@ print(np.sqrt(np.mean((predict-y_train) ** 2)))
 # => 1.3850759583660452
 
 fillna on std. why are there nulls?
+
+
+X = X_test_orig.replace(0, np.nan)
+
+X_train_orig = X_train_orig[36:37]
+
+l = list (X_train_orig[0:1].values)
+
+n = np.array(l)
+
+n = n.squeeze()
+
+n.mean()
+n.var()
+n.min()
+
+a = np.ma.array(n, mask=np.isnan(n)) # Use a mask to mark the NaNs
+
+n[~a.mask].sum()
+n[~a.mask].mean()
+n[~a.mask].min()
+n[~a.mask].max()
+n[~a.mask].std()
+n[~a.mask].var()
+
+X_train_orig.sum(axis = 1)
+X_train_orig.mean(axis = 1)
+X_train_orig.min(axis = 1)
+X_train_orig.max(axis = 1)
+X_train_orig.std(axis = 1)
+X_train_orig.var(axis = 1)
+
+
+X = X_test_orig.replace(0, np.nan)
+
+X
+
+X.sum(axis = 1).isnull().sum()
+X.mean(axis = 1).isnull().sum()
+X.min(axis = 1).isnull().sum()
+X.max(axis = 1).isnull().sum()
+
+X.std(axis = 1).isnull().sum()
+X.var(axis = 1).isnull().sum()
+
+
+n = np.matrix(X)
+
+
+nx = n[118, :]
+
+a = np.ma.array(nx, mask=np.isnan(nx))
+
+nxa = nx[~a.mask]
+
+len (nxa)
+nxa.var()
+nxa.mean()
+
+nxa.std()
+
+
+105
+
+# ===> X[115:120].std(axis = 1, ddof = 0)
+
+
+
+
