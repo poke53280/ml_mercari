@@ -77,7 +77,25 @@
     <Compile Include="home_credit\oliver_fun_lgbm.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="santander_3\fm_ftrl.py">
+    <Compile Include="santander_3\1owl_EDA.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="santander_3\catboost.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="santander_3\main.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="santander_3\lgbm_basic.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="santander_3\lgbm_svd.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="santander_3\xxutils.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="santander_3\__init__.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Synthpop_perf.py">
