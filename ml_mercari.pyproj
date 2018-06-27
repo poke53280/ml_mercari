@@ -83,6 +83,9 @@
     <Compile Include="santander_3\catboost.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="santander_3\kiselev_time_series.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="santander_3\main.py">
       <SubType>Code</SubType>
     </Compile>

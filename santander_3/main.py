@@ -46,6 +46,17 @@ sub_id = test.ID
 
 test = test.drop(['ID'], axis = 1)
 
+#
+# Train and test loaded and removed ID, target columns.
+#
+
+# Add additional columns:
+
+test = pd.concat([test, df_test6], axis =1)
+train = pd.concat([train, df_train6], axis =1)
+
+
+
 X_testFull = preprocess(test)
 
 non_zero_rows = X_testFull.getnnz(1) > 0
@@ -161,8 +172,13 @@ oof_res.to_csv(DATA_DIR + 'submission_oof.csv', encoding='utf-8-sig')
 # ==> Identical score to 26.6.18.
 #
 
-
-
+# 27.6.18: 1ows preprocess to 500 features, then lgbm basic
+# RMSLE = 1.3798356544218948 +/- 0.02245439186675799 => LV 1.41
+# 
+#
+# 
+# Owl + kiselev 6 params, then lgbm basic
+# RMSLE = 1.3509424818713218 +/- 0.025388774057149885
 
 
 
