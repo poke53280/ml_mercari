@@ -20,6 +20,140 @@ from santander_3.catboost import CatBoost_BASIC
 
 import gc
 
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+
+from sklearn.decomposition import PCA
+from sklearn.decomposition import TruncatedSVD
+from sklearn.decomposition import FastICA
+from sklearn.random_projection import SparseRandomProjection
+from sklearn.random_projection import GaussianRandomProjection
+
+
+
+class DReduction:
+
+    _N_COMP = 20            ### Number of decomposition components ###
+
+    _pca    = 0
+    _tsvd   = 0
+    _ica    = 0
+    _grp    = 0
+    _srp    = 0
+
+    def __init__(self):
+        self._pca = PCA(n_components=self._N_COMP, random_state=17)
+        self._tsvd = TruncatedSVD(n_components=self._N_COMP, random_state=17)
+        self._ica = FastICA(n_components=self._N_COMP, random_state=17)
+        self._grp = GaussianRandomProjection(n_components=self._N_COMP, eps=0.1, random_state=17)
+        self._srp = SparseRandomProjection(n_components=self._N_COMP, dense_output=True, random_state=17)
+
+
+    def fit(self, X):
+        self._pca.fit(X)
+        self._tsvd.fit(X)
+        self._ica.fit(X)
+        self._grp.fit(X)
+        self._srp.fit(X)
+
+
+    def transform(self, X):
+        res_pca  = self._pca.transform(X)
+        res_tsvd = self._tsvd.transform(X)
+        res_ica  = self._ica.transform(X)
+        res_grp  = self._grp.transform(X)
+        res_srp  = self._srp.transform(X)
+
+
+        df = pd.DataFrame()
+
+        for i in range(1, self._N_COMP + 1):
+            df['pca_' + str(i)] = res_pca[:, i - 1]
+            df['tsvd_' + str(i)] = res_tsvd[:, i - 1]
+            df['ica_' + str(i)] = res_ica[:, i - 1]
+            df['grp_' + str(i)] = res_grp[:, i - 1]
+            df['srp_' + str(i)] = res_srp[:, i - 1]
+
+        return df
+"""c"""
+
+ 
+
+
+######################################################################################
+#
+#  get_important_columns
+#
+#
+# Based on: https://www.kaggle.com/the1owl/love-is-the-answer
+#
+# by    https://www.kaggle.com/the1owl
+#
+#  dont_consider: List of named columns not to process and consider
+#
+#  Returns names of the nCut most important columns.
+#
+
+def rmsle(y, pred):
+    return np.sqrt(np.mean(np.power(np.log1p(y)-np.log1p(pred), 2)))
+
+def get_important_columns(df, y_true, nCut):
+
+    scl = StandardScaler()
+
+    col = [c for c in df.columns]
+
+    x1, x2, y1, y2 = train_test_split(df[col], y_true, test_size=0.20, random_state=5)
+
+    model = RandomForestRegressor(n_jobs = -1, random_state = 7)
+
+    model.fit(scl.fit_transform(x1), y1)
+
+    print(f"RMSLE Random Forest Regressor: {rmsle(y2, model.predict(scl.transform(x2)))}")
+
+    df = pd.DataFrame({'importance': model.feature_importances_, 'feature': col}).sort_values(by=['importance'], ascending=[False])
+
+    df = df[:nCut]
+
+    cols = df['feature'].values
+
+    return cols
+
+"""c"""
+
+#############################################################################
+#
+#         get_cols_low_zero
+#
+#   Returns cols with zero frequency lower than input perc_threshold
+#
+
+def get_cols_low_zero(df, exclude_cols, perc_threshold):
+
+    cols_to_keep = []
+    nAll = df.shape[0]
+
+    for c in df.columns:
+        if c in exclude_cols:
+            continue
+
+        q = df[c]
+        a = q.value_counts()
+
+        nZero = a[0] if 0 in a else 0
+
+        isInclude = (nZero < nAll * perc_threshold)
+
+        if isInclude:
+            cols_to_keep.append(c)
+
+    return cols_to_keep
+
+"""c"""
+
+
+
 #Useful for nan handling
 #n = np.array(l)
 #
@@ -41,18 +175,18 @@ import gc
 # From: https://www.kaggle.com/mortido/digging-into-the-data-time-series-theory
 #
 
-def create_row_stat_columns(df):
+def create_row_stat_columns(df, prefix):
 
     # Replace 0 with NaN to ignore them.
     df_nan = df.replace(0, np.nan)
 
     data = pd.DataFrame()
-    data['mean'] = df_nan.mean(axis=1)
-    data['std'] = df_nan.std(axis=1, ddof = 0)
-    data['min'] = df_nan.min(axis=1)
-    data['max'] = df_nan.max(axis=1)
-    data['number_of_different'] = df_nan.nunique(axis=1)               # Number of different values in a row.
-    data['non_zero_count'] = df_nan.fillna(0).astype(bool).sum(axis=1) # Number of non zero values (e.g. transaction count)
+    data[prefix + 'mean'] = df_nan.mean(axis=1)
+    data[prefix + 'std'] = df_nan.std(axis=1, ddof = 0)
+    data[prefix + 'min'] = df_nan.min(axis=1)
+    data[prefix + 'max'] = df_nan.max(axis=1)
+    data[prefix + 'number_of_different'] = df_nan.nunique(axis=1)               # Number of different values in a row.
+    data[prefix + 'non_zero_count'] = df_nan.fillna(0).astype(bool).sum(axis=1) # Number of non zero values (e.g. transaction count)
 
     del df_nan
     gc.collect()
@@ -73,27 +207,53 @@ DATA_DIR = DATA_DIR_PORTABLE
 
 train = pd.read_csv(DATA_DIR + 'train.csv')
 
+
+y_target = train.target
 y_trainFull = np.log1p(train.target)
-
 train_id = train.ID
-
 train = train.drop(['target', 'ID'], axis = 1)
-
 
 
 test = pd.read_csv(DATA_DIR + 'test.csv')
 sub_id = test.ID
-
 test = test.drop(['ID'], axis = 1)
 
-#
-# Train and test loaded and removed ID, target columns.
-#
 
-# Add additional columns:
+train_row_stat_a = create_row_stat_columns(train, 'a')
+test_row_stat_a = create_row_stat_columns(test, 'a')
 
-test = pd.concat([test, df_test6], axis =1)
-train = pd.concat([train, df_train6], axis =1)
+col = get_important_columns(train, y_target, 500)
+
+
+# Get cols found most important by random forest regressor.
+
+train = train[list(col)]
+test =  test[list(col)]
+
+train_row_stat_b = create_row_stat_columns(train, 'b')
+test_row_stat_b = create_row_stat_columns(test, 'b')
+
+
+PERC_TRESHOLD = 0.98  
+
+c = get_cols_low_zero(train, [], PERC_TRESHOLD)
+
+train = train[c]
+test = test[c]
+
+
+d = DReduction()
+
+d.fit(train)
+
+train_dim_info = d.transform(train)
+test_dim_info = d.transform(test)
+
+
+
+
+train = pd.concat([train, train_dim_info, train_row_stat_a, train_row_stat_b], axis = 1)
+test = pd.concat([test, test_dim_info, test_row_stat_a, test_row_stat_b], axis = 1)
 
 
 
@@ -219,10 +379,10 @@ oof_res.to_csv(DATA_DIR + 'submission_oof.csv', encoding='utf-8-sig')
 # 
 # Owl + kiselev 6 params, then lgbm basic
 # RMSLE = 1.3509424818713218 +/- 0.025388774057149885
+#
+#
+#
 
 
 
-# Transform:
-
-X = X[:, idx]
 
