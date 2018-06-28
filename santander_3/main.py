@@ -18,6 +18,46 @@ from santander_3.lgbm_svd import LGBMTrainer_TruncatedSVD
 
 from santander_3.catboost import CatBoost_BASIC
 
+import gc
+
+#Useful for nan handling
+#n = np.array(l)
+#
+#n = n.squeeze()
+#
+#n.mean()
+#n.var()
+#n.min()
+#
+#a = np.ma.array(n, mask=np.isnan(n)) # Use a mask to mark the NaNs
+#
+#nxa = nx[~a.mask]
+
+########################################################################################
+#
+#
+# create_row_stat_columns on non NANs for input df.
+#
+# From: https://www.kaggle.com/mortido/digging-into-the-data-time-series-theory
+#
+
+def create_row_stat_columns(df):
+
+    # Replace 0 with NaN to ignore them.
+    df_nan = df.replace(0, np.nan)
+
+    data = pd.DataFrame()
+    data['mean'] = df_nan.mean(axis=1)
+    data['std'] = df_nan.std(axis=1, ddof = 0)
+    data['min'] = df_nan.min(axis=1)
+    data['max'] = df_nan.max(axis=1)
+    data['number_of_different'] = df_nan.nunique(axis=1)               # Number of different values in a row.
+    data['non_zero_count'] = df_nan.fillna(0).astype(bool).sum(axis=1) # Number of non zero values (e.g. transaction count)
+
+    del df_nan
+    gc.collect()
+
+    return data
 
 
 def preprocess(df):
