@@ -7,6 +7,10 @@
 #
 #
 #
+#
+#  Geometric mean of each row:
+#  https://www.kaggle.com/ianchute/geometric-mean-of-each-row-lb-1-55
+#
 
 import pandas as pd
 import numpy as np
@@ -34,7 +38,7 @@ from sklearn.random_projection import GaussianRandomProjection
 
 class DReduction:
 
-    _N_COMP = 20            ### Number of decomposition components ###
+    _N_COMP = 0            ### Number of decomposition components ###
 
     _pca    = 0
     _tsvd   = 0
@@ -42,7 +46,8 @@ class DReduction:
     _grp    = 0
     _srp    = 0
 
-    def __init__(self):
+    def __init__(self, nComp):
+        self._N_COMP = nComp
         self._pca = PCA(n_components=self._N_COMP, random_state=17)
         self._tsvd = TruncatedSVD(n_components=self._N_COMP, random_state=17)
         self._ica = FastICA(n_components=self._N_COMP, random_state=17)
@@ -95,30 +100,37 @@ class DReduction:
 #  Returns names of the nCut most important columns.
 #
 
-def rmsle(y, pred):
-    return np.sqrt(np.mean(np.power(np.log1p(y)-np.log1p(pred), 2)))
 
-def get_important_columns(df, y_true, nCut):
+class RegImportance:
 
-    scl = StandardScaler()
+    _df = 0
 
-    col = [c for c in df.columns]
+    def __init__(self):
+        pass         
+    
+    def rmsle(self, y, pred):
+        return np.sqrt(np.mean(np.power(np.log1p(y)-np.log1p(pred), 2)))
 
-    x1, x2, y1, y2 = train_test_split(df[col], y_true, test_size=0.20, random_state=5)
+    def fit(self, df, y_true):
+        scl = StandardScaler()
 
-    model = RandomForestRegressor(n_jobs = -1, random_state = 7)
+        col = [c for c in df.columns]
 
-    model.fit(scl.fit_transform(x1), y1)
+        x1, x2, y1, y2 = train_test_split(df[col], y_true, test_size=0.20, random_state=5)
 
-    print(f"RMSLE Random Forest Regressor: {rmsle(y2, model.predict(scl.transform(x2)))}")
+        model = RandomForestRegressor(n_jobs = -1, random_state = 7)
 
-    df = pd.DataFrame({'importance': model.feature_importances_, 'feature': col}).sort_values(by=['importance'], ascending=[False])
+        model.fit(scl.fit_transform(x1), y1)
 
-    df = df[:nCut]
+        print(f"RMSLE Random Forest Regressor: {self.rmsle(y2, model.predict(scl.transform(x2)))}")
 
-    cols = df['feature'].values
+        self._df = pd.DataFrame({'importance': model.feature_importances_, 'feature': col}).sort_values(by=['importance'], ascending=[False])
 
-    return cols
+
+    def get_important(self, nCut):
+        df = self._df[:nCut]    
+        cols = df['feature'].values
+        return cols
 
 """c"""
 
@@ -175,7 +187,9 @@ def get_cols_low_zero(df, exclude_cols, perc_threshold):
 # From: https://www.kaggle.com/mortido/digging-into-the-data-time-series-theory
 #
 
-def create_row_stat_columns(df, prefix):
+def create_row_stat_columns(df, p):
+
+    prefix = str(p)
 
     # Replace 0 with NaN to ignore them.
     df_nan = df.replace(0, np.nan)
@@ -191,6 +205,23 @@ def create_row_stat_columns(df, prefix):
     del df_nan
     gc.collect()
 
+
+    m = data[prefix + 'non_zero_count'] == 0
+
+    nNullsZero = data[m].isnull().sum().values.sum()
+
+    if (nNullsZero > 0):
+        #Rows with no entries will leave NANs
+        # print(f"Found {nNullsZero} NAs in stat dataset, on empty rows. Setting to 0")
+        data[m] = data[m].fillna(0)
+
+    nNulls = data.isnull().sum().values.sum()
+  
+    if (nNulls > 0):
+        print(f"Warning: Found {nNulls} NAs in stat dataset, setting to 0")
+        data = data.fillna(0)
+
+
     return data
 
 
@@ -199,6 +230,43 @@ def preprocess(df):
     X = csr_matrix(df).astype(np.float64)
     return X
 """c"""
+
+
+class RowStatCollector:
+
+    _train_acc = pd.DataFrame()
+    _test_acc =  pd.DataFrame()
+
+    _prefix = 0
+
+    def __init__(self):
+        pass
+
+    def collect_stats(self, train, test, cols):
+        self._train_acc = pd.concat([self._train_acc, create_row_stat_columns(train[cols], self._prefix)], axis = 1)
+        self._test_acc  = pd.concat([self._test_acc,  create_row_stat_columns(test[cols], self._prefix)], axis = 1)
+        self._prefix = self._prefix + 1
+
+
+"""c"""
+
+# Data per row investigation
+
+#seq_data = []
+
+def func(x):
+    st = ""
+    count = 0
+    for c in x:
+        if c != 0:
+            st = st + " " + str(c)
+            count = count + 1
+
+    seq_data.append(str(count) + ":" + st)
+
+#train.apply(func, axis = 1)
+
+
 
 DATA_DIR_PORTABLE = "C:\\santander_3_data\\"
 DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
@@ -218,48 +286,84 @@ test = pd.read_csv(DATA_DIR + 'test.csv')
 sub_id = test.ID
 test = test.drop(['ID'], axis = 1)
 
-
-train_row_stat_a = create_row_stat_columns(train, 'a')
-test_row_stat_a = create_row_stat_columns(test, 'a')
-
-col = get_important_columns(train, y_target, 500)
+train_const = train.copy()
+test_const = test.copy()
 
 
-# Get cols found most important by random forest regressor.
+# ----------------- data loaded -----------------------------------
 
-train = train[list(col)]
-test =  test[list(col)]
-
-train_row_stat_b = create_row_stat_columns(train, 'b')
-test_row_stat_b = create_row_stat_columns(test, 'b')
+train = train_const.copy()
+test = test_const.copy()
 
 
-PERC_TRESHOLD = 0.98  
+rc = RowStatCollector()
 
-c = get_cols_low_zero(train, [], PERC_TRESHOLD)
-
-train = train[c]
-test = test[c]
+rc.collect_stats(train, test, train.columns)
 
 
-d = DReduction()
+zero_threshold = [0.999, 0.995, 0.98, 0.97, 0.95, 0.94, 0.93, 0.92, 0.91 ]
 
-d.fit(train)
+#zero_threshold = [0.999, 0.998, 0.997, 0.996, 0.995, 0.99, 0.98, 0.97, 0.96, 0.95, 0.94, 0.93, 0.92, 0.91, 0.8, 0.7, 0.5, 0.3 ]
 
-train_dim_info = d.transform(train)
-test_dim_info = d.transform(test)
+for zt in zero_threshold:
+    rc.collect_stats(train, test, get_cols_low_zero(train, [], zt ))
+
+
+c_098 =  get_cols_low_zero(train, [], 0.98 )
+
+train = train[c_098]
+test = test[c_098]
 
 
 
+r = RegImportance()
 
-train = pd.concat([train, train_dim_info, train_row_stat_a, train_row_stat_b], axis = 1)
-test = pd.concat([test, test_dim_info, test_row_stat_a, test_row_stat_b], axis = 1)
+r.fit(train, y_target)
 
+i_threshold = [3500, 3000, 2500, 2000, 1500, 1000, 400, 300, 200, 100, 50]
+
+for i_t in i_threshold:
+    rc.collect_stats(train, test, r.get_important(i_t))
+
+col_1 = r.get_important(500)
+
+train = train[list(col_1)]
+test =  test[list(col_1)]
+
+rc.collect_stats(train, test, train.columns)
+
+
+
+
+#d = DReduction(20)
+#
+#d.fit(train)
+#
+#train_dim_info_0 = d.transform(train)
+#test_dim_info_0 = d.transform(test)
+
+
+train_and_stats = pd.concat([train, rc._train_acc], axis = 1)
+test_and_stats = pd.concat([test, rc._test_acc], axis = 1)
+
+
+d2 = DReduction(22)
+
+d2.fit(train_and_stats)
+
+train_dim_info_2 = d2.transform(train_and_stats)
+test_dim_info_2 = d2.transform(test_and_stats)
+
+
+
+train = pd.concat([train, rc._train_acc, train_dim_info_2], axis = 1)
+test = pd.concat([test, rc._test_acc, test_dim_info_2], axis = 1)
 
 
 X_testFull = preprocess(test)
 
 non_zero_rows = X_testFull.getnnz(1) > 0
+
 assert( (non_zero_rows == True).sum() == X_testFull.shape[0])
 
 
@@ -373,16 +477,71 @@ oof_res.to_csv(DATA_DIR + 'submission_oof.csv', encoding='utf-8-sig')
 #
 
 # 27.6.18: 1ows preprocess to 500 features, then lgbm basic
-# RMSLE = 1.3798356544218948 +/- 0.02245439186675799 => LV 1.41
+# RMSLE = 1.3798356544218948 +/- 0.02245439186675799 => LB 1.41
 # 
 #
 # 
 # Owl + kiselev 6 params, then lgbm basic
-# RMSLE = 1.3509424818713218 +/- 0.025388774057149885
+# RMSLE = 1.3509424818713218 +/- 0.025388774057149885 => LB 1.39
+#
+# Reproduction:
+# RMSLE = 1.3513581053302484 +/- 0.029107351301479786
+
+# 29.6.18
+# 4 stats. data = most important + dim red + 4 stats
+# RMSLE = 1.3466391208960116 +/- 0.026560647793176247 => LB 1.39 (better)
+#
+# wo data
+# RMSLE = 1.3513601433146296 +/- 0.030562705043870986
+#
+# Cut to 0.98 on top
+#
+# RMSLE = 1.3411894612788142 +/- 0.029811893340113513 => LB 1.39 (same pos)
+#
+#
+# Added one more stat
+#
+# RMSLE = 1.3345900143879534 +/- 0.028837981089004754 => LB 1.39 (same pos)
 #
 #
 #
+# Lots of stats. Dim red also on stat
+#
+#
+# RMSLE = 1.3317368027725465 +/- 0.026210934894761846
+#
+
+#
+# + lots of dim reds
+# RMSLE = 1.3339867861359997 +/- 0.027655917990326056
+#
+# One dim red, 20, on data + stats. d = data + stats + dim red
+# 
+# RMSLE = 1.3285830630203477 +/- 0.022892193951572624
 
 
-
+# Retake.
+# zero_threshold = [0.999, 0.995, 0.98, 0.97, 0.95, 0.94, 0.93, 0.92, 0.91 ]
+# RMSLE = 1.3276220900730766 +/- 0.021510087721721926
+#
+# zero_threshold = [0.999, 0.998, 0.997, 0.996, 0.995, 0.99, 0.98, 0.97, 0.96, 0.95, 0.94, 0.93, 0.92, 0.91, 0.8, 0.7, 0.5, 0.3 ]
+#  
+# RMSLE = 1.3276220900730766 +/- 0.021510087721721926
+#
+# zero_threshold = [0.999, 0.995, 0.98, 0.97, 0.95, 0.94, 0.93, 0.92, 0.91 ]
+# DIM 40
+# RMSLE = 1.3329107467634214 +/- 0.025289962320957902
+#
+# zero_threshold = [0.999, 0.995, 0.98, 0.97, 0.95, 0.94, 0.93, 0.92, 0.91 ]
+# DIM 30
+#
+# RMSLE = 1.3329107467634214 +/- 0.025289962320957902
+##
+# DIM 18
+# RMSLE = 1.3314209045892127 +/- 0.02724667939935871
+#
+#
+# DIM 22
+#
+# RMSLE = 1.3293895815253935 +/- 0.025997633395490664
 

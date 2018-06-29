@@ -4,6 +4,14 @@
 #
 #
 #
+#
+# https://hsaghir.github.io/data_science/denoising-vs-variational-autoencoder/
+#
+# Keras example of variational auto encoder
+# https://github.com/keras-team/keras/blob/master/examples/variational_autoencoder.py
+#
+#
+
 
 from keras.layers import Input, Dense
 from keras.models import Model
