@@ -112,6 +112,10 @@ l.apply(lambda x: x/sum)
 # sort
 # let each group take from bottom.
 
+import numpy as np
+
+import pandas as pd
+
 
 
 

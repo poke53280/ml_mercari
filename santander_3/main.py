@@ -34,6 +34,89 @@ from sklearn.decomposition import FastICA
 from sklearn.random_projection import SparseRandomProjection
 from sklearn.random_projection import GaussianRandomProjection
 
+class Conf:
+    _zero_threshold = 0
+    _i_threshold = 0
+    _cat_pct_zero = 0
+    _cut_important_factors = 0
+    _dim_reduction = 0
+
+    def __init__(self):
+        pass
+
+    def configureA(self):
+        self._cut_important_factors = 2500
+        self._zero_threshold = [1.0, 0.9995, 0.9990, 0.997, 0.995, 0.992, 0.99, 0.98, 0.975, 0.97, 0.965, 0.96, 0.94, 0.93, 0.915, 0.91]
+        self._i_threshold = [2500, 1500, 1000, 200]
+        self._cat_pct_zero = 0.995
+        self._dim_reduction = 23
+        
+    def configureB(self):
+        self.configureA()
+        self._cut_important_factors = 3000
+
+
+    def configureC(self):
+        self.configureA()
+        self._cat_pct_zero = 0.99
+
+    def configureD(self):
+        self.configureA()
+        self._cat_pct_zero = 0.97
+
+    def configureE(self):
+        self.configureA()
+        self._cat_pct_zero = 0.999
+    
+
+    def info(self):
+        print(f"   zt {self._zero_threshold}")
+        print(f"   it {self._i_threshold}")
+        print(f"   cat_pct_zero {self._cat_pct_zero}")
+        print(f"   cut_important_factors {self._cut_important_factors}")
+        print(f"   dim_reduction {self._dim_reduction}")
+
+"""c"""
+
+
+def aggregate_row(row, prefix):
+
+    if a == 11:
+        return None
+
+    m = (row != 0)
+
+    v = np.array(row[m], dtype = np.float32)
+
+    aggs = {prefix + 'non_zero_mean': v.mean(),
+            prefix+ 'non_zero_std': v.std(),
+            prefix + 'non_zero_max': v.max(),
+            prefix + 'non_zero_min': v.min(),
+            prefix + 'non_zero_sum': v.sum(),
+            prefix + 'non_zero_skewness': skew(v),
+            prefix + 'non_zero_kurtosis': kurtosis(v),
+            prefix + 'non_zero_median': np.median(v),
+            prefix + 'non_zero_q1': np.percentile(v, q=25),
+            prefix + 'non_zero_q3': np.percentile(v, q=75),
+            prefix + 'non_zero_log_mean': np.log1p(v).mean(),
+            prefix + 'non_zero_log_std': np.log1p(v).std(),
+            prefix + 'non_zero_log_max': np.log1p(v).max(),
+            prefix + 'non_zero_log_min': np.log1p(v).min(),
+            prefix + 'non_zero_log_sum': np.log1p(v).sum(),
+            prefix + 'non_zero_log_skewness': skew(np.log1p(v)),
+            prefix + 'non_zero_log_kurtosis': kurtosis(np.log1p(v)),
+            prefix + 'non_zero_log_median': np.median(np.log1p(v)),
+            prefix + 'non_zero_log_q1': np.percentile(np.log1p(v), q=25),
+            prefix + 'non_zero_log_q3': np.percentile(np.log1p(v), q=75),
+            prefix + 'non_zero_count': len(v),
+            prefix + 'non_zero_fraction': len(v) / row.count()
+
+            }
+    return pd.Series(aggs)
+
+
+
+
 
 
 class DReduction:
@@ -141,14 +224,12 @@ class RegImportance:
 #   Returns cols with zero frequency lower than input perc_threshold
 #
 
-def get_cols_low_zero(df, exclude_cols, perc_threshold):
+def get_cols_low_zero(df, perc_threshold):
 
     cols_to_keep = []
     nAll = df.shape[0]
 
     for c in df.columns:
-        if c in exclude_cols:
-            continue
 
         q = df[c]
         a = q.value_counts()
@@ -164,8 +245,6 @@ def get_cols_low_zero(df, exclude_cols, perc_threshold):
 
 """c"""
 
-
-
 #Useful for nan handling
 #n = np.array(l)
 #
@@ -179,6 +258,21 @@ def get_cols_low_zero(df, exclude_cols, perc_threshold):
 #
 #nxa = nx[~a.mask]
 
+#############################################################
+#
+#  from the neptune ml open source project on github.
+#
+
+def create_row_stat_neptune(df, p):
+    prefix = str(p)
+
+    q = df.apply(aggregate_row, axis = 1, args = (prefix,))
+
+    return q
+
+"""c"""
+
+
 ########################################################################################
 #
 #
@@ -190,6 +284,7 @@ def get_cols_low_zero(df, exclude_cols, perc_threshold):
 def create_row_stat_columns(df, p):
 
     prefix = str(p)
+    
 
     # Replace 0 with NaN to ignore them.
     df_nan = df.replace(0, np.nan)
@@ -243,28 +338,145 @@ class RowStatCollector:
         pass
 
     def collect_stats(self, train, test, cols):
-        self._train_acc = pd.concat([self._train_acc, create_row_stat_columns(train[cols], self._prefix)], axis = 1)
-        self._test_acc  = pd.concat([self._test_acc,  create_row_stat_columns(test[cols], self._prefix)], axis = 1)
+        self._train_acc = pd.concat([self._train_acc, create_row_stat_neptune(train[cols], self._prefix)], axis = 1)
+        self._test_acc  = pd.concat([self._test_acc,  create_row_stat_neptune(test[cols], self._prefix)], axis = 1)
         self._prefix = self._prefix + 1
 
 
 """c"""
 
-# Data per row investigation
+def train_process(train, test):
 
-#seq_data = []
+    X_testFull = preprocess(test)
+    non_zero_rows = X_testFull.getnnz(1) > 0
+    assert( (non_zero_rows == True).sum() == X_testFull.shape[0])
 
-def func(x):
-    st = ""
-    count = 0
-    for c in x:
-        if c != 0:
-            st = st + " " + str(c)
-            count = count + 1
+    X_trainFull = preprocess(train)
+    
+    non_zero_rows = X_trainFull.getnnz(1) > 0
+    assert( (non_zero_rows == True).sum() == X_trainFull.shape[0])
 
-    seq_data.append(str(count) + ":" + st)
+    NUM_FOLDS = 5
 
-#train.apply(func, axis = 1)
+    # Input to training:
+    kf = KFold(n_splits=NUM_FOLDS, shuffle=True, random_state=22)
+
+    lKF = list (enumerate(kf.split(X_trainFull)))
+
+    lRMS = []
+
+    y_oof = np.zeros(len (y_trainFull))
+    prediction = np.zeros(X_testFull.shape[0])
+
+
+    while len(lKF) > 0:
+        iLoop, (train_index, test_index) = lKF.pop(0)
+
+        print(f"--- Fold: {iLoop +1}/ {NUM_FOLDS} ---")
+
+        X_train = X_trainFull[train_index]
+        y_train = y_trainFull[train_index]
+    
+        X_valid = X_trainFull[test_index]
+        y_valid = y_trainFull[test_index]
+
+        l = LGBMTrainer_BASIC()
+
+        l.fit(X_train)
+
+        X_train = l.transform(X_train)
+        X_valid = l.transform(X_valid)
+
+        l.train_with_validation(X_train, y_train, X_valid, y_valid)
+
+        y_p = l.predict(X_valid)
+
+        y_oof[test_index] = y_p
+
+        rmsle_error = np.sqrt(metrics.mean_squared_error(y_p, y_valid))
+        print(f"Rmsle: {rmsle_error}")
+
+        lRMS.append(rmsle_error)
+
+        # Predict on test set
+        X_test = l.transform(X_testFull)
+
+        y_pred_this = l.predict(X_test)
+
+        prediction = prediction + (1.0/NUM_FOLDS) * y_pred_this
+
+    return (y_oof, prediction, lRMS)
+    
+"""c"""
+
+def run9(train, test, conf):
+
+    rc = RowStatCollector()
+
+    # Collect row stats on removed features by zero.
+    for zt in conf._zero_threshold:
+        c = get_cols_low_zero(train, zt)
+        print(f"Zero pct < {zt}: {len(c)} column(s)")
+
+        rc.collect_stats(train, test, c)
+
+
+    c_cut =  get_cols_low_zero(train, conf._cat_pct_zero )
+
+    train = train[c_cut]
+    test = test[c_cut]
+
+    r = RegImportance()
+
+    r.fit(train, y_target)
+
+    for i_t in conf._i_threshold:
+        rc.collect_stats(train, test, r.get_important(i_t))
+
+    col_1 = r.get_important(conf._cut_important_factors)
+
+    train = train[list(col_1)]
+    test =  test[list(col_1)]
+
+    rc.collect_stats(train, test, train.columns)
+
+    train_and_stats = pd.concat([train, rc._train_acc], axis = 1)
+    test_and_stats = pd.concat([test, rc._test_acc], axis = 1)
+
+
+    d = DReduction(conf._dim_reduction)
+
+    d.fit(train_and_stats)
+
+    train_dim_info_2 = d.transform(train_and_stats)
+    test_dim_info_2 = d.transform(test_and_stats)
+
+    train = pd.concat([train_and_stats, train_dim_info_2], axis = 1)
+    test = pd.concat([test_and_stats, test_dim_info_2], axis = 1)
+
+    y_off, prediction, lRMS = train_process(train, test)
+
+    anRMS = np.array(lRMS)
+
+    
+
+    prediction = np.clip(prediction, 0, 22)
+    prediction = np.expm1(prediction)
+
+    y_off = np.clip(y_off, 0, 22)
+    y_off = np.expm1(y_off)
+
+
+    return (y_off, prediction, anRMS)    
+
+"""c"""
+
+#
+# https://github.com/neptune-ml/open-solution-value-prediction/blob/master/src/feature_extraction.py
+#
+
+
+
 
 
 
@@ -289,176 +501,69 @@ test = test.drop(['ID'], axis = 1)
 train_const = train.copy()
 test_const = test.copy()
 
-
 # ----------------- data loaded -----------------------------------
 
-train = train_const.copy()
-test = test_const.copy()
+
+lcConf = []
+
+c = Conf()
+c.configureA()
+lcConf.append(c)
+
+c = Conf()
+c.configureB()
+lcConf.append(c)
+
+c = Conf()
+c.configureC()
+lcConf.append(c)
+
+c = Conf()
+c.configureD()
+lcConf.append(c)
+
+c = Conf()
+c.configureE()
+lcConf.append(c)
 
 
-rc = RowStatCollector()
+lRMSLEMean = []
+lRMSLEStd = []
 
-rc.collect_stats(train, test, train.columns)
+for c in lcConf[:1]:
 
-
-zero_threshold = [0.999, 0.995, 0.98, 0.97, 0.95, 0.94, 0.93, 0.92, 0.91 ]
-
-#zero_threshold = [0.999, 0.998, 0.997, 0.996, 0.995, 0.99, 0.98, 0.97, 0.96, 0.95, 0.94, 0.93, 0.92, 0.91, 0.8, 0.7, 0.5, 0.3 ]
-
-for zt in zero_threshold:
-    rc.collect_stats(train, test, get_cols_low_zero(train, [], zt ))
+    print("Begin on:")
+    c.info()
+    train = train_const.copy()
+    test = test_const.copy()
 
 
-c_098 =  get_cols_low_zero(train, [], 0.98 )
+    yoff, prediction, anRMS = run9(train, test, c)
 
-train = train[c_098]
-test = test[c_098]
+    c.info()
 
+    RMSLEmean = anRMS.mean()
+    RMSLEstd  = anRMS.std()
 
+    lRMSLEMean.append(RMSLEmean)
+    lRMSLEStd.append(RMSLEstd)
 
-r = RegImportance()
-
-r.fit(train, y_target)
-
-i_threshold = [3500, 3000, 2500, 2000, 1500, 1000, 400, 300, 200, 100, 50]
-
-for i_t in i_threshold:
-    rc.collect_stats(train, test, r.get_important(i_t))
-
-col_1 = r.get_important(500)
-
-train = train[list(col_1)]
-test =  test[list(col_1)]
-
-rc.collect_stats(train, test, train.columns)
-
-
-
-
-#d = DReduction(20)
-#
-#d.fit(train)
-#
-#train_dim_info_0 = d.transform(train)
-#test_dim_info_0 = d.transform(test)
-
-
-train_and_stats = pd.concat([train, rc._train_acc], axis = 1)
-test_and_stats = pd.concat([test, rc._test_acc], axis = 1)
-
-
-d2 = DReduction(22)
-
-d2.fit(train_and_stats)
-
-train_dim_info_2 = d2.transform(train_and_stats)
-test_dim_info_2 = d2.transform(test_and_stats)
-
-
-
-train = pd.concat([train, rc._train_acc, train_dim_info_2], axis = 1)
-test = pd.concat([test, rc._test_acc, test_dim_info_2], axis = 1)
-
-
-X_testFull = preprocess(test)
-
-non_zero_rows = X_testFull.getnnz(1) > 0
-
-assert( (non_zero_rows == True).sum() == X_testFull.shape[0])
-
-
-X_trainFull = preprocess(train)
-
-non_zero_rows = X_trainFull.getnnz(1) > 0
-assert( (non_zero_rows == True).sum() == X_trainFull.shape[0])
-
-NUM_FOLDS = 5
-
-# Input to training:
-kf = KFold(n_splits=NUM_FOLDS, shuffle=True, random_state=22)
-
-lKF = list (enumerate(kf.split(X_trainFull)))
-
-lRMS = []
-
-#
-# 5 fold:
-#
-# RMSLE = 1.3923651817971539 +/- 0.0355577782181301
-# RMSLE = 1.3942490903567695 +/- 0.02128855447755487
-# RMSLE = 1.3987515329442886 +/- 0.014860682891675773
-#
-# 20 fold:
-#
-# 1.3862360884301765 +/- 0.04775749043367667
-#
-# 50 fold:
-#
-# RMSLE = 1.3741171143498698 +/- 0.09481640650704826
-#
-
-
-y_oof = np.zeros(len (y_trainFull))
-prediction = np.zeros(X_testFull.shape[0])
-
-
-while len(lKF) > 0:
-    iLoop, (train_index, test_index) = lKF.pop(0)
-
-    print(f"--- Fold: {iLoop +1}/ {NUM_FOLDS} ---")
-
-    X_train = X_trainFull[train_index]
-    y_train = y_trainFull[train_index]
-    
-    X_valid = X_trainFull[test_index]
-    y_valid = y_trainFull[test_index]
-
-    l = LGBMTrainer_BASIC()
-
-    l.fit(X_train)
-
-    X_train = l.transform(X_train)
-    X_valid = l.transform(X_valid)
-
-    l.train_with_validation(X_train, y_train, X_valid, y_valid)
-
-    y_p = l.predict(X_valid)
-
-    y_oof[test_index] = y_p
-
-    rmsle_error = np.sqrt(metrics.mean_squared_error(y_p, y_valid))
-    print(f"Rmsle: {rmsle_error}")
-
-    lRMS.append(rmsle_error)
-
-    # Predict on test set
-    X_test = l.transform(X_testFull)
-
-    y_pred_this = l.predict(X_test)
-
-    prediction = prediction + (1.0/NUM_FOLDS) * y_pred_this
-    
+    print(f"  ==> RMSLE = {RMSLEmean} +/- {RMSLEstd}")
+    print(" ------------------------------------------------- ")
 """c"""
 
-anRMS = np.array(lRMS)
 
-print(f"RMSLE = {anRMS.mean()} +/- {anRMS.std()}")
-
-prediction = np.clip(prediction, 0, 22)
-prediction = np.expm1(prediction)
 
 sub_lgb = pd.DataFrame()
 sub_lgb["target"] = prediction
 sub_lgb = sub_lgb.set_index(sub_id)
 sub_lgb.to_csv(DATA_DIR + 'submission.csv', encoding='utf-8-sig')
 
-y_oof = np.clip(y_off, 0, 22)
-y_oof = np.expm1(y_oof)
 
-oof_res = pd.DataFrame()
-oof_res["target"] = y_oof
-oof_res = oof_res.set_index(train_id)
-oof_res.to_csv(DATA_DIR + 'submission_oof.csv', encoding='utf-8-sig')
+#oof_res = pd.DataFrame()
+#oof_res["target"] = y_oof
+#oof_res = oof_res.set_index(train_id)
+#oof_res.to_csv(DATA_DIR + 'submission_oof.csv', encoding='utf-8-sig')
 
 #
 # 25.6.18: Split approach: FM_FTRL. LOCAL 2.1 => LB 2.55
@@ -544,4 +649,23 @@ oof_res.to_csv(DATA_DIR + 'submission_oof.csv', encoding='utf-8-sig')
 # DIM 22
 #
 # RMSLE = 1.3293895815253935 +/- 0.025997633395490664
+
+# zt [1.0, 0.999, 0.995, 0.99, 0.975, 0.965, 0.94, 0.915]
+#   it [2500, 1500, 1000, 200]
+#   cat_pct_zero 0.995
+#   cut_important_factors 1500
+#   dim_reduction 23
+#  ==> RMSLE = 1.3249261485147104 +/- 0.02284215140111256
+
+
+# zt [1.0, 0.9995, 0.999, 0.997, 0.995, 0.992, 0.99, 0.98, 0.975, 0.97, 0.965, 0.96, 0.94, 0.93, 0.915, 0.91]
+#   it [2500, 1500, 1000, 200]
+#   cat_pct_zero 0.995
+#   cut_important_factors 2500
+#  dim_reduction 23
+#  ==> RMSLE = 1.3234194129004229 +/- 0.022374313280645982 => LB 1.39 (same position  17)
+
+
+
+
 
