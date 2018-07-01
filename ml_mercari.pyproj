@@ -92,6 +92,9 @@
     <Compile Include="santander_3\lgbm_svd.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="santander_3\RowStatCollector.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="santander_3\timeseries.py">
       <SubType>Code</SubType>
     </Compile>

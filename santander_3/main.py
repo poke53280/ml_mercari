@@ -19,6 +19,7 @@ from sklearn import metrics
 from sklearn.model_selection import KFold
 from santander_3.lgbm_basic import LGBMTrainer_BASIC
 from santander_3.lgbm_svd import LGBMTrainer_TruncatedSVD
+from santander_3.RowStatCollector import RowStatCollector
 
 from santander_3.catboost import CatBoost_BASIC
 
@@ -34,6 +35,7 @@ from sklearn.decomposition import FastICA
 from sklearn.random_projection import SparseRandomProjection
 from sklearn.random_projection import GaussianRandomProjection
 
+
 class Conf:
     _zero_threshold = 0
     _i_threshold = 0
@@ -46,7 +48,9 @@ class Conf:
 
     def configureA(self):
         self._cut_important_factors = 2500
-        self._zero_threshold = [1.0, 0.9995, 0.9990, 0.997, 0.995, 0.992, 0.99, 0.98, 0.975, 0.97, 0.965, 0.96, 0.94, 0.93, 0.915, 0.91]
+
+        # Go much lower in column numbers (0.91 => 410)
+        self._zero_threshold = [1.0, 0.9995, 0.9990, 0.997, 0.995, 0.992, 0.99, 0.98, 0.975, 0.97, 0.965, 0.96, 0.94, 0.93, 0.915, 0.91, 0.90, 0.87, 0.86, 0.85, 0.82, 0.8, 0.76, 0.7, 0.68, 0.65, 0.64]
         self._i_threshold = [2500, 1500, 1000, 200]
         self._cat_pct_zero = 0.995
         self._dim_reduction = 23
@@ -77,46 +81,6 @@ class Conf:
         print(f"   dim_reduction {self._dim_reduction}")
 
 """c"""
-
-
-def aggregate_row(row, prefix):
-
-    if a == 11:
-        return None
-
-    m = (row != 0)
-
-    v = np.array(row[m], dtype = np.float32)
-
-    aggs = {prefix + 'non_zero_mean': v.mean(),
-            prefix+ 'non_zero_std': v.std(),
-            prefix + 'non_zero_max': v.max(),
-            prefix + 'non_zero_min': v.min(),
-            prefix + 'non_zero_sum': v.sum(),
-            prefix + 'non_zero_skewness': skew(v),
-            prefix + 'non_zero_kurtosis': kurtosis(v),
-            prefix + 'non_zero_median': np.median(v),
-            prefix + 'non_zero_q1': np.percentile(v, q=25),
-            prefix + 'non_zero_q3': np.percentile(v, q=75),
-            prefix + 'non_zero_log_mean': np.log1p(v).mean(),
-            prefix + 'non_zero_log_std': np.log1p(v).std(),
-            prefix + 'non_zero_log_max': np.log1p(v).max(),
-            prefix + 'non_zero_log_min': np.log1p(v).min(),
-            prefix + 'non_zero_log_sum': np.log1p(v).sum(),
-            prefix + 'non_zero_log_skewness': skew(np.log1p(v)),
-            prefix + 'non_zero_log_kurtosis': kurtosis(np.log1p(v)),
-            prefix + 'non_zero_log_median': np.median(np.log1p(v)),
-            prefix + 'non_zero_log_q1': np.percentile(np.log1p(v), q=25),
-            prefix + 'non_zero_log_q3': np.percentile(np.log1p(v), q=75),
-            prefix + 'non_zero_count': len(v),
-            prefix + 'non_zero_fraction': len(v) / row.count()
-
-            }
-    return pd.Series(aggs)
-
-
-
-
 
 
 class DReduction:
@@ -263,95 +227,17 @@ def get_cols_low_zero(df, perc_threshold):
 #  from the neptune ml open source project on github.
 #
 
-def create_row_stat_neptune(df, p):
-    prefix = str(p)
 
-    q = df.apply(aggregate_row, axis = 1, args = (prefix,))
+def train_process(train, test, conf):
 
-    return q
-
-"""c"""
-
-
-########################################################################################
-#
-#
-# create_row_stat_columns on non NANs for input df.
-#
-# From: https://www.kaggle.com/mortido/digging-into-the-data-time-series-theory
-#
-
-def create_row_stat_columns(df, p):
-
-    prefix = str(p)
-    
-
-    # Replace 0 with NaN to ignore them.
-    df_nan = df.replace(0, np.nan)
-
-    data = pd.DataFrame()
-    data[prefix + 'mean'] = df_nan.mean(axis=1)
-    data[prefix + 'std'] = df_nan.std(axis=1, ddof = 0)
-    data[prefix + 'min'] = df_nan.min(axis=1)
-    data[prefix + 'max'] = df_nan.max(axis=1)
-    data[prefix + 'number_of_different'] = df_nan.nunique(axis=1)               # Number of different values in a row.
-    data[prefix + 'non_zero_count'] = df_nan.fillna(0).astype(bool).sum(axis=1) # Number of non zero values (e.g. transaction count)
-
-    del df_nan
-    gc.collect()
-
-
-    m = data[prefix + 'non_zero_count'] == 0
-
-    nNullsZero = data[m].isnull().sum().values.sum()
-
-    if (nNullsZero > 0):
-        #Rows with no entries will leave NANs
-        # print(f"Found {nNullsZero} NAs in stat dataset, on empty rows. Setting to 0")
-        data[m] = data[m].fillna(0)
-
-    nNulls = data.isnull().sum().values.sum()
-  
-    if (nNulls > 0):
-        print(f"Warning: Found {nNulls} NAs in stat dataset, setting to 0")
-        data = data.fillna(0)
-
-
-    return data
-
-
-def preprocess(df):
-    df = df.applymap(np.float64)
-    X = csr_matrix(df).astype(np.float64)
-    return X
-"""c"""
-
-
-class RowStatCollector:
-
-    _train_acc = pd.DataFrame()
-    _test_acc =  pd.DataFrame()
-
-    _prefix = 0
-
-    def __init__(self):
-        pass
-
-    def collect_stats(self, train, test, cols):
-        self._train_acc = pd.concat([self._train_acc, create_row_stat_neptune(train[cols], self._prefix)], axis = 1)
-        self._test_acc  = pd.concat([self._test_acc,  create_row_stat_neptune(test[cols], self._prefix)], axis = 1)
-        self._prefix = self._prefix + 1
-
-
-"""c"""
-
-def train_process(train, test):
-
-    X_testFull = preprocess(test)
+    test = test.applymap(np.float64)
+    X_testFull = csr_matrix(test).astype(np.float64)
+   
     non_zero_rows = X_testFull.getnnz(1) > 0
     assert( (non_zero_rows == True).sum() == X_testFull.shape[0])
 
-    X_trainFull = preprocess(train)
+    train = train.applymap(np.float64)
+    X_trainFull = csr_matrix(train).astype(np.float64)
     
     non_zero_rows = X_trainFull.getnnz(1) > 0
     assert( (non_zero_rows == True).sum() == X_trainFull.shape[0])
@@ -380,12 +266,14 @@ def train_process(train, test):
         X_valid = X_trainFull[test_index]
         y_valid = y_trainFull[test_index]
 
+        d = DReduction(conf._dim_reduction)
+
+        d.fit(X_train)
+
+        X_train = pd.concat([X_train, d.transform(X_train)], axis = 1)
+        X_valid = pd.concat([X_valid, d.transform(X_valid)], axis = 1)
+        
         l = LGBMTrainer_BASIC()
-
-        l.fit(X_train)
-
-        X_train = l.transform(X_train)
-        X_valid = l.transform(X_valid)
 
         l.train_with_validation(X_train, y_train, X_valid, y_valid)
 
@@ -399,7 +287,7 @@ def train_process(train, test):
         lRMS.append(rmsle_error)
 
         # Predict on test set
-        X_test = l.transform(X_testFull)
+        X_test = pd.concat([X_testFull, d.transform(X_testFull)], axis = 1)
 
         y_pred_this = l.predict(X_test)
 
@@ -444,17 +332,9 @@ def run9(train, test, conf):
     test_and_stats = pd.concat([test, rc._test_acc], axis = 1)
 
 
-    d = DReduction(conf._dim_reduction)
+    
 
-    d.fit(train_and_stats)
-
-    train_dim_info_2 = d.transform(train_and_stats)
-    test_dim_info_2 = d.transform(test_and_stats)
-
-    train = pd.concat([train_and_stats, train_dim_info_2], axis = 1)
-    test = pd.concat([test_and_stats, test_dim_info_2], axis = 1)
-
-    y_off, prediction, lRMS = train_process(train, test)
+    y_off, prediction, lRMS = train_process(train_and_stats, test_and_stats, conf)
 
     anRMS = np.array(lRMS)
 
@@ -471,22 +351,13 @@ def run9(train, test, conf):
 
 """c"""
 
-#
-# https://github.com/neptune-ml/open-solution-value-prediction/blob/master/src/feature_extraction.py
-#
-
-
-
-
-
-
 DATA_DIR_PORTABLE = "C:\\santander_3_data\\"
 DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
 DATA_DIR = DATA_DIR_PORTABLE
 
-
 train = pd.read_csv(DATA_DIR + 'train.csv')
 
+#train = train[:500]
 
 y_target = train.target
 y_trainFull = np.log1p(train.target)
@@ -494,7 +365,19 @@ train_id = train.ID
 train = train.drop(['target', 'ID'], axis = 1)
 
 
+r = RowStatCollector()
+r.collect_stats(train, train, train.columns)
+
+==> C:\Users\ander\Anaconda3\lib\site-packages\scipy\stats\stats.py:950: RuntimeWarning: overflow encountered in square
+       s = s**2
+
+
+
+
 test = pd.read_csv(DATA_DIR + 'test.csv')
+
+test = test[:100]
+
 sub_id = test.ID
 test = test.drop(['ID'], axis = 1)
 
@@ -504,33 +387,20 @@ test_const = test.copy()
 # ----------------- data loaded -----------------------------------
 
 
+
+
 lcConf = []
 
 c = Conf()
 c.configureA()
 lcConf.append(c)
 
-c = Conf()
-c.configureB()
-lcConf.append(c)
-
-c = Conf()
-c.configureC()
-lcConf.append(c)
-
-c = Conf()
-c.configureD()
-lcConf.append(c)
-
-c = Conf()
-c.configureE()
-lcConf.append(c)
 
 
 lRMSLEMean = []
 lRMSLEStd = []
 
-for c in lcConf[:1]:
+for c in lcConf:
 
     print("Begin on:")
     c.info()
