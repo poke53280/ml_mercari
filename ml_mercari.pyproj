@@ -95,7 +95,13 @@
     <Compile Include="santander_3\RowStatCollector.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="santander_3\sparse_to_seq.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="santander_3\timeseries.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="santander_3\txt_regr.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="santander_3\xxutils.py">
