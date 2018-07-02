@@ -13,7 +13,7 @@ lgbm_params =  {
     'objective': 'regression',
     'metric': 'rmse',
     "learning_rate": 0.01,
-    "num_leaves": 180,
+    "num_leaves": 380,
     "feature_fraction": 0.50,
     "bagging_fraction": 0.50,
     'bagging_freq': 4,

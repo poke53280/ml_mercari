@@ -96,7 +96,7 @@ idx = (-X_nz).argsort()
 X = X[:, idx]
 train = pd.DataFrame(X)
 
-_interval_index = categorize_transactions (train, 50)
+_interval_index = categorize_transactions (train, 35000)
 
 q = train.apply(my_func, raw = True, axis = 1)
 
@@ -110,7 +110,7 @@ for x in q:
 """c"""
 
 anwait_period = np.array(wait_periods)
-s = pd.qcut(anwait_period, 10, duplicates='drop')
+s = pd.qcut(anwait_period, 88, duplicates='drop')
 _wait_indexer = s.categories
 
 w2 = q.apply(convert_all)
@@ -121,11 +121,9 @@ def create_string(l):
 
 s = w2.apply(create_string)
 
-s
-
 df = pd.DataFrame({'txt':s, 'target': y_trainFull}, index = s.index)
 
-df.to_csv(DATA_DIR + 'txt_db.csv')
+df.to_csv(DATA_DIR + 'txt_db_huge.csv')
 
 
 
