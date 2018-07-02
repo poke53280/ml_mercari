@@ -27,35 +27,40 @@ def aggregate_row(row, prefix):
     allzero = (len(v) == 0)
 
     
-    aggs = {prefix + 'non_zero_mean':           0 if allzero else v.mean(),
-            prefix + 'non_zero_std':            0 if allzero else v.std(),
-            prefix + 'non_zero_max':            0 if allzero else v.max(),
-            prefix + 'non_zero_min':            0 if allzero else v.min(),
-            prefix + 'non_zero_sum':            0 if allzero else v.sum(),
-            prefix + 'non_zero_skewness':       0 if allzero else skew(v),
-            prefix + 'non_zero_kurtosis':       0 if allzero else kurtosis(v),
-            prefix + 'non_zero_median':         0 if allzero else np.median(v),
-            prefix + 'non_zero_q1':             0 if allzero else np.percentile(v, q=25),
-            prefix + 'non_zero_q3':             0 if allzero else np.percentile(v, q=75),
-            prefix + 'non_zero_log_mean':       0 if allzero else np.log1p(v).mean(),
-            prefix + 'non_zero_log_std':        0 if allzero else np.log1p(v).std(),
-            prefix + 'non_zero_log_max':        0 if allzero else np.log1p(v).max(),
-            prefix + 'non_zero_log_min':        0 if allzero else np.log1p(v).min(),
-            prefix + 'non_zero_log_sum':        0 if allzero else np.log1p(v).sum(),
-            prefix + 'non_zero_log_skewness':   0 if allzero else skew(np.log1p(v)),
-            prefix + 'non_zero_log_kurtosis':   0 if allzero else kurtosis(np.log1p(v)),
-            prefix + 'non_zero_log_median':     0 if allzero else np.median(np.log1p(v)),
-            prefix + 'non_zero_log_q1':         0 if allzero else np.percentile(np.log1p(v), q=25),
-            prefix + 'non_zero_log_q3':         0 if allzero else np.percentile(np.log1p(v), q=75),
-            prefix + 'non_zero_count':          0 if allzero else len(v),
-            prefix + 'non_zero_fraction':       0 if allzero else len(v) / nRows
+    aggs = {prefix + 'mean':           0 if allzero else v.mean(),
+            prefix + 'std':            0 if allzero else v.std(),
+            prefix + 'max':            0 if allzero else v.max(),
+            prefix + 'min':            0 if allzero else v.min(),
+            prefix + 'sum':            0 if allzero else v.sum(),
+            prefix + 'skewness':       0 if allzero else skew(v),
+            prefix + 'kurtosis':       0 if allzero else kurtosis(v),
+            prefix + 'median':         0 if allzero else np.median(v),
+            prefix + 'q1':             0 if allzero else np.percentile(v, q=25),
+            prefix + 'q3':             0 if allzero else np.percentile(v, q=75),
+            prefix + 'log_mean':       0 if allzero else np.log1p(v).mean(),
+            prefix + 'log_std':        0 if allzero else np.log1p(v).std(),
+            prefix + 'log_max':        0 if allzero else np.log1p(v).max(),
+            prefix + 'log_min':        0 if allzero else np.log1p(v).min(),
+            prefix + 'log_sum':        0 if allzero else np.log1p(v).sum(),
+            prefix + 'log_skewness':   0 if allzero else skew(np.log1p(v)),
+            prefix + 'log_kurtosis':   0 if allzero else kurtosis(np.log1p(v)),
+            prefix + 'log_median':     0 if allzero else np.median(np.log1p(v)),
+            prefix + 'log_q1':         0 if allzero else np.percentile(np.log1p(v), q=25),
+            prefix + 'log_q3':         0 if allzero else np.percentile(np.log1p(v), q=75),
+            prefix + 'count':          0 if allzero else len(v),
+            prefix + 'fraction':       0 if allzero else len(v) / nRows
 
             }
 
-    s = pd.Series(aggs)
+    an = np.array(list(aggs.values()))
 
-    s.replace([np.inf, -np.inf], np.nan)
-    s = s.fillna(0)
+    if len(an) == np.isfinite(an).sum():
+        pass
+    else:
+        print(f"RowStatCollector: Nan/inf with data {v}")
+        print(aggs)
+
+    s = pd.Series(aggs)
 
     return s
 
@@ -67,7 +72,7 @@ def aggregate_row(row, prefix):
 #
 
 def create_row_stat_neptune(df, p):
-    prefix = str(p)
+    prefix = str(p) + "_"
 
     q = df.apply(aggregate_row, axis = 1, args = (prefix,))
 
@@ -153,26 +158,46 @@ def local_run():
 
 
     train = pd.read_csv(DATA_DIR + 'train.csv')
-    train = train[:100]
 
     y_target = train.target
     y_trainFull = np.log1p(train.target)
     train_id = train.ID
     train = train.drop(['target', 'ID'], axis = 1)
 
-    test = pd.read_csv(DATA_DIR + 'test.csv')
+    y_target = y_target / 1000.0
+    
+    for c in train.columns:
+        train[c] = 0.001 * train[c]
 
-    test = test[:100]
+    """c"""
+
+    test = pd.read_csv(DATA_DIR + 'test.csv')
 
     sub_id = test.ID
     test = test.drop(['ID'], axis = 1)
 
+    for c in test.columns:
+        test[c] = 0.001 * test[c]
+
+    """c"""
+
+
+
     train_const = train.copy()
     test_const = test.copy()
 
+    train = train_const.copy()
+    test = test_const.copy()
+
+    r = RowStatCollector()
+    
+    r.collect_stats(train, test, train.columns)
+
+
+
 """c"""
 
-
+local_run()
 
 
 

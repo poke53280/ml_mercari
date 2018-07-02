@@ -11,6 +11,10 @@
 #  Geometric mean of each row:
 #  https://www.kaggle.com/ianchute/geometric-mean-of-each-row-lb-1-55
 #
+import os
+
+os.chdir('C:\\Users\\ander\\ds\\ml_mercari')
+
 
 import pandas as pd
 import numpy as np
@@ -18,10 +22,8 @@ from scipy.sparse import csr_matrix
 from sklearn import metrics
 from sklearn.model_selection import KFold
 from santander_3.lgbm_basic import LGBMTrainer_BASIC
-from santander_3.lgbm_svd import LGBMTrainer_TruncatedSVD
 from santander_3.RowStatCollector import RowStatCollector
 
-from santander_3.catboost import CatBoost_BASIC
 
 import gc
 
@@ -342,10 +344,11 @@ def run9(train, test, conf):
 
     prediction = np.clip(prediction, 0, 22)
     prediction = np.expm1(prediction)
+    prediction = 1000.0 * prediction
 
     y_off = np.clip(y_off, 0, 22)
     y_off = np.expm1(y_off)
-
+    y_off = 1000.0 * y_off
 
     return (y_off, prediction, anRMS)    
 
@@ -356,30 +359,28 @@ DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
 DATA_DIR = DATA_DIR_PORTABLE
 
 train = pd.read_csv(DATA_DIR + 'train.csv')
-
-#train = train[:500]
-
-y_target = train.target
-y_trainFull = np.log1p(train.target)
 train_id = train.ID
-train = train.drop(['target', 'ID'], axis = 1)
 
+y_trainFull = train.target
+y_trainFull = y_trainFull / 1000.0
+y_trainFull = np.log1p(y_trainFull)
+
+
+train = train.drop(['target', 'ID'], axis = 1)
+    
+for c in train.columns:
+    train[c] = 0.001 * train[c]
+
+test = pd.read_csv(DATA_DIR + 'test.csv')
+sub_id = test.ID
+
+test = test.drop(['ID'], axis = 1)
+
+for c in test.columns:
+    test[c] = 0.001 * test[c]
 
 r = RowStatCollector()
 r.collect_stats(train, train, train.columns)
-
-==> C:\Users\ander\Anaconda3\lib\site-packages\scipy\stats\stats.py:950: RuntimeWarning: overflow encountered in square
-       s = s**2
-
-
-
-
-test = pd.read_csv(DATA_DIR + 'test.csv')
-
-test = test[:100]
-
-sub_id = test.ID
-test = test.drop(['ID'], axis = 1)
 
 train_const = train.copy()
 test_const = test.copy()
@@ -387,14 +388,11 @@ test_const = test.copy()
 # ----------------- data loaded -----------------------------------
 
 
-
-
 lcConf = []
 
 c = Conf()
 c.configureA()
 lcConf.append(c)
-
 
 
 lRMSLEMean = []
