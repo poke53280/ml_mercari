@@ -4,8 +4,8 @@
 import numpy as np
 import pandas as pd
 
-_interval_index = 0
-_wait_indexer = 0
+from santander_3.txt_regr import txt_reg
+
 
 
 def my_func(x):
@@ -35,7 +35,7 @@ def wait_find(l):
     return l[::2]
 
 
-def convert_all(l):
+def convert_all(l, wait_indexer, transaction_indexer):
 
     l_out = []
 
@@ -47,84 +47,125 @@ def convert_all(l):
         if zero_count == 0:
             pass
         else:
-            wait_binned = _wait_indexer.get_loc(zero_count)
+            wait_binned = wait_indexer.transform(zero_count)
             l_out.append("WAIT_" + str(wait_binned))
 
-        value_binned = _interval_index.get_loc(np.log(value))
+        value_binned = transaction_indexer.transform(value)
         l_out.append("AMT_" + str(value_binned))
     return l_out        
             
 """c"""      
 
-def categorize_transactions(train, count):
 
-    X_train = np.array(train)
-    X_train = X_train.flatten()
 
-    m = (X_train != 0)
+class BinCutter:
 
-    X_train = X_train[m]
+    _indexer = 0
 
-    X_train = np.log(X_train)
+    def __init__(self):
+        pass
 
-    s = pd.qcut(X_train, count, duplicates='drop')
 
-    s.value_counts()
+    def fit(self, df, count):
 
-    interval_index = s.categories
+        X_train = np.array(df)
+        X_train = X_train.flatten()
 
-    return interval_index
+        m = (X_train != 0)
+
+        X_train = X_train[m]
+        X_train = np.log(X_train)
+
+        s = pd.qcut(X_train, count, duplicates='drop')
+
+        s.value_counts()
+
+        self._indexer = s.categories
+
+
+    def transform(self, x):
+        return self._indexer.get_loc(np.log(x))
 
 """c"""
 
 
-DATA_DIR_PORTABLE = "C:\\santander_3_data\\"
-DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
-DATA_DIR = DATA_DIR_PORTABLE
+def get_txt_set(data, y_trainFull):
 
-train = pd.read_csv(DATA_DIR + 'train.csv')
+    transaction_bin = BinCutter ()
+    transaction_bin.fit(data, 50)
 
-y_trainFull = np.log(train.target)
-train_id = train.ID
-train = train.drop(['target', 'ID'], axis = 1)
+    q = data.apply(my_func, raw = True, axis = 1)
 
-# Re-arrange so most non-null column to the left
+    wf = q.apply(wait_find)
 
-X = np.array(train)
-X_nz = np.count_nonzero(X, axis = 0)
-idx = (-X_nz).argsort()
-X = X[:, idx]
-train = pd.DataFrame(X)
+    wait_periods = []
 
-_interval_index = categorize_transactions (train, 35000)
+    for x in q:
+        wait_periods.extend(x)
 
-q = train.apply(my_func, raw = True, axis = 1)
+    anwait_period = np.array(wait_periods)
+    
+    wait_bin = BinCutter()
+    wait_bin.fit(anwait_period, 3)
+
+    w2 = q.apply(convert_all, args = (wait_bin, transaction_bin))
+
+    def create_string(l):
+        return " ".join(l)
+    """c"""
+
+    s = w2.apply(create_string)
+
+    data_txt = pd.DataFrame({'txt':s, 'target': y_trainFull}, index = s.index)
+
+    return data_txt
 
 
-wf = q.apply(wait_find)
+def train_txt_set(data, y):
+    m, s = txt_reg(data, y)
+    return (m,s )
 
-wait_periods = []
-
-for x in q:
-    wait_periods.extend(x)
 """c"""
 
-anwait_period = np.array(wait_periods)
-s = pd.qcut(anwait_period, 88, duplicates='drop')
-_wait_indexer = s.categories
 
-w2 = q.apply(convert_all)
+def my_main():
 
-def create_string(l):
-    return " ".join(l)
-"""c"""
+    DATA_DIR_PORTABLE = "C:\\santander_3_data\\"
+    DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
+    DATA_DIR = DATA_DIR_PORTABLE
 
-s = w2.apply(create_string)
+    train_CONST = pd.read_csv(DATA_DIR + 'train.csv')
 
-df = pd.DataFrame({'txt':s, 'target': y_trainFull}, index = s.index)
-
-df.to_csv(DATA_DIR + 'txt_db_huge.csv')
+    y_trainFull = np.log(train_CONST.target)
+    train_id = train_CONST.ID
 
 
+    # On original ordering
+    train = train_CONST.drop(['target', 'ID'], axis = 1)
+    X = np.array(train)
+    train = pd.DataFrame(X)
+
+    df = get_txt_set(train, y_trainFull)
+
+    train_txt_set(df, y_trainFull)
+
+
+    # So most non-null column to the left
+
+    X = np.array(train_CONST.drop(['target', 'ID'], axis = 1))
+    X_nz = np.count_nonzero(X, axis = 0)
+    idx = (-X_nz).argsort()
+    X = X[:, idx]
+    train = pd.DataFrame(X)
+    run(train, y_trainFull)
+
+    # So most non null to the right
+
+    X = np.array(train_CONST.drop(['target', 'ID'], axis = 1))
+    X_nz = np.count_nonzero(X, axis = 0)
+    idx = X_nz.argsort()
+    X = X[:, idx]
+    train = pd.DataFrame(X)
+    run(train, y_trainFull)
 
 

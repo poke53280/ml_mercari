@@ -11,9 +11,6 @@
 #  Geometric mean of each row:
 #  https://www.kaggle.com/ianchute/geometric-mean-of-each-row-lb-1-55
 #
-import os
-
-os.chdir('C:\\Users\\ander\\ds\\ml_mercari')
 
 
 import pandas as pd
@@ -270,10 +267,17 @@ def train_process(train, test, conf):
 
         d = DReduction(conf._dim_reduction)
 
-        d.fit(X_train)
+        d.fit(X_train.todense())
 
-        X_train = pd.concat([X_train, d.transform(X_train)], axis = 1)
-        X_valid = pd.concat([X_valid, d.transform(X_valid)], axis = 1)
+        type (X_train)
+
+        X2 = csr_matrix(d.transform(X_train.todense()))
+
+        X_train = pd.concat([pd.DataFrame(X_train.todense()), pd.DataFrame(X2.todense())], axis = 1)
+
+        V2 = csr_matrix(d.transform(X_valid.todense()))
+
+        X_valid = pd.concat([pd.DataFrame(X_valid.todense()), pd.DataFrame(V2.todense())], axis = 1)
         
         l = LGBMTrainer_BASIC()
 
@@ -289,7 +293,10 @@ def train_process(train, test, conf):
         lRMS.append(rmsle_error)
 
         # Predict on test set
-        X_test = pd.concat([X_testFull, d.transform(X_testFull)], axis = 1)
+
+        X3 = d.transform(X_testFull.todense())
+
+        X_test = pd.concat([pd.DataFrame(X_testFull.todense()), X3], axis = 1)
 
         y_pred_this = l.predict(X_test)
 
@@ -299,7 +306,7 @@ def train_process(train, test, conf):
     
 """c"""
 
-def run9(train, test, conf):
+def run9(train, test, conf, y_target):
 
     rc = RowStatCollector()
 
@@ -332,14 +339,11 @@ def run9(train, test, conf):
 
     train_and_stats = pd.concat([train, rc._train_acc], axis = 1)
     test_and_stats = pd.concat([test, rc._test_acc], axis = 1)
-
-
-    
+   
 
     y_off, prediction, lRMS = train_process(train_and_stats, test_and_stats, conf)
 
     anRMS = np.array(lRMS)
-
     
 
     prediction = np.clip(prediction, 0, 22)
@@ -359,6 +363,12 @@ DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
 DATA_DIR = DATA_DIR_PORTABLE
 
 train = pd.read_csv(DATA_DIR + 'train.csv')
+
+# train = train[:50]
+
+train['one'] = 1
+
+
 train_id = train.ID
 
 y_trainFull = train.target
@@ -372,6 +382,11 @@ for c in train.columns:
     train[c] = 0.001 * train[c]
 
 test = pd.read_csv(DATA_DIR + 'test.csv')
+
+# test = test[:90]
+
+test['one'] = 1
+
 sub_id = test.ID
 
 test = test.drop(['ID'], axis = 1)
@@ -380,6 +395,7 @@ for c in test.columns:
     test[c] = 0.001 * test[c]
 
 r = RowStatCollector()
+
 r.collect_stats(train, train, train.columns)
 
 train_const = train.copy()
@@ -406,7 +422,7 @@ for c in lcConf:
     test = test_const.copy()
 
 
-    yoff, prediction, anRMS = run9(train, test, c)
+    yoff, prediction, anRMS = run9(train, test, c, y_trainFull)
 
     c.info()
 

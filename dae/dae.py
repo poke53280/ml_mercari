@@ -11,7 +11,8 @@
 # https://github.com/keras-team/keras/blob/master/examples/variational_autoencoder.py
 #
 #
-
+#
+# http://kvfrans.com/variational-autoencoders-explained/
 
 from keras.layers import Input, Dense
 from keras.models import Model
@@ -24,7 +25,6 @@ encoding_dim = 32  # 32 floats -> compression of factor 24.5, assuming the input
 # this is our input placeholder
 input_img = Input(shape=(784,))
 
-
 # The encoded representation of the input
 encoded = Dense(encoding_dim, activation='relu')(input_img)
 
@@ -36,7 +36,6 @@ decoded = Dense(784, activation='sigmoid')(encoded)
 autoencoder = Model(input_img, decoded)
 
 autoencoder.summary()
-
 
 
 # Access to encode model
@@ -120,10 +119,13 @@ plt.show()
 # Detailed discussion
 # http://forums.fast.ai/t/porto-seguro-winning-solution-representation-learning/8499/32
 #
-#
 # 
 # Why Does Unsupervised Pre-training Help Deep Learning?
 # http://www.jmlr.org/papers/volume11/erhan10a/erhan10a.pdf
 #
 #
+
+
+
+
 
