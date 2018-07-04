@@ -366,7 +366,7 @@ train = pd.read_csv(DATA_DIR + 'train.csv')
 
 # train = train[:50]
 
-train['one'] = 1
+#train['one'] = 1
 
 
 train_id = train.ID
@@ -385,7 +385,7 @@ test = pd.read_csv(DATA_DIR + 'test.csv')
 
 # test = test[:90]
 
-test['one'] = 1
+#test['one'] = 1
 
 sub_id = test.ID
 
@@ -400,6 +400,14 @@ r.collect_stats(train, train, train.columns)
 
 train_const = train.copy()
 test_const = test.copy()
+
+
+####################################################
+#
+# From disk
+
+train_const = pd.read_csv(DATA_DIR + 'train_const_lot_of_stats.csv')
+
 
 # ----------------- data loaded -----------------------------------
 

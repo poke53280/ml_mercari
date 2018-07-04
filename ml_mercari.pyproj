@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>cc77cf4b-e52a-4996-852b-eba94c92124b</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>santander_3\main.py</StartupFile>
+    <StartupFile>santander_3\sparse_to_nn.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -45,6 +45,9 @@
     </Compile>
     <Compile Include="cython_test.py" />
     <Compile Include="dae\dae.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="dae\RankGauss.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Driver_SM.py">
@@ -93,6 +96,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="santander_3\RowStatCollector.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="santander_3\sparse_to_nn.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="santander_3\sparse_to_seq.py">
