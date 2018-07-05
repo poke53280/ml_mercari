@@ -8,24 +8,11 @@ from scipy.stats import skew, kurtosis
 
 ###############################################################################################
 #
-#             aggregate_row
+#             get_aggs
 #
 
-def aggregate_row(row, prefix):
-    
-    nRows = row.count()
-
-    # Bottleneck.
-    # Todo: Use 'raw' row passing for better performance.
-
-    m = (row != 0)
-
-    nonzero_list = row[m]
-
-    v = np.array(nonzero_list, dtype = np.float32)
-
+def get_aggs(v, prefix):
     allzero = (len(v) == 0)
-
     
     aggs = {prefix + 'mean':           0 if allzero else v.mean(),
             prefix + 'std':            0 if allzero else v.std(),
@@ -47,22 +34,56 @@ def aggregate_row(row, prefix):
             prefix + 'log_median':     0 if allzero else np.median(np.log1p(v)),
             prefix + 'log_q1':         0 if allzero else np.percentile(np.log1p(v), q=25),
             prefix + 'log_q3':         0 if allzero else np.percentile(np.log1p(v), q=75),
-            prefix + 'count':          0 if allzero else len(v),
-            prefix + 'fraction':       0 if allzero else len(v) / nRows
+            prefix + 'count':          0 if allzero else len(v)
 
             }
-
-    an = np.array(list(aggs.values()))
-
-    if len(an) == np.isfinite(an).sum():
-        pass
-    else:
-        print(f"RowStatCollector: Nan/inf with data {v}")
-        print(aggs)
 
     s = pd.Series(aggs)
 
     return s
+
+###############################################################################################
+#
+#             get_aggs_lite
+#
+
+def get_aggs_lite(v, prefix):
+    allzero = (len(v) == 0)
+    
+    aggs = {prefix + 'mean':           0 if allzero else v.mean(),
+            prefix + 'std':            0 if allzero else v.std(),
+            prefix + 'max':            0 if allzero else v.max(),
+            prefix + 'min':            0 if allzero else v.min(),
+            prefix + 'sum':            0 if allzero else v.sum(),
+            prefix + 'count':          0 if allzero else len(v)
+
+            }
+
+    s = pd.Series(aggs)
+
+    return s
+
+
+########################################################################################
+#
+#       aggregate_row
+#
+
+
+def aggregate_row(row, prefix):
+    
+   
+    # Bottleneck.
+    # Todo: Use 'raw' row passing for better performance.
+
+    m = (row != 0)
+
+    nonzero_list = row[m]
+
+    v = np.array(nonzero_list, dtype = np.float32)
+
+    return get_aggs(v, prefix)
+   
 
 """c"""
 

@@ -1,11 +1,8 @@
 
-
-
 import numpy as np
 import pandas as pd
 
 from santander_3.txt_regr import txt_reg
-
 
 
 def my_func(x):

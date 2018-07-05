@@ -7,12 +7,16 @@
 #
 #
 
-
-
 import numpy as np
 import pandas as pd
 from scipy.special import erfinv
 import matplotlib.pyplot as plt
+
+######################################################################
+#
+#      rank_gauss
+#
+#
 
 def rank_gauss(x):
     # x is numpy vector
@@ -25,11 +29,45 @@ def rank_gauss(x):
     efi_x -= efi_x.mean()
     return efi_x
 
-x = np.random.rand(500)
-# histogram test: the histogram of rank_gauss should be gauss-liked and centered
-pd.Series(x).hist()
-plt.show()
-pd.Series(rank_gauss(x)).hist()
-plt.show()
+
+######################################################################
+#
+#      rank_gauss_test
+#
+#
+# x = np.random.rand(500)
+
+def rank_gauss_test(x):
+
+    
+    # histogram test: the histogram of rank_gauss should be gauss-liked and centered
+    pd.Series(x).hist()
+    plt.show()
+    pd.Series(rank_gauss(x)).hist()
+    plt.show()
+
+"""c"""
+
+######################################################################
+#
+#      gauss_rank_transform
+#
+
+def gauss_rank_transform(x):
+    return pd.Series(rank_gauss(x))
+
+
+######################################################################
+#
+#      test_gauss_rank_transform
+#
+
+def test_gauss_rank_transform():
+    q = train_CONST.apply(gauss_rank_transform, axis = 0, raw = True)
+
+
+
+
+
 
 
