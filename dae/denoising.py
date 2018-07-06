@@ -122,7 +122,7 @@ while len(lKF) > 0:
 
     for i in range(1):
         print(f"Epoch {i + 1}...")
-        h = model.fit(x=X_train, y=y_train, batch_size=128, epochs=4, verbose=1, validation_data = (X_valid, y_valid))
+        h = model.fit(x=X_train, y=y_train, batch_size=128, epochs=1, verbose=1, validation_data = (X_valid, y_valid))
         y_p = model.predict(X_valid)
         mse_error = mean_squared_error(y_p, y_valid)
         print (mse_error)
