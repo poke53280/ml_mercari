@@ -1,58 +1,32 @@
 
 import numpy as np
 
-#########################################################################
-#
-#           get_noised_line
-#
+def add_swap_noise(X_batch, X_clean, p):
 
-def _get_noised_line(init, noise, p):
-    N = len (init)
+    nNumRowsBatch = X_batch.shape[0]
+    nNumRowsSource = X_clean.shape[0]
 
-    ar = np.random.rand(N)
-    ab = (ar < p)
+    print(f"Adding noise to {nNumRowsBatch} row(s) from noise pool of {nNumRowsSource} row(s).")
 
-    res = np.empty(N, dtype = init.dtype)
+    aiNoiseIndex = np.random.randint(nNumRowsSource, size=nNumRowsBatch)
 
-    for ix, (init_value, noise_value, is_swap) in enumerate(zip (init, noise, ab)):
-        res[ix] = noise_value if is_swap else init_value
+    X_noise = X_clean[aiNoiseIndex]
 
-    return res
+    X_mask = np.random.rand(X_batch.shape[0], X_batch.shape[1])
 
+    m = X_mask < p
+
+    X_batch[m] = 0
+    X_noise[~m] = 0
+
+    X_batch = X_noise + X_batch
+
+    return X_batch
 """c"""
 
-#########################################################################
-#
-#           swap_rows
-#
+def swap_test():
 
-def swap_rows(X_batch, X_clean, p):
-
-    X_out = X_batch.copy()
-
-    #nCols = X.shape[1]
-    nRowsBatch = X_batch.shape[0]
-
-    nRowsClean = X_clean.shape[0]
-
-    for iRow in range(nRowsBatch):
-
-        target = np.squeeze(np.asarray( X_batch[iRow, :]))
-
-        iNoiseRow = np.random.choice(range(nRowsClean))
-
-        noise = np.squeeze(np.asarray( X_clean[iNoiseRow, :]))
-
-        res = _get_noised_line (target, noise, p)
-        X_out[iRow] = res
-
-    return X_out
-
-"""c"""
-
-def test():
-
-    X_clean =[[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    X_clean_const =[[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
              [2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
             [ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
         [47, 47, 47, 47, 47, 47, 47, 47, 47, 47],
@@ -61,20 +35,10 @@ def test():
         [21, 21, 21, 21, 21, 21, 21, 21, 21, 21],
         [19, 19, 19, 19, 19, 19, 19, 19, 19, 19]]
 
-    X_clean = np.matrix(X_clean)
-
-    X_clean.shape
-
     X_batch = [[99,99,99,99,99,99,99,99,99,99], [77,77,77,77,77,77,77,77,77,77], [55,55,55,55,55,55,55,55,55,55]]
 
-    X_batch = np.matrix(X_batch)
+    X_clean_const = np.array(X_clean_const)
 
-    X_res = swap_rows(X_batch, X_clean, 0.3)
+    X_batch = np.array(X_batch)
 
-    print(X_batch)
-    print(X_res)
-
-"""c"""
-
-
-
+    X_batch = add_swap_noise(X_batch, X_clean_const, 0.15)
