@@ -4,6 +4,11 @@ import pandas as pd
 
 from santander_3.txt_regr import txt_reg
 
+########################################################################
+#
+#    my_func
+#
+#
 
 def my_func(x):
 
@@ -27,10 +32,21 @@ def my_func(x):
     return l_out
 """c"""
 
+########################################################################
+#
+#    wait_find
+#
+#
 
 def wait_find(l):
     return l[::2]
 
+
+########################################################################
+#
+#    convert_all
+#
+#
 
 def convert_all(l, wait_indexer, transaction_indexer):
 
@@ -54,6 +70,12 @@ def convert_all(l, wait_indexer, transaction_indexer):
 """c"""      
 
 
+
+########################################################################
+#
+#    BinCutter
+#
+#
 
 class BinCutter:
 
@@ -86,6 +108,12 @@ class BinCutter:
 """c"""
 
 
+########################################################################
+#
+#    get_txt_set
+#
+#
+
 def get_txt_set(data, y_trainFull):
 
     transaction_bin = BinCutter ()
@@ -117,6 +145,12 @@ def get_txt_set(data, y_trainFull):
 
     return data_txt
 
+########################################################################
+#
+#    train_txt_set
+#
+#
+#
 
 def train_txt_set(data, y):
     m, s = txt_reg(data, y)
@@ -124,6 +158,55 @@ def train_txt_set(data, y):
 
 """c"""
 
+###########################################################################################################
+###########################################################################################################
+###########################################################################################################
+
+
+import numpy as np
+import pandas as pd
+
+
+####################################################################
+#
+#    Clip or pad to cut elements
+#
+#
+
+def get_pop_cols(x):
+
+    an = np.array(x)
+
+    my_keys = np.nonzero(an)[0]
+    my_values = an[my_keys]
+
+    c = np.empty(2 * len(my_keys), dtype=my_keys.dtype)
+
+    c[:] = np.nan
+
+    c[0::2] = my_keys
+    c[1::2] = my_values
+
+    return list(c)
+
+"""c"""
+
+
+########################################################################
+#
+#    cut_or_pad
+#
+#
+#
+
+def cut_or_pad(x, cut):
+    x.extend(cut * [np.nan])
+    return x[:cut]
+
+########################################################################
+#
+#    my_main
+#
 
 def my_main():
 
@@ -131,38 +214,108 @@ def my_main():
     DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
     DATA_DIR = DATA_DIR_PORTABLE
 
-    train_CONST = pd.read_csv(DATA_DIR + 'train.csv')
+    N_CUT = 15
 
-    y_trainFull = np.log(train_CONST.target)
-    train_id = train_CONST.ID
+    train = pd.read_csv(DATA_DIR + 'train.csv')
+    train = train.drop(['target', 'ID'], axis = 1)
 
+    test = pd.read_csv(DATA_DIR + 'test.csv')
+    test = test.drop(['ID'], axis = 1)
 
-    # On original ordering
-    train = train_CONST.drop(['target', 'ID'], axis = 1)
-    X = np.array(train)
-    train = pd.DataFrame(X)
-
-    df = get_txt_set(train, y_trainFull)
-
-    train_txt_set(df, y_trainFull)
-
-
-    # So most non-null column to the left
-
-    X = np.array(train_CONST.drop(['target', 'ID'], axis = 1))
+    df = pd.concat([train, test], axis = 0)
+  
+    X = np.array(df)
+   
     X_nz = np.count_nonzero(X, axis = 0)
     idx = (-X_nz).argsort()
     X = X[:, idx]
-    train = pd.DataFrame(X)
-    run(train, y_trainFull)
+    df = pd.DataFrame(X)
 
-    # So most non null to the right
+    q = df.apply(get_pop_cols, raw = True, axis = 1)
 
-    X = np.array(train_CONST.drop(['target', 'ID'], axis = 1))
-    X_nz = np.count_nonzero(X, axis = 0)
-    idx = X_nz.argsort()
-    X = X[:, idx]
-    train = pd.DataFrame(X)
-    run(train, y_trainFull)
+    nList = q.apply(lambda x: len(x)/2)
+
+    anLength = np.array(nList)
+
+    print(f"Number of column entries: {anLength.mean()} +/- { anLength.std() }")
+
+    test_threshold = nList.apply(lambda x: x >= N_CUT)
+
+    aTrue = np.array(test_threshold)
+    nFilled = (aTrue == True).sum()
+    nPadded = len(q) - nFilled
+
+    rPct = 100.0 * nPadded / len(q)
+
+    print(f"Column count {N_CUT}: NA padding at {rPct}% of rows")
+
+    q_idx = q.apply(lambda x: x[0::2])
+
+
+    q_val = q.apply(lambda x: x[1::2])
+
+
+    q_idx_cut = q_idx.apply(cut_or_pad, args = (N_CUT,))
+    q_val_cut = q_val.apply(cut_or_pad, args = (N_CUT,))
+
+   
+
+    pd_IDX = pd.DataFrame.from_items(zip(q_idx_cut.index, q_idx_cut.values)).transpose()
+
+    pd_IDX = pd_IDX.fillna(-1)
+
+    cols = pd_IDX.columns
+
+    for c in cols:
+        pd_IDX[c] += 1
+
+
+    """c"""
+
+    pd_VAL = pd.DataFrame.from_items(zip(q_val_cut.index, q_val_cut.values)).transpose()
+    pd_VAL = pd_VAL.fillna(0)
+
+
+    df = pd.concat([pd_IDX, pd_VAL], axis = 1)
+
+    new_cols = []
+
+    for i in range(N_CUT):
+        new_cols.append("col_" + str(i))
+
+    for i in range(N_CUT):
+        new_cols.append("val_" + str(i))
+
+    """c"""
+    df.columns = new_cols
+
+
+    df.shape
+
+    # 0 - cat is NA
+    # 0 value is NA
+    # !!  Check
+    # TODO: df.val_14.value_counts() 0.0 is 15130, length 18592, does not agree with rPct
+    
+
+#
+#
+#
+# Clip so that few zeros.
+#
+#
+#
+# 'col0', 'col1', 'col2', 'col3', 'col4', val0, val1, val2, val3, val4
+#
+#
+# DAE on train + test.
+# Categorical + continuous.
+#
+#
+
+
+
+
+
 
 

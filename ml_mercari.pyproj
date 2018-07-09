@@ -53,6 +53,9 @@
     <Compile Include="dae\RankGauss.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="dae\SimpleTabular.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="dae\SwapNoise.py">
       <SubType>Code</SubType>
     </Compile>
