@@ -199,8 +199,8 @@ def get_pop_cols(x):
 #
 #
 
-def cut_or_pad(x, cut):
-    x.extend(cut * [np.nan])
+def cut_or_pad(x, cut, nan_value):
+    x.extend(cut * [nan_value])
     return x[:cut]
 
 ########################################################################
@@ -214,7 +214,7 @@ def my_main():
     DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
     DATA_DIR = DATA_DIR_PORTABLE
 
-    N_CUT = 15
+    N_CUT = 5
 
     train = pd.read_csv(DATA_DIR + 'train.csv')
     train = train.drop(['target', 'ID'], axis = 1)
@@ -233,6 +233,8 @@ def my_main():
 
     q = df.apply(get_pop_cols, raw = True, axis = 1)
 
+    q = q[:9]
+
     nList = q.apply(lambda x: len(x)/2)
 
     anLength = np.array(nList)
@@ -250,53 +252,66 @@ def my_main():
     print(f"Column count {N_CUT}: NA padding at {rPct}% of rows")
 
     q_idx = q.apply(lambda x: x[0::2])
-
-
     q_val = q.apply(lambda x: x[1::2])
 
 
-    q_idx_cut = q_idx.apply(cut_or_pad, args = (N_CUT,))
-    q_val_cut = q_val.apply(cut_or_pad, args = (N_CUT,))
+    q_idx_cut = q_idx.apply(cut_or_pad, args = (N_CUT, -1))
+    q_val_cut = q_val.apply(cut_or_pad, args = (N_CUT, 0))
 
-   
 
     pd_IDX = pd.DataFrame.from_items(zip(q_idx_cut.index, q_idx_cut.values)).transpose()
-
-    pd_IDX = pd_IDX.fillna(-1)
 
     cols = pd_IDX.columns
 
     for c in cols:
         pd_IDX[c] += 1
 
-
     """c"""
-
-    pd_VAL = pd.DataFrame.from_items(zip(q_val_cut.index, q_val_cut.values)).transpose()
-    pd_VAL = pd_VAL.fillna(0)
-
-
-    df = pd.concat([pd_IDX, pd_VAL], axis = 1)
 
     new_cols = []
 
     for i in range(N_CUT):
         new_cols.append("col_" + str(i))
 
+    pd_IDX.columns = new_cols
+
+
+
+
+
+
+
+    pd_VAL = pd.DataFrame.from_items(zip(q_val_cut.index, q_val_cut.values)).transpose()
+
+    new_cols = []
+
     for i in range(N_CUT):
         new_cols.append("val_" + str(i))
 
     """c"""
-    df.columns = new_cols
+    pd_VAL.columns = new_cols
+
+    df = pd.concat([pd_IDX, pd_VAL], axis = 1)
+
+   
 
 
     df.shape
 
-    # 0 - cat is NA
-    # 0 value is NA
-    # !!  Check
-    # TODO: df.val_14.value_counts() 0.0 is 15130, length 18592, does not agree with rPct
     
+from sklearn.preprocessing import OneHotEncoder
+
+
+from sklearn.preprocessing import LabelBinarizer
+
+
+import numpy as np
+import pandas as pd
+
+import category_encoders as ce
+
+
+
 
 #
 #
@@ -317,5 +332,28 @@ def my_main():
 
 
 
+df = pd.DataFrame({
 
+        'name': ['The Dude', 'Walter', 'Donny', 'The Stranger', 'Brandt', 'Bunny'],
 
+        'haircolor': ['brown', 'brown', 'brown', 'silver', 'blonde', 'blonde'],
+
+        'gender': ['male', 'male', 'male', 'male', 'male', 'female'],
+
+        'drink': ['caucasian', 'beer', 'beer', 'sasparilla', 'unknown', 'unknown'],
+
+        'age': [48, 49, 45, 63, 40, 23] 
+
+    },
+
+    columns=['name', 'haircolor', 'gender', 'drink', 'age']
+
+)
+
+encoder = ce.BinaryEncoder(cols=['haircolor'])
+
+df_binary = encoder.fit_transform(df)
+
+df_binary
+
+df
