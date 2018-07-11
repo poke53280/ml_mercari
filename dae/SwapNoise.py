@@ -6,7 +6,7 @@ def add_swap_noise(X_batch, X_clean, p):
     nNumRowsBatch = X_batch.shape[0]
     nNumRowsSource = X_clean.shape[0]
 
-    print(f"Adding noise to {nNumRowsBatch} row(s) from noise pool of {nNumRowsSource} row(s).")
+    print(f"Adding {p * 100.0}% noise to {nNumRowsBatch} row(s) from noise pool of {nNumRowsSource} row(s).")
 
     aiNoiseIndex = np.random.randint(nNumRowsSource, size=nNumRowsBatch)
 
