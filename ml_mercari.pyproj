@@ -59,6 +59,9 @@
     <Compile Include="dae\SwapNoise.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="dae\tf_net.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="dae\__init__.py">
       <SubType>Code</SubType>
     </Compile>
