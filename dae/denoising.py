@@ -27,7 +27,7 @@ from scipy.special import erfinv
 DATA_DIR_PORTABLE = "C:\\santander_3_data\\"
 DATA_DIR_AWS = "./"
 DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
-DATA_DIR = DATA_DIR_AWS
+DATA_DIR = DATA_DIR_PORTABLE
 
 
 ######################################################################
@@ -113,19 +113,76 @@ def loadY():
 
     return Y
 
+
+
+########################################################################
+#
+#    trainAll
+#
+#
+
+def trainAll(Y, config):
+    num_features = Y.shape[1]
+    num_rows = Y.shape[0]
+
+    models = create_model(num_features, config)
+
+    for i in range(config['num_epochs']):
+
+        print(f"Epoch {i + 1}/ {config['num_epochs']}:")
+
+        y_train = Y.copy()
+        X_train = Y.copy()
+
+        X_train = add_swap_noise(X_train, Y, config['noise_factor'])
+
+        p_t = np.random.permutation(len(y_train))
+      
+        X_train = X_train[p_t]
+        y_train = y_train[p_t]
+
+        h = models['autoencoder'].fit(x=X_train, y=y_train, batch_size=config['mini_batch_size'], epochs=1, verbose=1)
+
+
+    E0 = models['encoder_0'].predict(Y)
+    E1 = models['encoder_1'].predict(Y)
+    E2 = models['encoder_2'].predict(Y)
+
+    del models['autoencoder']
+    del models['encoder_0']
+    del models['encoder_1']
+    del models['encoder_2']
+        
+    K.clear_session()
+    gc.collect()
+
+    E = np.hstack((E0, E1, E2))
+
+    return E
+
+
+
 ########################################################################
 #
 #    trainCV
 #
 #
 
-def trainCV(y, num_epochs, noise_factor, num_folds, lRunFolds, n_batchsize, num_neurons):
+def trainCV(Y, num_folds, lRunFolds, config):
+
+    num_features = Y.shape[1]
+
+    num_rows = Y.shape[0]
 
     kf = KFold(n_splits=num_folds, shuffle=True, random_state=22)   
 
-    lKF = list (enumerate(kf.split(y)))
+    lKF = list (enumerate(kf.split(Y)))
 
     lRMS = []
+
+    E0 = np.zeros((num_rows, config['num_neurons']), dtype='float32') # Can be empty
+    E1 = np.zeros((num_rows, config['num_neurons']), dtype='float32') 
+    E2 = np.zeros((num_rows, config['num_neurons']), dtype='float32') 
 
     for iFold in lRunFolds:
         assert iFold >= 0 and iFold < num_folds
@@ -134,29 +191,22 @@ def trainCV(y, num_epochs, noise_factor, num_folds, lRunFolds, n_batchsize, num_
 
         print(f" Running fold {iLoop +1}/ {num_folds}")
 
-        # Create model for each fold
-        num_features = y.shape[1]
+        models = create_model(num_features, config)
 
-        model = create_model(num_features, num_neurons)
+        y_train_const = Y[train_index]
+        y_valid_const = Y[test_index]    
 
-        y_train_const = y[train_index]
-        y_valid_const = y[test_index]    
-
-        X_train_const = y[train_index]
-        X_valid_const = y[test_index]
-
-        for i in range(num_epochs):
-            print(f"Fold {iLoop + 1}/ {num_folds} Epoch {i + 1}/ {num_epochs}:")
+        for i in range(config['num_epochs']):
+            print(f"Fold {iLoop + 1}/ {num_folds} Epoch {i + 1}/ {config['num_epochs']}:")
 
             y_train = y_train_const.copy()
             y_valid = y_valid_const.copy()
 
-            X_train = X_train_const.copy()
-            X_valid = X_valid_const.copy()
-            
+            X_train = y_train_const.copy()
+            X_valid = y_valid_const.copy()
 
-            X_train = add_swap_noise(X_train, y, noise_factor)
-            X_valid = add_swap_noise(X_valid, y, noise_factor)
+            X_train = add_swap_noise(X_train, Y, config['noise_factor'])
+            X_valid = add_swap_noise(X_valid, Y, config['noise_factor'])
 
             p_t = np.random.permutation(len(y_train))
             p_v = np.random.permutation(len(y_valid))
@@ -167,24 +217,33 @@ def trainCV(y, num_epochs, noise_factor, num_folds, lRunFolds, n_batchsize, num_
             X_valid = X_valid[p_v]
             y_valid = y_valid[p_v]
 
-
-            h = model.fit(x=X_train, y=y_train, batch_size=n_batchsize, epochs=1, verbose=1, validation_data = (X_valid, y_valid))
+            h = models['autoencoder'].fit(x=X_train, y=y_train, batch_size=config['mini_batch_size'], epochs=1, verbose=1, validation_data = (X_valid, y_valid))
             
-            y_p = model.predict(X_valid)
+            y_p = models['autoencoder'].predict(X_valid)
 
             mse_error = mean_squared_error(y_p, y_valid)
 
-            print(f"Fold {iLoop + 1}/ {num_folds} Epoch {i + 1}/ {num_epochs} finished. MSE = {mse_error}.")
-    
+            print(f"Fold {iLoop + 1}/ {num_folds} Epoch {i + 1}/ {config['num_epochs']} finished. MSE = {mse_error}.")
+   
         lRMS.append(mse_error)
-        del model
+
+        E0[test_index] = models['encoder_0'].predict(y_valid_const)
+        E1[test_index] = models['encoder_1'].predict(y_valid_const)
+        E2[test_index] = models['encoder_2'].predict(y_valid_const)
+
+        del models['autoencoder']
+        del models['encoder_0']
+        del models['encoder_1']
+        del models['encoder_2']
         
         K.clear_session()
         gc.collect()
 
     anRMS = np.array(lRMS)
 
-    return anRMS
+    E = np.hstack((E0, E1, E2))
+
+    return anRMS, E
     
 """c"""
 
@@ -195,23 +254,39 @@ def trainCV(y, num_epochs, noise_factor, num_folds, lRunFolds, n_batchsize, num_
 #
 #
 
-def create_model(num_features, num_neurons):
+
+
+def create_model(num_features, config):
+
+    models = {}
 
     input_user = Input(shape=(num_features,))
 
-    encoded_l_0 = Dense(num_neurons, activation='relu') (input_user)
-    encoded_l_1 = Dense(num_neurons, activation='relu') (encoded_l_0)
-    encoded_l_2 = Dense(num_neurons, activation='relu') (encoded_l_1)
+    encoded_l_0 = Dense(config['num_neurons'], activation='relu') (input_user)
+    encoder_0 = Model(input_user, encoded_l_0)
+
+
+    encoded_l_1 = Dense(config['num_neurons'], activation='relu') (encoded_l_0)
+    encoder_1   = Model(input_user, encoded_l_1)
+
+    encoded_l_2 = Dense(config['num_neurons'], activation='relu') (encoded_l_1)
+    encoder_2   = Model(input_user, encoded_l_2)
 
     decoded = Dense(num_features, activation='linear') (encoded_l_2)
 
     autoencoder = Model(input_user, decoded)
 
-    autoencoder.compile(loss='mean_squared_error', optimizer=Adam(lr = 0.003, decay = 0.995))
+    autoencoder.compile(loss='mean_squared_error', optimizer=Adam(lr = config['r_learning_rate'], decay = config['r_decay']))
 
     autoencoder.summary()
+
+    models['autoencoder'] = autoencoder
+
+    models['encoder_0'] = encoder_0
+    models['encoder_1'] = encoder_1
+    models['encoder_2'] = encoder_2
     
-    return autoencoder
+    return models
 
 ########################################################################
 #
@@ -247,31 +322,61 @@ def create_model_large(num_features):
 #
 
 def main():
+    
+    c = {}
+
+    c['num_neurons']       = 1500
+    c['r_learning_rate']   = 0.003
+    c['r_decay']           = 0.995
+    c['mini_batch_size']   = 128
+    c['noise_factor']      = 0.11
+    c['num_epochs']        = 3
+
     Y = loadY()
-   
-    # lRunFolds = list (range(9))
 
-    lRunFolds = [2]
+    num_folds = 9
+    # lRunFolds = [2]
+    lRunFolds = list (range(num_folds))
 
-    anMSE = trainCV(Y, 1000, 0.11, 9, lRunFolds, 128, 5000)
+    anMSE, E = trainCV(Y, num_folds, lRunFolds, c)
 
     MSEmean = anMSE.mean()
     MSEstd  = anMSE.std()
     
     print(f"  ==> MSE = {MSEmean} +/- {MSEstd}")
 
+    info = f"n{c['num_neurons']}lr{c['r_learning_rate']}d{c['r_decay']}b{c['mini_batch_size']}sw{c['noise_factor']}e{c['num_epochs']}{MSEmean}+/-{MSEstd}"
+
+    print(info)
+
+    if len(lRunFolds) == num_folds:
+        print("Saving " + info + "...")
+
+        np.save(DATA_DIR + "EMatrix", E)
+        F = np.load(DATA_DIR + "EMatrix.npy")
+
+        if (E == F).all():
+            print("Matrix saved and verified OK")
+
 
 if __name__ == "__main__": main()  
 
+#
+#
 # Fold 3/ 9 Epoch 3/ 3 finished. MSE = 0.06062798947095871. 1500
 # Fold 3/ 9 Epoch 3/ 3 finished. MSE = 0.06034927815198898. 2500
 # Fold 3/ 9 Epoch 3/ 3 finished. MSE = 0.06111340969800949. 3500
-
-
+#
 # at 1500n: Fold 3/ 9 Epoch 109/ 1000 finished. MSE = 0.05556689202785492.
 # Fold 3/ 9 Epoch 4/ 1000 finished. MSE = 0.06124715879559517 8500
-
+#
 # plateau abpit 0.055
-
+#
 # running 5000
 # not moving a lot at: Fold 3/ 9 Epoch 180/ 1000 finished. MSE = 0.054184440523386.
+#
+#
+
+
+
+
