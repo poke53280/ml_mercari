@@ -117,3 +117,85 @@ print("Accuracy:", accuracy.eval({X: mnist.test.images, Y: mnist.test.labels}))
 
 
 
+import tensorflow as tf
+
+data = loadY()
+
+num_features = data.shape[1]
+
+X = tf.placeholder("float", [None, num_features])
+
+Y = tf.placeholder("float", [None, num_features])
+
+
+weights = {
+    'h0': tf.Variable(tf.random_normal([num_features, 1500])),
+    'h1': tf.Variable(tf.random_normal([1500, 1500])),
+    'h2': tf.Variable(tf.random_normal([1500, 1500])),
+    'out': tf.Variable(tf.random_normal([1500, num_features]))
+}
+
+biases = {
+    'b0': tf.Variable(tf.random_normal([1500])),
+    'b1': tf.Variable(tf.random_normal([1500])),
+    'b2': tf.Variable(tf.random_normal([1500])),
+    'out': tf.Variable(tf.random_normal([num_features]))
+}
+
+def multilayer_perceptron(x):
+    
+   
+    layer_0 = tf.add(tf.matmul(x, weights['h0']), biases['b0'])
+    
+    layer_1 = tf.add(tf.matmul(layer_0, weights['h1']), biases['b1'])
+
+    layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
+
+    out_layer = tf.add(tf.matmul(layer_2, weights['out']), biases['out'])
+    
+    return out_layer
+
+
+
+
+my_model = multilayer_perceptron(X)
+
+loss_op = tf.losses.mean_squared_error(labels=Y, predictions=my_model)
+
+
+# Define optimizer
+optimizer = tf.train.AdamOptimizer(learning_rate=0.003)
+
+
+train_op = optimizer.minimize(loss_op)
+
+init = tf.global_variables_initializer()
+
+sess = tf.Session()
+
+sess.run(init)
+
+
+nRows = data.shape[0]
+
+
+# Create a small batch
+
+batch_x = data[:128]
+batch_y = data[:128]
+
+
+
+_, c = sess.run([train_op, loss_op], feed_dict={X: batch_x, Y: batch_y})
+
+# Compute average loss
+avg_cost = c 
+
+print(f"avg_cost = {avg_cost}")
+
+
+
+
+#######################################################################################
+
+
