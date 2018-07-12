@@ -274,3 +274,4 @@ if __name__ == "__main__": main()
 # plateau abpit 0.055
 
 # running 5000
+# not moving a lot at: Fold 3/ 9 Epoch 180/ 1000 finished. MSE = 0.054184440523386.
