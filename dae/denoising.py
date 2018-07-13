@@ -8,20 +8,15 @@ import pandas as pd
 import scipy 
 from keras.layers import Input, Dense
 from keras.models import Model
-
 from keras.optimizers import Adam
 from keras.layers import Input, Dense
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_squared_error
-
 from keras import backend as K
-
-
 import time
 import gc
-
 from scipy.special import erfinv
-
+import random
 
 
 DATA_DIR_PORTABLE = "C:\\santander_3_data\\"
@@ -29,39 +24,47 @@ DATA_DIR_AWS = "./"
 DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
 DATA_DIR = DATA_DIR_PORTABLE
 
+class SwapNoise:
 
-######################################################################
-#
-#      add_swap_noise
-#
-#
+    _var = 0
 
-def add_swap_noise(X_batch, X_clean, p):
+    def __init__(self):
+        pass
 
-    nNumRowsBatch = X_batch.shape[0]
-    nNumRowsSource = X_clean.shape[0]
+    def add_swap_noise(self, X_batch, X_clean, p, verbose):
 
-    print(f"Adding {p * 100.0}% noise to {nNumRowsBatch} row(s) from noise pool of {nNumRowsSource} row(s).")
+        nNumRowsBatch = X_batch.shape[0]
+        nNumRowsSource = X_clean.shape[0]
 
-    print(f"   Creating noise source indices")
-    aiNoiseIndex = np.random.randint(nNumRowsSource, size=nNumRowsBatch)
+        if verbose == 7:
+            print(f"Adding {p * 100.0}% noise to {nNumRowsBatch} row(s) from noise pool of {nNumRowsSource} row(s).")
+            print(f"   Creating noise source indices")
 
-    print(f"   Allocating noise source")
-    X_noise = X_clean[aiNoiseIndex]
+        aiNoiseIndex = np.random.randint(nNumRowsSource, size=nNumRowsBatch)
+        aiNoiseIndex = np.sort(aiNoiseIndex)
 
-    print(f"   Allocating noise mask")
-    X_mask = np.random.rand(X_batch.shape[0], X_batch.shape[1])
+        if verbose == 7:
+            print(f"   Allocating noise source")
+        
+        X_noise = X_clean[aiNoiseIndex]
 
-    print(f"   Applying noise")
-    m = X_mask < p
+        if verbose == 7:
+            print(f"   Allocating noise mask")
 
-    X_batch[m] = 0
-    X_noise[~m] = 0
+        X_mask = np.random.rand(X_batch.shape[0], X_batch.shape[1])
 
-    X_batch = X_noise + X_batch
+        if verbose == 7:
+            print(f"   Applying noise")
+        
+        m = X_mask < p
 
-    return X_batch
+        X_batch[m] = X_noise[m]
+
+        return X_batch
 """c"""
+
+
+
 
 ######################################################################
 #
@@ -97,8 +100,8 @@ def gauss_rank_transform(x):
 
 def loadY():
 
-    train = pd.read_csv(DATA_DIR + 'train.csv')
     print(f"Loading train data...")
+    train = pd.read_csv(DATA_DIR + 'train.csv')
     train = train.drop(['target', 'ID'], axis = 1)
 
     print(f"Loading test data...")
@@ -127,6 +130,8 @@ def trainAll(Y, config):
 
     models = create_model(num_features, config)
 
+    s = SwapNoise()
+
     for i in range(config['num_epochs']):
 
         print(f"Epoch {i + 1}/ {config['num_epochs']}:")
@@ -134,32 +139,16 @@ def trainAll(Y, config):
         y_train = Y.copy()
         X_train = Y.copy()
 
-        X_train = add_swap_noise(X_train, Y, config['noise_factor'])
+        X_train = s.add_swap_noise(X_train, Y, config['noise_factor'], config['verbose'])
 
         p_t = np.random.permutation(len(y_train))
       
         X_train = X_train[p_t]
         y_train = y_train[p_t]
 
-        h = models['autoencoder'].fit(x=X_train, y=y_train, batch_size=config['mini_batch_size'], epochs=1, verbose=1)
+        h = models['autoencoder'].fit(x=X_train, y=y_train, batch_size=config['mini_batch_size'], epochs=1, verbose=config['verbose'])
 
-
-    E0 = models['encoder_0'].predict(Y)
-    E1 = models['encoder_1'].predict(Y)
-    E2 = models['encoder_2'].predict(Y)
-
-    del models['autoencoder']
-    del models['encoder_0']
-    del models['encoder_1']
-    del models['encoder_2']
-        
-    K.clear_session()
-    gc.collect()
-
-    E = np.hstack((E0, E1, E2))
-
-    return E
-
+    return models
 
 
 ########################################################################
@@ -193,6 +182,8 @@ def trainCV(Y, num_folds, lRunFolds, config):
 
         models = create_model(num_features, config)
 
+        s = SwapNoise()
+
         y_train_const = Y[train_index]
         y_valid_const = Y[test_index]    
 
@@ -205,8 +196,8 @@ def trainCV(Y, num_folds, lRunFolds, config):
             X_train = y_train_const.copy()
             X_valid = y_valid_const.copy()
 
-            X_train = add_swap_noise(X_train, Y, config['noise_factor'])
-            X_valid = add_swap_noise(X_valid, Y, config['noise_factor'])
+            X_train = s.add_swap_noise(X_train, Y, config['noise_factor'], config['verbose'])
+            X_valid = s.add_swap_noise(X_valid, Y, config['noise_factor'], config['verbose'])
 
             p_t = np.random.permutation(len(y_train))
             p_v = np.random.permutation(len(y_valid))
@@ -217,7 +208,7 @@ def trainCV(Y, num_folds, lRunFolds, config):
             X_valid = X_valid[p_v]
             y_valid = y_valid[p_v]
 
-            h = models['autoencoder'].fit(x=X_train, y=y_train, batch_size=config['mini_batch_size'], epochs=1, verbose=1, validation_data = (X_valid, y_valid))
+            h = models['autoencoder'].fit(x=X_train, y=y_train, batch_size=config['mini_batch_size'], epochs=1, verbose=config['verbose'], validation_data = (X_valid, y_valid))
             
             y_p = models['autoencoder'].predict(X_valid)
 
@@ -226,24 +217,13 @@ def trainCV(Y, num_folds, lRunFolds, config):
             print(f"Fold {iLoop + 1}/ {num_folds} Epoch {i + 1}/ {config['num_epochs']} finished. MSE = {mse_error}.")
    
         lRMS.append(mse_error)
-
-        E0[test_index] = models['encoder_0'].predict(y_valid_const)
-        E1[test_index] = models['encoder_1'].predict(y_valid_const)
-        E2[test_index] = models['encoder_2'].predict(y_valid_const)
-
-        del models['autoencoder']
-        del models['encoder_0']
-        del models['encoder_1']
-        del models['encoder_2']
         
         K.clear_session()
         gc.collect()
 
     anRMS = np.array(lRMS)
 
-    E = np.hstack((E0, E1, E2))
-
-    return anRMS, E
+    return anRMS
     
 """c"""
 
@@ -278,7 +258,8 @@ def create_model(num_features, config):
 
     autoencoder.compile(loss='mean_squared_error', optimizer=Adam(lr = config['r_learning_rate'], decay = config['r_decay']))
 
-    autoencoder.summary()
+    if config['verbose'] == 1:
+        autoencoder.summary()
 
     models['autoencoder'] = autoencoder
 
@@ -314,6 +295,31 @@ def create_model_large(num_features):
     
     return autoencoder
 
+class Configurator:
+    _c = {}
+
+    def __init__(self):
+        self._c['num_neurons']       = 1500
+        self._c['r_learning_rate']   = 0.003
+        self._c['r_decay']           = 0.995
+        self._c['mini_batch_size']   = 128
+        self._c['noise_factor']      = 0.11
+        self._c['num_epochs']        = 2
+        self._c['verbose']           = 1
+
+    def get_configuration(self):
+        return self._c
+
+    def randomize(self):
+        self._c['num_neurons']       = random.choice([1500, 2500, 3500])
+        self._c['r_learning_rate']   = random.choice([0.003, 0.001, 0.002])
+        self._c['r_decay']           = 0.995
+        self._c['mini_batch_size']   = random.choice([128, 32, 256])
+        self._c['noise_factor']      = random.choice([0.11, 0.15, 0.12])
+        self._c['num_epochs']        = 5
+        self._c['verbose']           = 1
+
+"""c"""
 
 ########################################################################
 #
@@ -323,43 +329,70 @@ def create_model_large(num_features):
 
 def main():
     
-    c = {}
-
-    c['num_neurons']       = 1500
-    c['r_learning_rate']   = 0.003
-    c['r_decay']           = 0.995
-    c['mini_batch_size']   = 128
-    c['noise_factor']      = 0.11
-    c['num_epochs']        = 3
-
     Y = loadY()
 
-    num_folds = 9
-    # lRunFolds = [2]
-    lRunFolds = list (range(num_folds))
+    #num_folds = 9
+    #lRunFolds = [2]
+    # lRunFolds = list (range(num_folds))
 
-    anMSE, E = trainCV(Y, num_folds, lRunFolds, c)
+    configurator = Configurator()
 
-    MSEmean = anMSE.mean()
-    MSEstd  = anMSE.std()
+    c = configurator.get_configuration()
+
+    info = f"Starting: n{c['num_neurons']}lr{c['r_learning_rate']}d{c['r_decay']}b{c['mini_batch_size']}sw{c['noise_factor']}e{c['num_epochs']} "
+    print (info)
+
+
+    m = trainAll(Y, c)
+
+    m['encoder_0'].save_weights(DATA_DIR + "encoder_0")
+    m['encoder_1'].save_weights(DATA_DIR + "encoder_1")
+    m['encoder_2'].save_weights(DATA_DIR + "encoder_2")
+
+    del m['autoencoder']
     
-    print(f"  ==> MSE = {MSEmean} +/- {MSEstd}")
+    info = f"Is completed: n{c['num_neurons']}lr{c['r_learning_rate']}d{c['r_decay']}b{c['mini_batch_size']}sw{c['noise_factor']}e{c['num_epochs']} "
 
-    info = f"n{c['num_neurons']}lr{c['r_learning_rate']}d{c['r_decay']}b{c['mini_batch_size']}sw{c['noise_factor']}e{c['num_epochs']}{MSEmean}+/-{MSEstd}"
+    print (info)
 
-    print(info)
 
-    if len(lRunFolds) == num_folds:
-        print("Saving " + info + "...")
 
-        np.save(DATA_DIR + "EMatrix", E)
-        F = np.load(DATA_DIR + "EMatrix.npy")
 
-        if (E == F).all():
-            print("Matrix saved and verified OK")
+    #anMSE, E = trainCV(Y, num_folds, lRunFolds, c)
+
+    #MSEmean = anMSE.mean()
+    #MSEstd  = anMSE.std()
+
+    #info = f"Is completed: n{c['num_neurons']}lr{c['r_learning_rate']}d{c['r_decay']}b{c['mini_batch_size']}sw{c['noise_factor']}e{c['num_epochs']} ==> {MSEmean}+/-{MSEstd}"
+
+    #print(info)
+    #np.save(DATA_DIR + "EMatrix", E)
+
+#
+#    if len(lRunFolds) == num_folds:
+#        print("Saving " + info + "...")
+#
+#       np.save(DATA_DIR + "EMatrix", E)
+#        F = np.load(DATA_DIR + "EMatrix.npy")
+#        if (E == F).all():
+#            print("Matrix saved and verified OK")
+#    else:
+#        print("Not all folds run, no predictions saved")
 
 
 if __name__ == "__main__": main()  
+
+# 0.11, 256 (?)
+# at 1500, maxes at 0.0490 after about 100 epochs
+
+# at 3500, plataeu at 0.0480 - 0.0486 from 300 -490
+# at 3500, plataeu at 0.0480 - 0.0486 from 600 as well.
+
+
+# 2500, 32, noise 0.2  37 mill params
+# NO, stops at 0.0520 early , 40 epochs.
+
+
 
 #
 #
