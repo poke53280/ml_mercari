@@ -44,16 +44,22 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="cython_test.py" />
-    <Compile Include="dae\dae.py">
+    <Compile Include="dae\dae_mnist.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="dae\denoising.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="dae\RankGauss.py">
+    <Compile Include="dae\EncToPrediction.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="dae\SwapNoise.py">
+    <Compile Include="dae\noise_study.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="dae\SimpleTabular.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="dae\tf_net.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="dae\__init__.py">
@@ -89,10 +95,16 @@
     <Compile Include="home_credit\oliver_fun_lgbm.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="porto_seguro\porto_seguro.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="santander_3\1owl_EDA.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="santander_3\catboost.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="santander_3\init_v2.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="santander_3\main.py">
@@ -197,6 +209,7 @@
     <Folder Include="favorita\" />
     <Folder Include="avito\" />
     <Folder Include="dae\" />
+    <Folder Include="porto_seguro\" />
     <Folder Include="santander_3\" />
     <Folder Include="talking\" />
     <Folder Include="toxic\" />
