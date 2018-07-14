@@ -43,7 +43,7 @@ num_features = y.shape[1]
 
 input_user = Input(shape=(num_features,))
 
-out = Dense(250, activation='relu') (input_user)
+out = Dense(32, activation='relu') (input_user)
 out = Dense(num_features, activation='linear') (out)
 
 model = Model(input_user, out)
@@ -79,8 +79,8 @@ while len(lKF) > 0:
         X_train = y[train_index]
         X_valid = y[test_index]
 
-        X_train = add_swap_noise(X_train, y, 0.15)
-        X_valid = add_swap_noise(X_valid, y, 0.15)
+        X_train = add_swap_noise(X_train, y, 0.0)
+        X_valid = add_swap_noise(X_valid, y, 0.0)
 
         np.random.shuffle(X_train)
         np.random.shuffle(X_valid)

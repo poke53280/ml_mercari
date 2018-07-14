@@ -13,6 +13,11 @@
 #  https://www.kaggle.com/ianchute/geometric-mean-of-each-row-lb-1-55
 #
 
+import os
+print (os.getcwd())
+
+os.chdir('c:\\Users\\ander\\ds\\ml_mercari')
+
 
 import pandas as pd
 import numpy as np
