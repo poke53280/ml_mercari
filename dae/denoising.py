@@ -6,7 +6,7 @@
 import numpy as np
 import pandas as pd
 import scipy 
-from keras.layers import Input, Dense
+from keras.layers import Input, Dense, Dropout
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.layers import Input, Dense
@@ -18,11 +18,17 @@ import gc
 from scipy.special import erfinv
 import random
 
+from keras import regularizers
+
 
 DATA_DIR_PORTABLE = "C:\\santander_3_data\\"
 DATA_DIR_AWS = "./"
 DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
 DATA_DIR = DATA_DIR_PORTABLE
+
+def keras_root_mean_squared_error(y_true, y_pred):
+    return K.sqrt(K.mean(K.square(y_pred - y_true), axis=-1)) 
+
 
 class SwapNoise:
 
@@ -36,24 +42,24 @@ class SwapNoise:
         nNumRowsBatch = X_batch.shape[0]
         nNumRowsSource = X_clean.shape[0]
 
-        if verbose == 7:
+        if verbose == 1:
             print(f"Adding {p * 100.0}% noise to {nNumRowsBatch} row(s) from noise pool of {nNumRowsSource} row(s).")
             print(f"   Creating noise source indices")
 
         aiNoiseIndex = np.random.randint(nNumRowsSource, size=nNumRowsBatch)
         aiNoiseIndex = np.sort(aiNoiseIndex)
 
-        if verbose == 7:
+        if verbose == 1:
             print(f"   Allocating noise source")
         
         X_noise = X_clean[aiNoiseIndex]
 
-        if verbose == 7:
+        if verbose == 1:
             print(f"   Allocating noise mask")
 
         X_mask = np.random.rand(X_batch.shape[0], X_batch.shape[1])
 
-        if verbose == 7:
+        if verbose == 1:
             print(f"   Applying noise")
         
         m = X_mask < p
@@ -128,7 +134,7 @@ def trainAll(Y, config):
     num_features = Y.shape[1]
     num_rows = Y.shape[0]
 
-    models = create_model(num_features, config)
+    models = create_dae_model(num_features, config)
 
     s = SwapNoise()
 
@@ -180,7 +186,7 @@ def trainCV(Y, num_folds, lRunFolds, config):
 
         print(f" Running fold {iLoop +1}/ {num_folds}")
 
-        models = create_model(num_features, config)
+        models = create_dae_model(num_features, config)
 
         s = SwapNoise()
 
@@ -227,16 +233,61 @@ def trainCV(Y, num_folds, lRunFolds, config):
     
 """c"""
 
+########################################################################
+#
+#    create_stage2_model
+#
+#
+
+def create_stage2_model(config):
+
+    num_features = config['num_neurons'] * 3
+    
+    input_user = Input(shape=(num_features,))
+
+    x = Dropout(0.1) (input_user)
+    x = Dense(500, activation='relu', kernel_regularizer=regularizers.l2(0.05)) (x)
+    x = Dropout(0.5) (x)
+    x = Dense(500, activation='relu' , kernel_regularizer=regularizers.l2(0.05)) (x)
+    x = Dropout(0.5) (x)
+    x = Dense(500, activation='relu', kernel_regularizer=regularizers.l2(0.05)) (x)
+    x = Dropout(0.5) (x)
+    out = Dense(1, activation='linear') (x)
+    model = Model(input_user, out)
+    model.compile(loss = keras_root_mean_squared_error, optimizer=Adam(lr = 0.01, decay = 0.995))
+
+    return model
+
 
 ########################################################################
 #
-#    create_model
+#    create_stage2_model_no_regularization
 #
 #
 
+def create_stage2_model_no_regularization(config):
 
+    num_features = config['num_neurons'] * 3
+    
+    input_user = Input(shape=(num_features,))
 
-def create_model(num_features, config):
+    x = Dense(500, activation='relu') (input_user)
+    x = Dense(500, activation='relu') (x)
+    x = Dense(500, activation='relu') (x)
+    out = Dense(1, activation='linear') (x)
+    model = Model(input_user, out)
+
+    model.compile(loss = keras_root_mean_squared_error, optimizer=Adam(lr = 0.01, decay = 0.995))
+
+    return model
+
+########################################################################
+#
+#    create_dae_model
+#
+#
+
+def create_dae_model(num_features, config):
 
     models = {}
 
@@ -258,9 +309,6 @@ def create_model(num_features, config):
 
     autoencoder.compile(loss='mean_squared_error', optimizer=Adam(lr = config['r_learning_rate'], decay = config['r_decay']))
 
-    if config['verbose'] == 1:
-        autoencoder.summary()
-
     models['autoencoder'] = autoencoder
 
     models['encoder_0'] = encoder_0
@@ -269,31 +317,6 @@ def create_model(num_features, config):
     
     return models
 
-########################################################################
-#
-#    create_model_large
-#
-#
-
-def create_model_large(num_features):
-
-    input_user = Input(shape=(num_features,))
-
-    x = Dense(15000, activation='relu') (input_user)
-    x = Dense(15000, activation='relu') (x)
-    x = Dense(3000, activation='linear') (x)
-    x = Dense(15000, activation='relu') (x)
-    x = Dense(15000, activation='relu') (x)
-
-    decoded = Dense(num_features, activation='linear') (x)
-
-    autoencoder = Model(input_user, decoded)
-
-    autoencoder.compile(loss='mean_squared_error', optimizer=Adam(lr = 0.001, decay = 0.995))
-
-    autoencoder.summary()
-    
-    return autoencoder
 
 class Configurator:
     _c = {}
@@ -304,7 +327,7 @@ class Configurator:
         self._c['r_decay']           = 0.995
         self._c['mini_batch_size']   = 128
         self._c['noise_factor']      = 0.11
-        self._c['num_epochs']        = 2
+        self._c['num_epochs']        = 4
         self._c['verbose']           = 1
 
     def get_configuration(self):
@@ -323,6 +346,120 @@ class Configurator:
 
 ########################################################################
 #
+#    stage2
+#
+#
+
+def stage2(config):
+    
+    num_folds = 9
+    lRunFolds = list (range(num_folds))
+    
+    df = pd.read_csv(DATA_DIR + 'train.csv')
+
+    train_id = df.ID
+
+    y = df.target.values
+    
+    y = np.log1p(y)
+    y = y.astype(np.float32)    
+
+    df = df.drop(['target', 'ID'], axis = 1)
+
+    df = df.apply(gauss_rank_transform, axis = 0, raw = True)
+
+    X = np.array(df, dtype='float32')
+
+    num_features = X.shape[1]
+
+    configurator = Configurator()
+
+    config = configurator.get_configuration()
+
+    kf = KFold(n_splits=num_folds, shuffle=True, random_state=22)   
+
+    lKF = list (enumerate(kf.split(X)))
+
+    lRMSLE = []
+
+    for iFold in lRunFolds:
+        assert iFold >= 0 and iFold < num_folds
+
+        iLoop, (train_index, test_index) = lKF[iFold]
+
+        print(f" Running fold {iLoop +1}/ {num_folds}")
+
+
+        enc = create_dae_model(num_features, c)
+
+        del enc['autoencoder']
+        enc['encoder_0'].load_weights(DATA_DIR + "encoder_0")
+        enc['encoder_1'].load_weights(DATA_DIR + "encoder_1")
+        enc['encoder_2'].load_weights(DATA_DIR + "encoder_2")
+
+        m = create_stage2_model(c)
+
+        s = SwapNoise()
+
+        x_train_const = X[train_index]
+        x_valid_const = X[test_index]    
+
+        y_train_const = y[train_index]
+        y_valid_const = y[test_index]
+
+        for i in range(config['num_epochs']):
+            print(f"Fold {iLoop + 1}/ {num_folds} Epoch {i + 1}/ {config['num_epochs']}:")
+
+            y_train = y_train_const.copy()
+            y_valid = y_valid_const.copy()
+
+            X_train = x_train_const.copy()
+            X_valid = x_valid_const.copy()
+
+            X_train = s.add_swap_noise(X_train, X, 0.0, config['verbose'])
+            X_valid = s.add_swap_noise(X_valid, X, 0.0, config['verbose'])
+
+            p_t = np.random.permutation(len(y_train))
+            p_v = np.random.permutation(len(y_valid))
+
+            X_train = X_train[p_t]
+            y_train = y_train[p_t]
+
+            X_valid = X_valid[p_v]
+            y_valid = y_valid[p_v]
+
+            E0_train = enc['encoder_0'].predict(X_train)               
+            E1_train = enc['encoder_1'].predict(X_train) 
+            E2_train = enc['encoder_2'].predict(X_train) 
+
+            E0_valid = enc['encoder_0'].predict(X_valid)               
+            E1_valid = enc['encoder_1'].predict(X_valid) 
+            E2_valid = enc['encoder_2'].predict(X_valid)
+
+            E_train = np.hstack((E0_train, E1_train, E2_train))
+            E_valid = np.hstack((E0_valid, E1_valid, E2_valid))
+
+            h = m.fit(x=E_train, y=y_train, batch_size=128, epochs=1, verbose=config['verbose'], validation_data = (E_valid, y_valid))
+            
+            y_p = m.predict(E_valid)
+
+            rmsle_error = np.sqrt(mean_squared_error(y_valid, y_p))
+
+            print(f"Fold {iLoop + 1}/ {num_folds} Epoch {i + 1}/ {config['num_epochs']} finished. RMSLE = {rmsle_error}.")
+
+        lRMSLE.append(rmsle_error)
+        
+        K.clear_session()
+        gc.collect()
+
+    anRMS = np.array(lRMSLE)
+    return anRMS
+
+"""c"""
+
+
+########################################################################
+#
 #    main
 #
 #
@@ -338,6 +475,8 @@ def main():
     configurator = Configurator()
 
     c = configurator.get_configuration()
+
+    c['num_epochs'] = 45
 
     info = f"Starting: n{c['num_neurons']}lr{c['r_learning_rate']}d{c['r_decay']}b{c['mini_batch_size']}sw{c['noise_factor']}e{c['num_epochs']} "
     print (info)

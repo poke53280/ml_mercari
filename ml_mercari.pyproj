@@ -104,6 +104,9 @@
     <Compile Include="santander_3\catboost.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="santander_3\init_v2.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="santander_3\main.py">
       <SubType>Code</SubType>
     </Compile>
