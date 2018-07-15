@@ -6,7 +6,7 @@ import gc
 from category_encoders import *
   
 DATA_DIR_PORTABLE = "C:\\home_credit_data\\"
-DATA_DIR_BASEMENT = "D:\\XXX\\"
+DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
 DATA_DIR = DATA_DIR_PORTABLE
 
 def load_frame(name):
@@ -38,6 +38,33 @@ def load_all():
 
 """c"""
 
+#########################################################################################
+#
+#   SetObjectToCategorical
+#
+
+def SetObjectToCategorical(d):
+
+    lRemoveCat = list (d.keys())
+
+    for df in lRemoveCat:
+        q = d[df]
+
+        cols = q.columns
+        num_cols = q._get_numeric_data().columns
+        cat_columns = list(set(cols) - set(num_cols))
+
+        for c in cat_columns:
+
+            cat_series = q[c].astype('category')
+
+            kwargs = {c : cat_series}
+
+            q = q.assign(**kwargs)
+
+        d[df] = q
+    return d
+
 ##########################################################################################
 #
 #   BinaryEncodeAllCategoricalColumns
@@ -64,6 +91,9 @@ print('[{}] Go'.format(time.time() - start_time))
 
 d = load_all()
 
+# Note: Verify test/train fit/transform
+d = SetObjectToCategorical(d)
+
 gc.collect()
 
 print('[{}] Data loaded'.format(time.time() - start_time))
@@ -72,15 +102,15 @@ y = d['train']['TARGET']
 del d['train']['TARGET']
 
 
-lRemoveCat = list (d.keys())
+
 
 # Todo: Fit - not fit_transform on train. Careful handling of unseen.
 
-for x in lRemoveCat:
-    print(f"Binary encoding '{x}'...")
-    d[x] = BinaryEncodeAllCategoricalColumns(d[x])
-
-"""c"""
+#for x in lRemoveCat:
+#    print(f"Binary encoding '{x}'...")
+#    d[x] = BinaryEncodeAllCategoricalColumns(d[x])
+#
+#"""c"""
 
 
 d.keys()
@@ -182,22 +212,15 @@ print(f" Feature number estimate: {num_features}")
 
 
 
-#g_Cat = {}
-#
-#d['bb']["STATUS"] = d['bb'].STATUS.astype('category')
-#g_Cat["BureauBalance_Status"] = d['bb'].STATUS.cat.categories.values
-#
-#d['b']["CREDIT_ACTIVE"] =   d['b'].CREDIT_ACTIVE.astype('category')
-#g_Cat["Bureau_CreditActive"] = d['b'].CREDIT_ACTIVE.cat.categories.values
-#
-#d['b']["CREDIT_CURRENCY"] = d['b'].CREDIT_CURRENCY.astype('category')
-#g_Cat["Bureau_CreditCurrency"] = d['b'].CREDIT_CURRENCY.cat.categories.values
-#
-#d['b']["CREDIT_TYPE"] =     d['b'].CREDIT_TYPE.astype('category')
-#g_Cat["Bureau_CreditType"] = d['b'].CREDIT_TYPE.cat.categories.values
+g_Cat = {}
+
+d['bb']["STATUS"] = d['bb'].STATUS.astype('category')
+g_Cat["BureauBalance_Status"] = d['bb'].STATUS.cat.categories.values
+g_Cat["Bureau_CreditActive"] = d['b'].CREDIT_ACTIVE.cat.categories.values
+g_Cat["Bureau_CreditCurrency"] = d['b'].CREDIT_CURRENCY.cat.categories.values
+g_Cat["Bureau_CreditType"] = d['b'].CREDIT_TYPE.cat.categories.values
 
 
-gc.collect()
 
 
 
@@ -263,8 +286,6 @@ def detail_loan_bureau(id):
     return bdetails
 
 """c"""
-
-
 
 
 
@@ -474,6 +495,7 @@ def get_user_data(id):
 
 """c"""
 
+
 all_users = np.array(d['train'].SK_ID_CURR) 
 
 sampled_users = np.random.choice(all_users, replace= False, size = 10)
@@ -484,12 +506,6 @@ for id in sampled_users:
 
 """c"""
 
-user_id = [370747]
-q_b = get_on_sk_id_curr(user_id, 'b')
-
-
-# For all bureau loans. Only first for now:
-q = q_b[0:1]
 
 
 get_user_data(370747)
@@ -516,8 +532,6 @@ len(df.dtypes)
 # Initialization:
 #
 #
-
-
 ##----app curr-------------- app prev slot ------------------ app prev slot ---------------- app prev slot --------------------bureau slot--------------bureau slot-------------bureau slot-----------
 
 
@@ -539,9 +553,10 @@ X = np.array(q)
 X.shape
 
 
-##########################################################
+############################################################################################################
 #
 # Checking out combining many rows into one row.
+#
 #
 
 data = np.array([['','ID', 'Col1','Col2'], ['Row1',0, 1, 2], ['Row2',0, 3,4], ['Row3',1, 7,9]])
@@ -685,6 +700,13 @@ plt.show()
 # Test (from Train_merge.py)
 #
 
+
+#############################################################################################
+#
+#  Working on bureau balance
+#
+
+
 d = load_all()
 
 # Process bureau balance
@@ -758,14 +780,6 @@ for a in arrays_balance:
 print(f"Sparse: {nSparse}, Dense: {nDense}")
 
 
-a = [8,3,4,9]
-
-for ix, x in enumerate(a):
-    print (ix, x)
-
-"""c"""
-
-
 #
 #
 # => All are dense
@@ -778,5 +792,3 @@ for ix, x in enumerate(a):
 # Todo: Check characteristics of status string - consider feature engineering
 #
 #
-
-
