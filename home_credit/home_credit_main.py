@@ -113,11 +113,6 @@ del d['train']['TARGET']
 #"""c"""
 
 
-d.keys()
-
-# Analysing amount of data
-
-
 
 num_train = d['train'].shape[0]
 num_test = d['test'].shape[0]
@@ -219,7 +214,6 @@ g_Cat["BureauBalance_Status"] = d['bb'].STATUS.cat.categories.values
 g_Cat["Bureau_CreditActive"] = d['b'].CREDIT_ACTIVE.cat.categories.values
 g_Cat["Bureau_CreditCurrency"] = d['b'].CREDIT_CURRENCY.cat.categories.values
 g_Cat["Bureau_CreditType"] = d['b'].CREDIT_TYPE.cat.categories.values
-
 
 
 
@@ -792,3 +786,228 @@ print(f"Sparse: {nSparse}, Dense: {nDense}")
 # Todo: Check characteristics of status string - consider feature engineering
 #
 #
+############################################################################
+#
+#Time slot to a certain degree
+#
+#App 1        App 2         App 3        App 4
+#
+#
+
+import numpy as np
+
+
+def find_nearest(array, value):
+    idx = (np.abs(array - value)).argmin()
+    return idxfull_slots 
+
+
+######################################################################
+#
+#    TimeData
+#
+#
+
+class TimeData:
+
+    _t0 = 0
+
+    _a = 9.2
+    _b = 12.9
+    _c = 19.9
+    _d = 21
+
+    def __init__(self, t0):
+        self._t0 = t0
+
+    def getT0(self):
+        return self._t0
+
+    def getBaseSize(self):
+        return 4
+
+    def getIntervalSize(self):
+        return 0
+
+# Negotisation how many will be optimal, how many will be non-null if given these slots..fit_to_slots may be called for that
+#  
+
+
+    def fit_to_slot(self, slot_time, delivery_size):
+        assert delivery_size >= self.getBaseSize()
+
+        print(f"TimeData {self._t0} requested to fit to time slot at time {slot_time}, delivery size {delivery_size}")
+
+        out = np.array([self._a, self._b, self._c, self._d], dtype = np.float32)
+
+        assert len(out) == delivery_size
+
+        return out
+
+"""c"""
+
+# Values are input as sorted from big to small. Fitting large values has the priority
+
+# Slots are given with target values.
+# Todo sort them/assert sorted.
+
+# Returned list sized like input slots, with indices into the sorted value array. -1 if no value found to match.
+# tolerance is max appected difference between condidate data value and slot target value for insertion to slot.
+# slots are filled greedily igh values first.
+#
+
+
+def assign_to_slots(data, slots, tolerance):
+    
+    filled_slot = []
+
+    current_slot_idx = 0
+    current_value_idx = 0
+
+    while len(filled_slot) < len (slots):
+
+        isOutOfValues = current_value_idx >= len (data)
+        isOutOfSlots = current_slot_idx >= len(slots)
+
+        if isOutOfValues or isOutOfSlots:
+            filled_slot.append(-1)
+            print("value or slot out of bonds, pad with -1")
+            continue
+
+        current_value = data[current_value_idx]
+        current_slot = slots[current_slot_idx]
+
+        print(f"val = {current_value}, idx = {current_slot}")
+
+        isValueTooLarge = (current_value - current_slot) > tolerance
+        isValueTooSmall = (current_slot - current_value) > tolerance
+
+        if isValueTooLarge:
+            print("Value too large, going to next")
+            current_value_idx = current_value_idx + 1
+
+        elif isValueTooSmall:
+            print("Slot too large, setting empty going to next")
+            filled_slot.append(-1)
+            current_slot_idx = current_slot_idx + 1
+
+        else:
+            print("Match")
+            filled_slot.append(current_value_idx)
+            current_slot_idx = current_slot_idx + 1
+            current_value_idx = current_value_idx +1 
+
+    return filled_slot
+
+"""c"""
+
+
+
+
+t0 = []
+
+t0.append(TimeData(110))
+t0.append(TimeData(90))
+t0.append(TimeData(50))
+t0.append(TimeData(30))
+t0.append(TimeData(10))
+
+t_slots = [120, 100, 90, 40, 20, 0]
+
+tolerance = 5
+
+
+t0_data = []
+
+for t in t0:
+    t0_data.append(t.getT0())
+
+
+filled_slot = assign_to_slots(t0_data, t_slots, tolerance)
+
+
+filled_slot
+
+
+num_slots = len(t_slots)
+
+tolerance = 5
+
+datasize = 4
+
+avMem = np.empty( (num_slots, datasize), dtype = np.float32)
+
+filled_slot = assign_to_slots(t0_data, t_slots, tolerance)
+
+for i, s in enumerate(filled_slot):
+    if s == -1:
+        print(f"slot {i}, target value {t_slots[i]}: Empty")
+        avMem[i] = 0
+    else:
+        mem = t0[s].fit_to_slot(t_slots[i], datasize)
+        assert len(mem) == datasize
+        avMem[i] = mem
+
+avMem
+
+avMem = avMem.reshape(datasize * num_slots )
+
+
+
+# ccb with home credit.
+
+#
+#
+# Some SK_ID_CURR  100006, 456233, 456243, 456254
+#
+#
+#
+#
+
+class CreditCardBalanceRecord:
+    
+    # An amount of data per time slot
+    _balance = 0
+    
+    def __init__(self, s):
+        print(f"Constructing CCB object, amount is {s.AMT_BALANCE}")
+        self._balance = s.AMT_BALANCE
+
+"""c"""
+
+class CreditCardBalance:
+
+    _records = {}
+
+    def __init__(self, q):
+
+        for i in range(len(q)):
+            s = q.iloc[i]
+            time = s.MONTHS_BALANCE
+            rec = CreditCardBalanceRecord(s)
+            assert not (time in self._records)
+            self._records[time] = rec
+
+    def getTimeStamps(self):
+        l = list (self._records.keys())
+        return list (np.sort(np.array(l))[::-1])
+"""c"""
+
+
+q = get_on_sk_id_curr([456233], 'ccb')
+
+c = CreditCardBalance(q)
+
+list_time_slots_configuration = [-1,-2, -17]
+
+list_time_values = c.getTimeStamps()
+
+l_slot_allocation = assign_to_slots(list_time_values, list_time_slots_configuration, 0.0)
+
+
+for i, alloc_location in enumerate(l_slot_allocation):
+    print(f"slot {i}, requesting data index = {alloc_location}")
+
+
+
+list_time_values
