@@ -127,57 +127,12 @@ u0_a = [450]
 
 
 
+import interval
 
-#
-# https://stackoverflow.com/questions/35094454/how-would-one-use-kernel-density-estimation-as-a-1d-clustering-method-in-scikit
-#
-# https://jakevdp.github.io/PythonDataScienceHandbook/05.13-kernel-density-estimation.html
-#
-#
+a = interval.interval([0, 1], [2, 3], [10, 15])
+b = interval.interval([0,3], [11, 14])
 
-from numpy import array, linspace
-from sklearn.neighbors.kde import KernelDensity
-import matplotlib.pyplot as plt
-
-
-a = df1.time.values.reshape(-1,1)
-
-a = array([10,11,9,23,21,11,45,20,11,12]).reshape(-1, 1)
-
-a = acData.reshape(-1, 1)
-
-kde = KernelDensity(kernel='linear', bandwidth=3).fit(a)
-
-s = linspace(0, 220000)
-
-e = kde.score_samples(s.reshape(-1,1))
-
-plot(s, e)
-
-plt.show()
-
-from scipy.signal import argrelextrema
-
-mi, ma = argrelextrema(e, np.less)[0], argrelextrema(e, np.greater)[0]
-
-print(f"Minima: {s[mi]}")
-print(f"Maxima: {s[ma]}")
-
-m = a < mi[0]
-a[m]
-
-m = a >= mi[0] & a < mi[1]
-a[m]
-
-m = (a >= mi[1])
-a[m]
-
-plot(s[:mi[0]+1], e[:mi[0]+1], 'r',
-     s[mi[0]:mi[1]+1], e[mi[0]:mi[1]+1], 'g',
-     s[mi[1]:], e[mi[1]:], 'b',
-     s[ma], e[ma], 'go',
-     s[mi], e[mi], 'ro')
-
+a | b
 
 
 
