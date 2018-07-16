@@ -83,6 +83,12 @@
     <Compile Include="general\SymSpell.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="general\TimeSlotAllocator.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="general\__init__py.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="home_credit\AutoEncoding.py">
       <SubType>Code</SubType>
     </Compile>

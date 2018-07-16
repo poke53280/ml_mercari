@@ -1,5 +1,6 @@
 
 import time
+import TimeSlotAllocator
 import pandas as pd
 import numpy as np
 import gc
@@ -508,10 +509,6 @@ get_user_data(370747)
 
 # Start work on current application
 
-df = d['train']
-
-len(df.dtypes)
-122
 
 #
 #
@@ -802,7 +799,27 @@ def find_nearest(array, value):
     return idxfull_slots 
 
 
-######################################################################
+#
+#
+# Data analyis - placement in time.
+#
+#
+# Data   Property
+# Data   Time related : 'x'
+# Data   Time related : 'x'
+# Data   Time related : 'x'
+# Data   Time related : 'x'
+# Data   Time related : 'x'
+# Data   Time related : 'x'
+# Data   Property. Category
+# Data  Time related start
+# Data  Time related stop
+#
+# 
+
+
+
+##################################################################################################
 #
 #    TimeData
 #
@@ -846,60 +863,6 @@ class TimeData:
 
 """c"""
 
-# Values are input as sorted from big to small. Fitting large values has the priority
-
-# Slots are given with target values.
-# Todo sort them/assert sorted.
-
-# Returned list sized like input slots, with indices into the sorted value array. -1 if no value found to match.
-# tolerance is max appected difference between condidate data value and slot target value for insertion to slot.
-# slots are filled greedily igh values first.
-#
-
-
-def assign_to_slots(data, slots, tolerance):
-    
-    filled_slot = []
-
-    current_slot_idx = 0
-    current_value_idx = 0
-
-    while len(filled_slot) < len (slots):
-
-        isOutOfValues = current_value_idx >= len (data)
-        isOutOfSlots = current_slot_idx >= len(slots)
-
-        if isOutOfValues or isOutOfSlots:
-            filled_slot.append(-1)
-            print("value or slot out of bonds, pad with -1")
-            continue
-
-        current_value = data[current_value_idx]
-        current_slot = slots[current_slot_idx]
-
-        print(f"val = {current_value}, idx = {current_slot}")
-
-        isValueTooLarge = (current_value - current_slot) > tolerance
-        isValueTooSmall = (current_slot - current_value) > tolerance
-
-        if isValueTooLarge:
-            print("Value too large, going to next")
-            current_value_idx = current_value_idx + 1
-
-        elif isValueTooSmall:
-            print("Slot too large, setting empty going to next")
-            filled_slot.append(-1)
-            current_slot_idx = current_slot_idx + 1
-
-        else:
-            print("Match")
-            filled_slot.append(current_value_idx)
-            current_slot_idx = current_slot_idx + 1
-            current_value_idx = current_value_idx +1 
-
-    return filled_slot
-
-"""c"""
 
 
 
@@ -922,16 +885,12 @@ t0_data = []
 for t in t0:
     t0_data.append(t.getT0())
 
+     
 
-filled_slot = assign_to_slots(t0_data, t_slots, tolerance)
-
-
-filled_slot
+filled_slot = slot_allocator(t0_data, t_slots, 10, False)
 
 
 num_slots = len(t_slots)
-
-tolerance = 5
 
 datasize = 4
 
@@ -953,14 +912,10 @@ avMem
 avMem = avMem.reshape(datasize * num_slots )
 
 
-
-# ccb with home credit.
-
 #
+# ccb with home credit.
 #
 # Some SK_ID_CURR  100006, 456233, 456243, 456254
-#
-#
 #
 #
 
@@ -993,6 +948,8 @@ class CreditCardBalance:
         return list (np.sort(np.array(l))[::-1])
 """c"""
 
+from general.TimeSlotAllocator import slot_allocator
+
 
 q = get_on_sk_id_curr([456233], 'ccb')
 
@@ -1002,7 +959,7 @@ list_time_slots_configuration = [-1,-2, -17]
 
 list_time_values = c.getTimeStamps()
 
-l_slot_allocation = assign_to_slots(list_time_values, list_time_slots_configuration, 0.0)
+l_slot_allocation = slot_allocator(list_time_values, list_time_slots_configuration, 0.0, False)
 
 
 for i, alloc_location in enumerate(l_slot_allocation):
