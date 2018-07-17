@@ -95,6 +95,9 @@
     <Compile Include="home_credit\oliver_fun_lgbm.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="p0\p0.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="porto_seguro\porto_seguro.py">
       <SubType>Code</SubType>
     </Compile>
@@ -209,6 +212,7 @@
     <Folder Include="favorita\" />
     <Folder Include="avito\" />
     <Folder Include="dae\" />
+    <Folder Include="p0\" />
     <Folder Include="porto_seguro\" />
     <Folder Include="santander_3\" />
     <Folder Include="talking\" />
