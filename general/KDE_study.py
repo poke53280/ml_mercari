@@ -35,6 +35,7 @@ def sort_to_cluster(a, c):
 #
 # Return interval centered around mean with same amount of elements.
 #
+
 def group_unique_integers(a):
 
     assert len(np.unique(a)) == len (a)
@@ -49,7 +50,8 @@ def group_unique_integers(a):
 
     lo = c - (nElements -1)// 2
 
-    return list(range(lo, lo + nElements))
+    # Returns both ends inclusive
+    return (lo, lo + nElements - 1)
 
 
 ###############################################################################
@@ -72,7 +74,6 @@ def group_sorted_unique_integers(a, bandwidth):
     # A few more than the integer range
     num_x = 3 + a_hi - a_low
 
-
     kde = KernelDensity(kernel='linear', bandwidth=bandwidth).fit(a)
 
     s = np.linspace(a_low, a_hi, num = num_x)
@@ -81,8 +82,8 @@ def group_sorted_unique_integers(a, bandwidth):
 
     e = kde.score_samples(s)
 
-    #plt.plot(s, e)
-    #plt.show()
+    plt.plot(s, e)
+    plt.show()
 
     ma = argrelextrema(e, np.greater)[0]
 
@@ -105,45 +106,27 @@ def group_sorted_unique_integers(a, bandwidth):
     for idx, g in d.items():
         ang = np.array(g)
         l.append(group_unique_integers(ang))
-
-
+        
     return l
 
 
 """c"""
 
 
+
 ########################################## MAIN #############################################
 
-# Input data
-n_bandwidth = 3
 
-# Input sorted integers, no duplicates
+def test_example():
 
-a = np.array([ 9, 11, 12, 14, 22, 24, 25, 27, 29, 34, 35, 38, 39, 50])
+    # Input data
+    n_bandwidth = 3
 
-l = group_sorted_unique_integers(a, n_bandwidth)
+    # Input sorted integers, no duplicates
 
-l
+    a = np.array([ 9, 11, 12, 14, 22, 24, 25, 27, 29, 34, 35, 38, 39, 50])
 
-
-
-
-m = a < mi[0]
-a[m]
-
-m = a >= mi[0] & a < mi[1]
-a[m]
-
-m = (a >= mi[1])
-a[m]
-
-plot(s[:mi[0]+1], e[:mi[0]+1], 'r',
-     s[mi[0]:mi[1]+1], e[mi[0]:mi[1]+1], 'g',
-     s[mi[1]:], e[mi[1]:], 'b',
-     s[ma], e[ma], 'go',
-     s[mi], e[mi], 'ro')
-
+    l = group_sorted_unique_integers(a, n_bandwidth)
 
 
 
