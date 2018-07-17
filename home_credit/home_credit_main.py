@@ -1,12 +1,13 @@
 
 import time
+import TimeSlotAllocator
 import pandas as pd
 import numpy as np
 import gc
 from category_encoders import *
   
 DATA_DIR_PORTABLE = "C:\\home_credit_data\\"
-DATA_DIR_BASEMENT = "D:\\XXX\\"
+DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
 DATA_DIR = DATA_DIR_PORTABLE
 
 def load_frame(name):
@@ -38,6 +39,33 @@ def load_all():
 
 """c"""
 
+#########################################################################################
+#
+#   SetObjectToCategorical
+#
+
+def SetObjectToCategorical(d):
+
+    lRemoveCat = list (d.keys())
+
+    for df in lRemoveCat:
+        q = d[df]
+
+        cols = q.columns
+        num_cols = q._get_numeric_data().columns
+        cat_columns = list(set(cols) - set(num_cols))
+
+        for c in cat_columns:
+
+            cat_series = q[c].astype('category')
+
+            kwargs = {c : cat_series}
+
+            q = q.assign(**kwargs)
+
+        d[df] = q
+    return d
+
 ##########################################################################################
 #
 #   BinaryEncodeAllCategoricalColumns
@@ -64,6 +92,9 @@ print('[{}] Go'.format(time.time() - start_time))
 
 d = load_all()
 
+# Note: Verify test/train fit/transform
+d = SetObjectToCategorical(d)
+
 gc.collect()
 
 print('[{}] Data loaded'.format(time.time() - start_time))
@@ -72,20 +103,15 @@ y = d['train']['TARGET']
 del d['train']['TARGET']
 
 
-lRemoveCat = list (d.keys())
+
 
 # Todo: Fit - not fit_transform on train. Careful handling of unseen.
 
-for x in lRemoveCat:
-    print(f"Binary encoding '{x}'...")
-    d[x] = BinaryEncodeAllCategoricalColumns(d[x])
-
-"""c"""
-
-
-d.keys()
-
-# Analysing amount of data
+#for x in lRemoveCat:
+#    print(f"Binary encoding '{x}'...")
+#    d[x] = BinaryEncodeAllCategoricalColumns(d[x])
+#
+#"""c"""
 
 
 
@@ -182,22 +208,14 @@ print(f" Feature number estimate: {num_features}")
 
 
 
-#g_Cat = {}
-#
-#d['bb']["STATUS"] = d['bb'].STATUS.astype('category')
-#g_Cat["BureauBalance_Status"] = d['bb'].STATUS.cat.categories.values
-#
-#d['b']["CREDIT_ACTIVE"] =   d['b'].CREDIT_ACTIVE.astype('category')
-#g_Cat["Bureau_CreditActive"] = d['b'].CREDIT_ACTIVE.cat.categories.values
-#
-#d['b']["CREDIT_CURRENCY"] = d['b'].CREDIT_CURRENCY.astype('category')
-#g_Cat["Bureau_CreditCurrency"] = d['b'].CREDIT_CURRENCY.cat.categories.values
-#
-#d['b']["CREDIT_TYPE"] =     d['b'].CREDIT_TYPE.astype('category')
-#g_Cat["Bureau_CreditType"] = d['b'].CREDIT_TYPE.cat.categories.values
+g_Cat = {}
 
+d['bb']["STATUS"] = d['bb'].STATUS.astype('category')
+g_Cat["BureauBalance_Status"] = d['bb'].STATUS.cat.categories.values
+g_Cat["Bureau_CreditActive"] = d['b'].CREDIT_ACTIVE.cat.categories.values
+g_Cat["Bureau_CreditCurrency"] = d['b'].CREDIT_CURRENCY.cat.categories.values
+g_Cat["Bureau_CreditType"] = d['b'].CREDIT_TYPE.cat.categories.values
 
-gc.collect()
 
 
 
@@ -263,8 +281,6 @@ def detail_loan_bureau(id):
     return bdetails
 
 """c"""
-
-
 
 
 
@@ -474,6 +490,7 @@ def get_user_data(id):
 
 """c"""
 
+
 all_users = np.array(d['train'].SK_ID_CURR) 
 
 sampled_users = np.random.choice(all_users, replace= False, size = 10)
@@ -484,12 +501,6 @@ for id in sampled_users:
 
 """c"""
 
-user_id = [370747]
-q_b = get_on_sk_id_curr(user_id, 'b')
-
-
-# For all bureau loans. Only first for now:
-q = q_b[0:1]
 
 
 get_user_data(370747)
@@ -498,10 +509,6 @@ get_user_data(370747)
 
 # Start work on current application
 
-df = d['train']
-
-len(df.dtypes)
-122
 
 #
 #
@@ -516,8 +523,6 @@ len(df.dtypes)
 # Initialization:
 #
 #
-
-
 ##----app curr-------------- app prev slot ------------------ app prev slot ---------------- app prev slot --------------------bureau slot--------------bureau slot-------------bureau slot-----------
 
 
@@ -539,9 +544,10 @@ X = np.array(q)
 X.shape
 
 
-##########################################################
+############################################################################################################
 #
 # Checking out combining many rows into one row.
+#
 #
 
 data = np.array([['','ID', 'Col1','Col2'], ['Row1',0, 1, 2], ['Row2',0, 3,4], ['Row3',1, 7,9]])
@@ -685,6 +691,13 @@ plt.show()
 # Test (from Train_merge.py)
 #
 
+
+#############################################################################################
+#
+#  Working on bureau balance
+#
+
+
 d = load_all()
 
 # Process bureau balance
@@ -758,14 +771,6 @@ for a in arrays_balance:
 print(f"Sparse: {nSparse}, Dense: {nDense}")
 
 
-a = [8,3,4,9]
-
-for ix, x in enumerate(a):
-    print (ix, x)
-
-"""c"""
-
-
 #
 #
 # => All are dense
@@ -778,5 +783,188 @@ for ix, x in enumerate(a):
 # Todo: Check characteristics of status string - consider feature engineering
 #
 #
+############################################################################
+#
+#Time slot to a certain degree
+#
+#App 1        App 2         App 3        App 4
+#
+#
+
+import numpy as np
 
 
+def find_nearest(array, value):
+    idx = (np.abs(array - value)).argmin()
+    return idxfull_slots 
+
+
+#
+#
+# Data analyis - placement in time.
+#
+#
+# Data   Property
+# Data   Time related : 'x'
+# Data   Time related : 'x'
+# Data   Time related : 'x'
+# Data   Time related : 'x'
+# Data   Time related : 'x'
+# Data   Time related : 'x'
+# Data   Property. Category
+# Data  Time related start
+# Data  Time related stop
+#
+# 
+
+
+
+##################################################################################################
+#
+#    TimeData
+#
+#
+
+class TimeData:
+
+    _t0 = 0
+
+    _a = 9.2
+    _b = 12.9
+    _c = 19.9
+    _d = 21
+
+    def __init__(self, t0):
+        self._t0 = t0
+
+    def getT0(self):
+        return self._t0
+
+    def getBaseSize(self):
+        return 4
+
+    def getIntervalSize(self):
+        return 0
+
+# Negotisation how many will be optimal, how many will be non-null if given these slots..fit_to_slots may be called for that
+#  
+
+
+    def fit_to_slot(self, slot_time, delivery_size):
+        assert delivery_size >= self.getBaseSize()
+
+        print(f"TimeData {self._t0} requested to fit to time slot at time {slot_time}, delivery size {delivery_size}")
+
+        out = np.array([self._a, self._b, self._c, self._d], dtype = np.float32)
+
+        assert len(out) == delivery_size
+
+        return out
+
+"""c"""
+
+
+
+
+
+t0 = []
+
+t0.append(TimeData(110))
+t0.append(TimeData(90))
+t0.append(TimeData(50))
+t0.append(TimeData(30))
+t0.append(TimeData(10))
+
+t_slots = [120, 100, 90, 40, 20, 0]
+
+tolerance = 5
+
+
+t0_data = []
+
+for t in t0:
+    t0_data.append(t.getT0())
+
+     
+
+filled_slot = slot_allocator(t0_data, t_slots, 10, False)
+
+
+num_slots = len(t_slots)
+
+datasize = 4
+
+avMem = np.empty( (num_slots, datasize), dtype = np.float32)
+
+filled_slot = assign_to_slots(t0_data, t_slots, tolerance)
+
+for i, s in enumerate(filled_slot):
+    if s == -1:
+        print(f"slot {i}, target value {t_slots[i]}: Empty")
+        avMem[i] = 0
+    else:
+        mem = t0[s].fit_to_slot(t_slots[i], datasize)
+        assert len(mem) == datasize
+        avMem[i] = mem
+
+avMem
+
+avMem = avMem.reshape(datasize * num_slots )
+
+
+#
+# ccb with home credit.
+#
+# Some SK_ID_CURR  100006, 456233, 456243, 456254
+#
+#
+
+class CreditCardBalanceRecord:
+    
+    # An amount of data per time slot
+    _balance = 0
+    
+    def __init__(self, s):
+        print(f"Constructing CCB object, amount is {s.AMT_BALANCE}")
+        self._balance = s.AMT_BALANCE
+
+"""c"""
+
+class CreditCardBalance:
+
+    _records = {}
+
+    def __init__(self, q):
+
+        for i in range(len(q)):
+            s = q.iloc[i]
+            time = s.MONTHS_BALANCE
+            rec = CreditCardBalanceRecord(s)
+            assert not (time in self._records)
+            self._records[time] = rec
+
+    def getTimeStamps(self):
+        l = list (self._records.keys())
+        return list (np.sort(np.array(l))[::-1])
+"""c"""
+
+from general.TimeSlotAllocator import slot_allocator
+
+
+q = get_on_sk_id_curr([456233], 'ccb')
+
+c = CreditCardBalance(q)
+
+list_time_slots_configuration = [-1,-2, -17]
+
+list_time_values = c.getTimeStamps()
+
+l_slot_allocation = slot_allocator(list_time_values, list_time_slots_configuration, 0.0, False)
+
+
+for i, alloc_location in enumerate(l_slot_allocation):
+    print(f"slot {i}, requesting data index = {alloc_location}")
+
+
+
+list_time_values

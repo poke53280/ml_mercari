@@ -766,8 +766,6 @@ def AnalyzeTargetCondition(df, out, idx):
 
 
 
-
-
 ##############################################################################
 #
 #        TimeLineTool_GetProximityGroups1D
