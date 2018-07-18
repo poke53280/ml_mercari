@@ -12,32 +12,16 @@ from sklearn.neighbors.kde import KernelDensity
 from scipy.signal import argrelextrema
 import matplotlib.pyplot as plt
 
-
-def sort_to_cluster(a, c):
-    assert (a == np.sort(a)).all()
-    assert (c == np.sort(c)).all()
-
-    d = {}
-
-    for x in range(len(c)):
-        d[x] = []
-
-    for value in a:
-        idx = (np.abs(c - value)).argmin()
-        d[idx].append(value)
-
-    return d
-
 ###############################################################################
 #
-#           group_unique_integers
+#           group_unique_integers_around_mean
 #
 # Input integer array with unique elements
 #
 # Return interval centered around mean with same amount of elements.
 #
 
-def group_unique_integers(a):
+def group_unique_integers_around_mean(a):
 
     assert len(np.unique(a)) == len (a)
 
@@ -47,36 +31,55 @@ def group_unique_integers(a):
     # Center at mean:
     c = a.mean()
 
-    c = int (c + 0.5)
+    lo = c - (nElements/2)
+    
+    # Round down if there is element there.
+    if int(lo) == np.min(a):
+        lo = np.min(a)
+    else:
+        lo = int (lo + .5)
 
-    lo = c - (nElements -1)// 2
-
-    return list(range(lo, lo + nElements))
-
+    # Returns both ends inclusive
+    return (lo, lo + nElements - 1)
 
 ###############################################################################
 #
-#           group_sorted_unique_integers
+#           group_unique_integers_from_min
+#
+# Input integer array with unique elements
+#
+# Return interval starting from smallest element.
+#
+
+def group_unique_integers_from_min(a):
+
+    assert len(np.unique(a)) == len (a)
+
+    nElements = len(a)
+
+    lo = np.min(a)
+
+    # Returns both ends inclusive
+    return (lo, lo + nElements - 1)
+
+"""c"""
+
+###############################################################################
+#
+#           get_minima
 #
 #
 
-
-def group_sorted_unique_integers(a, bandwidth):
-    
-    # Ensure unique and sorted
-    assert len(np.unique(a)) == len(a)
-    assert (a == np.sort(a)).all()
+def get_minima(a, bandwidth, isPlot):
 
     a_low = a.min() - 2
     a_hi = a.max() + 2
 
     a = a.reshape(-1, 1)
 
-    # A few more than the integer range
-    num_x = 3 + a_hi - a_low
+    num_x = 300 + a_hi - a_low
 
-
-    kde = KernelDensity(kernel='linear', bandwidth=bandwidth).fit(a)
+    kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(a)
 
     s = np.linspace(a_low, a_hi, num = num_x)
 
@@ -84,50 +87,91 @@ def group_sorted_unique_integers(a, bandwidth):
 
     e = kde.score_samples(s)
 
-    #plt.plot(s, e)
-    #plt.show()
+    # Fill in low values on -inf for a derivable function
+    #e_min = np.min(e[np.isfinite(e)])
 
-    ma = argrelextrema(e, np.greater)[0]
+    #e [np.isneginf(e) ] = (e_min - 1)
 
-    print(f"Suggesting {len(ma)} group(s)")
+    if isPlot:
+        plt.plot(s, e)
+        plt.show()
+
+    mi = argrelextrema(e, np.less)[0]
 
     s = s.squeeze()
 
-    maxima = s[ma]
+    minima = s[mi]
 
-    print(f"Maxima: {s[ma]}")
-
-    c = s[ma]
-
-    a = a.squeeze()
-
-    d = sort_to_cluster(a, c)
+    nMinima = len (minima)
 
     l = []
 
-    for idx, g in d.items():
-        ang = np.array(g)
-        l.append(group_unique_integers(ang))
+    if nMinima == 0:
+        # print("No minima found, no split")
+        l.append(a)
 
+    else:
+        l.append(a[a < minima[0]])
+
+        for i in range(0, nMinima -1):
+            l.append (a[ (a > minima[i]) & (a < minima[i+1])])
+
+        """c"""
+
+        l.append(a[a > minima[nMinima -1]])
 
     return l
 
+###############################################################################
+#
+#           group_sorted_unique_integers
+#
+#
+
+def group_sorted_unique_integers(a, bandwidth, isPlot):
+    
+    # Ensure unique and sorted
+    assert len(np.unique(a)) == len(a)
+    assert (a == np.sort(a)).all()
+
+    l = get_minima(a, bandwidth, isPlot)
+
+    clustered = []
+
+    for x in l:
+        ang = np.array(x)
+
+        if len(ang) == 0:
+            pass
+        else:
+            clustered.append(group_unique_integers_from_min(ang))
+
+    """c"""
+        
+    return clustered
 
 """c"""
 
+
+
 ########################################## MAIN #############################################
 
-# Input data
 
-n_bandwidth = 3
+def test_example():
 
-# Input sorted integers, no duplicates
+    # Input data
+    n_bandwidth = 2
 
-a = np.array([ 9, 11, 12, 14, 22, 24, 25, 27, 29, 34, 35, 38, 39, 50])
+    # Input sorted integers, no duplicates
 
-l = group_sorted_unique_integers(a, n_bandwidth)
+    a = np.array([ 9, 11, 12, 14, 22, 24, 25, 27, 29, 34, 35, 38, 39, 50, 52, 54, 60, 90, 110,112, 120])
+
+    l = group_sorted_unique_integers(a, n_bandwidth, True)
 
 
 
 
+
+
+    
 
