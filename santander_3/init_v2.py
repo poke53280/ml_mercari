@@ -110,17 +110,6 @@ def col_tracker_by_col(c):
     return col_tracker_by_list(l)
 
 
-def is_col_candidate(x):
-    x = x / 1000.0
-    if x > 0.0 and x < 9999.9 and x == int (x):
-        n = int(x)
-        b = ((n//10) == (n/10))
-        if b:
-            pass
-        else:
-            return True
-
-    return False
 
 
 def col_tracker_by_list(l):
@@ -366,6 +355,19 @@ def set_txt_on_df_value(X, value, az, txt, isClearSource):
 
 """c"""
 
+def is_col_candidate(x):
+    x = x / 1000.0
+    if x > 0.0 and x < 9999.9 and x == int (x):
+        n = int(x)
+        b = ((n//10) == (n/10))
+        if b:
+            pass
+        else:
+            return True
+
+    return False
+
+""""c"""
 
 g_col_counter = 0
 g_val_counter = 0
@@ -399,3 +401,5 @@ for process_col in range (0, X.shape[1]):
     print(f"    {nValCandidatesConverted} val candidates converted")  
 
 print(f" Col count is {g_col_counter} val count is {g_val_counter}")
+
+
