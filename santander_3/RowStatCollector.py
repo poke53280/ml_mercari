@@ -11,6 +11,8 @@ from scipy.stats import skew, kurtosis
 #             get_aggs
 #
 
+# SEE p0\p0.py
+
 def get_aggs(v, prefix):
     allzero = (len(v) == 0)
     

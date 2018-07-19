@@ -33,7 +33,7 @@ class LGBMTrainer_BASIC:
         lgtrain = lgb.Dataset(X_train, y_train, feature_name = "auto")
         lgvalid = lgb.Dataset(X_test, y_test, feature_name = "auto")
 
-        self._clf = lgb.train(lgbm_params, lgtrain, 100000, valid_sets= [lgvalid], verbose_eval=30)
+        self._clf = lgb.train(lgbm_params, lgtrain, 1000, valid_sets= [lgvalid], verbose_eval=200)
 
     def predict(self, X_test):
         return self._clf.predict(X_test)

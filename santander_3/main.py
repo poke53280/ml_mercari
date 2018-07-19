@@ -138,54 +138,6 @@ class DReduction:
  
 
 
-######################################################################################
-#
-#  get_important_columns
-#
-#
-# Based on: https://www.kaggle.com/the1owl/love-is-the-answer
-#
-# by    https://www.kaggle.com/the1owl
-#
-#  dont_consider: List of named columns not to process and consider
-#
-#  Returns names of the nCut most important columns.
-#
-
-
-class RegImportance:
-
-    _df = 0
-
-    def __init__(self):
-        pass         
-    
-    def rmsle(self, y, pred):
-        return np.sqrt(np.mean(np.power(np.log1p(y)-np.log1p(pred), 2)))
-
-    def fit(self, df, y_true):
-        scl = StandardScaler()
-
-        col = [c for c in df.columns]
-
-        x1, x2, y1, y2 = train_test_split(df[col], y_true, test_size=0.20, random_state=5)
-
-        model = RandomForestRegressor(n_jobs = -1, random_state = 7)
-
-        model.fit(scl.fit_transform(x1), y1)
-
-        print(f"RMSLE Random Forest Regressor: {self.rmsle(y2, model.predict(scl.transform(x2)))}")
-
-        self._df = pd.DataFrame({'importance': model.feature_importances_, 'feature': col}).sort_values(by=['importance'], ascending=[False])
-
-
-    def get_important(self, nCut):
-        df = self._df[:nCut]    
-        cols = df['feature'].values
-        return cols
-
-"""c"""
-
 #############################################################################
 #
 #         get_cols_low_zero
