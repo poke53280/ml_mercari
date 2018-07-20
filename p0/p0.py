@@ -13,13 +13,15 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from santander_3.lgbm_basic import LGBMTrainer_BASIC
 
 from sklearn.decomposition import PCA
 from sklearn.decomposition import TruncatedSVD
 from sklearn.decomposition import FastICA
 from sklearn.random_projection import SparseRandomProjection
 from sklearn.random_projection import GaussianRandomProjection
+
+
+
 
 
 
@@ -370,7 +372,7 @@ def prepare_each_id(x, expiry_days):
 # main
 
 
-df = train = pd.read_csv(DATA_DIR + 'noised_intervals.csv')
+df = train = pd.read_csv(DATA_DIR + 'noised_intervals_90000.csv')
 
 
 df.columns = ['drop', 'begin', 'end', 'P']
@@ -401,6 +403,21 @@ print(df_t.shape)
 
 
 ####################################################################################################
+#
+# Serialization, load, init area.
+#
+
+
+
+df_t.to_pickle(DATA_DIR + "dt_t_90000.pkl")
+
+# Verify save/load
+
+q = pd.read_pickle(DATA_DIR + "dt_t_90000.pkl")
+
+isVerifiedOK = df_t.equals(q)
+
+
 
 
 y = df_t['Y'].values
@@ -415,7 +432,7 @@ df_t = df_t.drop(['Y'], axis = 1)
 X = np.array(df_t, dtype = np.float32)
 
 
-#### CHECKPOINT - X and y.
+#### ###
 
 from sklearn.datasets import make_regression
 
@@ -427,6 +444,39 @@ from sklearn.datasets import load_boston
 X, y = load_boston(return_X_y=True)
 
 
+
+class LGBMTrainer:
+
+    lgbm_params =  {
+        'task': 'train',
+        'boosting_type': 'gbdt',
+        'objective': 'regression',
+        'metric': 'rmse',
+        "learning_rate": 0.001,
+        "num_leaves": 300,
+        "max_bin": 400
+    }
+
+
+    _clf = 0
+
+    def __init__(self):
+        pass
+
+    def train_with_validation(self, X_train, y_train, X_test, y_test):
+
+        lgtrain = lgb.Dataset(X_train, y_train, feature_name = "auto")
+        lgvalid = lgb.Dataset(X_test, y_test, feature_name = "auto")
+
+        self._clf = lgb.train(lgbm_params, lgtrain, num_boost_round=3000, early_stopping_rounds=100, valid_sets= [lgtrain, lgvalid], verbose_eval=1)
+
+    def predict(self, X_test):
+        return self._clf.predict(X_test)
+
+"""c"""
+
+
+
 #################################################################################
 #
 #       train(X, y)
@@ -435,7 +485,7 @@ X, y = load_boston(return_X_y=True)
     
 def train(X, y):
 
-    THRESHOLD = 28
+    THRESHOLD = 60
 
     NUM_FOLDS = 7
 
@@ -449,7 +499,8 @@ def train(X, y):
     a_conf_acc = np.zeros((2,2), dtype = np.int32)
 
     y_oof = np.zeros(len (y))
-    prediction = np.zeros(X.shape[0])
+
+    auc_warning_issued = False
 
     while len(lKF) > 0:
         iLoop, (train_index, test_index) = lKF.pop(0)
@@ -462,7 +513,7 @@ def train(X, y):
         X_valid = X[test_index]
         y_valid = y[test_index]
 
-        d = DReduction(79)
+        d = DReduction(9)
 
         d.fit(X_train)
 
@@ -481,7 +532,7 @@ def train(X, y):
             X_valid = X_valid_d
 
                 
-        l = LGBMTrainer_BASIC()
+        l = LGBMTrainer()
         l.train_with_validation(X_train, y_train, X_valid, y_valid)
 
         y_p = l.predict(X_valid)
@@ -489,15 +540,29 @@ def train(X, y):
         y_oof[test_index] = y_p
 
         rmse_error = np.sqrt(mean_squared_error(y_p, y_valid))
-        print(f"Rmsle: {rmse_error}")
+        print(f"Rmse: {rmse_error}")
 
         lRMS.append(rmse_error)
 
         # 0: Short, 1: Long
         y_true_classifier = (y_valid > THRESHOLD)
         y_pred_classifier = (y_p > THRESHOLD)
+        
+        n = len (y_true_classifier)
+        n_positive_true = (y_true_classifier).sum()
+        n_positive_pred = (y_pred_classifier).sum()
+
+        isTrueDegenerate = (n_positive_true == 0) or (n_positive_true == len(y_true_classifier))
+        isPredDegenerate = (n_positive_pred == 0) or (n_positive_pred == len(y_true_classifier))
+
+        if isTrueDegenerate or isPredDegenerate:
+            print("Warning missing pos/negs for AUC")
+            auc_warning_issued = True
 
         auc_score = roc_auc_score(y_true_classifier, y_pred_classifier)
+
+        print(f"AUC: {auc_score}")
+
         a_confusion = confusion_matrix(y_true_classifier, y_pred_classifier)
 
         a_conf_acc = a_conf_acc + a_confusion
@@ -510,11 +575,16 @@ def train(X, y):
 
     print(f"N = {X.shape[0]}, Folds = {NUM_FOLDS}")
     print(f"RMS {anRMS.mean()} +/- {anRMS.std()}")
-    print(f"AUC {anAUC.mean()} +/- {anAUC.std()} @threshold = {THRESHOLD}" )
+    print(f"AUC {anAUC.mean()} +/- {anAUC.std()} @positive > {THRESHOLD}. Degeneration warning issued: {auc_warning_issued}" )
+
     print(f"{a_conf_acc}")
 
+    return y_oof
 
 """c"""
 
-train(X,y)
+y_p = train(X,y)
+
+# 90,000
+# RMS 79.48185238724217 +/- 1.8339855334955504
 
