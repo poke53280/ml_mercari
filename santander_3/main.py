@@ -34,11 +34,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 
-from sklearn.decomposition import PCA
-from sklearn.decomposition import TruncatedSVD
-from sklearn.decomposition import FastICA
-from sklearn.random_projection import SparseRandomProjection
-from sklearn.random_projection import GaussianRandomProjection
+
 
 
 class Conf:
@@ -88,52 +84,6 @@ class Conf:
 """c"""
 
 
-class DReduction:
-
-    _N_COMP = 0            ### Number of decomposition components ###
-
-    _pca    = 0
-    _tsvd   = 0
-    _ica    = 0
-    _grp    = 0
-    _srp    = 0
-
-    def __init__(self, nComp):
-        self._N_COMP = nComp
-        self._pca = PCA(n_components=self._N_COMP, random_state=17)
-        self._tsvd = TruncatedSVD(n_components=self._N_COMP, random_state=17)
-        self._ica = FastICA(n_components=self._N_COMP, random_state=17)
-        self._grp = GaussianRandomProjection(n_components=self._N_COMP, eps=0.1, random_state=17)
-        self._srp = SparseRandomProjection(n_components=self._N_COMP, dense_output=True, random_state=17)
-
-
-    def fit(self, X):
-        self._pca.fit(X)
-        self._tsvd.fit(X)
-        self._ica.fit(X)
-        self._grp.fit(X)
-        self._srp.fit(X)
-
-
-    def transform(self, X):
-        res_pca  = self._pca.transform(X)
-        res_tsvd = self._tsvd.transform(X)
-        res_ica  = self._ica.transform(X)
-        res_grp  = self._grp.transform(X)
-        res_srp  = self._srp.transform(X)
-
-
-        df = pd.DataFrame()
-
-        for i in range(1, self._N_COMP + 1):
-            df['pca_' + str(i)] = res_pca[:, i - 1]
-            df['tsvd_' + str(i)] = res_tsvd[:, i - 1]
-            df['ica_' + str(i)] = res_ica[:, i - 1]
-            df['grp_' + str(i)] = res_grp[:, i - 1]
-            df['srp_' + str(i)] = res_srp[:, i - 1]
-
-        return df
-"""c"""
 
  
 

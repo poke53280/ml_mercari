@@ -10,13 +10,70 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import roc_auc_score
+from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from santander_3.lgbm_basic import LGBMTrainer_BASIC
 
+from sklearn.decomposition import PCA
+from sklearn.decomposition import TruncatedSVD
+from sklearn.decomposition import FastICA
+from sklearn.random_projection import SparseRandomProjection
+from sklearn.random_projection import GaussianRandomProjection
+
+
+
 DATA_DIR_PORTABLE = "C:\\p_data\\"
 DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
 DATA_DIR = DATA_DIR_PORTABLE
+
+class DReduction:
+
+    _N_COMP = 0            ### Number of decomposition components ###
+
+    _pca    = 0
+    _tsvd   = 0
+    _ica    = 0
+    _grp    = 0
+    _srp    = 0
+
+    def __init__(self, nComp):
+        self._N_COMP = nComp
+        self._pca = PCA(n_components=self._N_COMP, random_state=17)
+        self._tsvd = TruncatedSVD(n_components=self._N_COMP, random_state=17)
+        self._ica = FastICA(n_components=self._N_COMP, random_state=17)
+        self._grp = GaussianRandomProjection(n_components=self._N_COMP, eps=0.1, random_state=17)
+        self._srp = SparseRandomProjection(n_components=self._N_COMP, dense_output=True, random_state=17)
+
+
+    def fit(self, X):
+        self._pca.fit(X)
+        self._tsvd.fit(X)
+        self._ica.fit(X)
+        self._grp.fit(X)
+        self._srp.fit(X)
+
+
+    def transform(self, X):
+        res_pca  = self._pca.transform(X)
+        res_tsvd = self._tsvd.transform(X)
+        res_ica  = self._ica.transform(X)
+        res_grp  = self._grp.transform(X)
+        res_srp  = self._srp.transform(X)
+
+
+        df = pd.DataFrame()
+
+        for i in range(1, self._N_COMP + 1):
+            df['pca_' + str(i)] = res_pca[:, i - 1]
+            df['tsvd_' + str(i)] = res_tsvd[:, i - 1]
+            df['ica_' + str(i)] = res_ica[:, i - 1]
+            df['grp_' + str(i)] = res_grp[:, i - 1]
+            df['srp_' + str(i)] = res_srp[:, i - 1]
+
+        return df
+"""c"""
+
 
 
 
@@ -85,19 +142,6 @@ def get_group_list(g, colname):
     return l
 
 
-
-##################################################################################
-#
-#       add_to_set
-#
-#
-
-def add_to_set(x, my_set):
-    begin = x['begin']
-    end   = x['end']
-    my_set.update ( range(begin, end + 1))
-
-
 ##################################################################################
 #
 #       get_day_set
@@ -105,6 +149,11 @@ def add_to_set(x, my_set):
 #
 
 def get_day_set(df, m):
+
+    def add_to_set(x, my_set):
+        begin = x['begin']
+        end   = x['end']
+        my_set.update ( range(begin, end + 1))
 
     days = set()
 
@@ -363,30 +412,41 @@ df_t = df_t.drop(['begin', 'end'], axis = 1)
 df_t = df_t.drop(['Y'], axis = 1)
 
 
-
-r = RegImportance()
-
-r.fit(df_t, y)
-c = r.get_important(20)
-
-df_t  = df_t[list(c)]
-
 X = np.array(df_t, dtype = np.float32)
 
 
+#### CHECKPOINT - X and y.
+
+from sklearn.datasets import make_regression
+
+X, y = make_regression(n_samples = 5000, n_features = 3000, n_informative = 2110, bias=0.1)
+
+
+from sklearn.datasets import load_boston
+
+X, y = load_boston(return_X_y=True)
+
+
+#################################################################################
+#
+#       train(X, y)
+#
+#
+    
 def train(X, y):
 
     THRESHOLD = 28
 
     NUM_FOLDS = 7
 
-    # Input to training:
     kf = KFold(n_splits=NUM_FOLDS, shuffle=True, random_state=22)
 
     lKF = list (enumerate(kf.split(X)))
 
     lRMS = []
     l_auc = []
+
+    a_conf_acc = np.zeros((2,2), dtype = np.int32)
 
     y_oof = np.zeros(len (y))
     prediction = np.zeros(X.shape[0])
@@ -401,8 +461,26 @@ def train(X, y):
     
         X_valid = X[test_index]
         y_valid = y[test_index]
-        
 
+        d = DReduction(79)
+
+        d.fit(X_train)
+
+        X_train_d = np.array(d.transform(X_train))
+        X_valid_d = np.array(d.transform(X_valid))
+
+
+        isIncludeRaw = True
+
+        if isIncludeRaw:
+            X_train = np.hstack([X_train, X_train_d])
+            X_valid = np.hstack([X_valid, X_valid_d])
+
+        else:
+            X_train = X_train_d
+            X_valid = X_valid_d
+
+                
         l = LGBMTrainer_BASIC()
         l.train_with_validation(X_train, y_train, X_valid, y_valid)
 
@@ -416,7 +494,14 @@ def train(X, y):
         lRMS.append(rmse_error)
 
         # 0: Short, 1: Long
-        auc_score = roc_auc_score((y_p < THRESHOLD), (y_valid < THRESHOLD))
+        y_true_classifier = (y_valid > THRESHOLD)
+        y_pred_classifier = (y_p > THRESHOLD)
+
+        auc_score = roc_auc_score(y_true_classifier, y_pred_classifier)
+        a_confusion = confusion_matrix(y_true_classifier, y_pred_classifier)
+
+        a_conf_acc = a_conf_acc + a_confusion
+
         l_auc.append(auc_score)
 
 
@@ -426,10 +511,10 @@ def train(X, y):
     print(f"N = {X.shape[0]}, Folds = {NUM_FOLDS}")
     print(f"RMS {anRMS.mean()} +/- {anRMS.std()}")
     print(f"AUC {anAUC.mean()} +/- {anAUC.std()} @threshold = {THRESHOLD}" )
+    print(f"{a_conf_acc}")
 
 
 """c"""
-
 
 train(X,y)
 
