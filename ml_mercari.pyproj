@@ -175,6 +175,9 @@
     <Compile Include="mercari\study_mercaring_2nd_place.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="tgs\starter.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Train_FastText.py">
       <SubType>Code</SubType>
     </Compile>
@@ -218,6 +221,7 @@
     <Folder Include="favorita\" />
     <Folder Include="avito\" />
     <Folder Include="dae\" />
+    <Folder Include="tgs\" />
     <Folder Include="p0\" />
     <Folder Include="porto_seguro\" />
     <Folder Include="santander_3\" />
