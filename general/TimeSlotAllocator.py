@@ -60,6 +60,6 @@ def example():
     values = [90, 80, 4, -1]
     slots = [40, 40, 3, 3]
 
-    slot_allocator(values, slots, 5, True)
+    slot_allocator(values, slots, 5, False)
     # => [-1, -1, 2, 3]
 

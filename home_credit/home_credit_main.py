@@ -1,6 +1,7 @@
 
+
 import time
-import TimeSlotAllocator
+from general.TimeSlotAllocator import slot_allocator
 import pandas as pd
 import numpy as np
 import gc
@@ -103,6 +104,94 @@ y = d['train']['TARGET']
 del d['train']['TARGET']
 
 
+
+########## Group bureau days_credit by sk_id_curr ###################
+
+train = d['train']
+test = d['test']
+
+l_user = d['train'].SK_ID_CURR.unique()
+l_user2 = d['test'].SK_ID_CURR.unique()
+
+an = np.concatenate([l_user, l_user2])
+
+
+b = d['b']
+q = b[['SK_ID_CURR', 'DAYS_CREDIT']]
+
+q = q[q.SK_ID_CURR.isin(an)]
+
+
+g = q.groupby(by = 'SK_ID_CURR')
+
+
+e = g['DAYS_CREDIT'].apply(lambda x: x.tolist())
+
+
+#verify:
+m = q.SK_ID_CURR ==162297
+q[m]
+
+# equals:
+
+e[162297]
+
+def sort_values(x):
+    x.sort()
+
+e.apply(sort_values)
+
+
+
+def get_element_value(x, idx):
+    if len(x) >= -idx:
+        return x[idx]
+    else:
+        return np.nan
+
+
+l_slots = []
+
+for slot in [0,1,2,3,4]:
+
+    idx = -1 - slot
+    hi = e.apply(get_element_value, args = (idx,))
+    an_hi = np.array(hi)
+
+    rSlotMean = np.nanmean(an_hi) 
+
+    print(f"Slot #{slot}: Mean value = {rSlotMean}")
+    l_slots.append(rSlotMean)
+
+
+
+def designate_slots(x):
+    x.sort(reverse = True)
+    return slot_allocator(x, l_slots, 305, False)
+
+
+
+
+q = e.apply(designate_slots)
+
+
+q
+
+
+def crit(x, threshold):
+    return sum (i > threshold for i in x)
+
+l_threshold = [-4000, -3000, -2000, -1500, -1000, -500]
+
+for threshold in l_threshold:
+
+    c = e.apply(crit, args = (threshold, ))
+
+    ac = np.array(c)
+    np.mean(ac)
+    np.std(ac)
+
+    print(f"With cut off at {threshold}, element count is {np.mean(ac)} +/- {np.std(ac)}")
 
 
 # Todo: Fit - not fit_transform on train. Careful handling of unseen.
@@ -825,14 +914,26 @@ def find_nearest(array, value):
 #
 #
 
+
+
+
 class TimeData:
 
+    # Base time - T0
     _t0 = 0
 
+    # Header. Fixed amount of data
     _a = 9.2
     _b = 12.9
     _c = 19.9
     _d = 21
+
+
+    # Time line data. Varying in length. Fixed amount per time slot
+
+    _l = [[1,2,3], [-1, -1, 3], [3,3,3]]
+    _ts0 = 7
+    
 
     def __init__(self, t0):
         self._t0 = t0
@@ -840,28 +941,22 @@ class TimeData:
     def getT0(self):
         return self._t0
 
+    def getTimespan(self):
+        ts1 = self._t0 + len (self._l)
+
     def getBaseSize(self):
-        return 4
+        return 4   #_a, _b, _c, _d
 
     def getIntervalSize(self):
-        return 0
+        return 3
 
-# Negotisation how many will be optimal, how many will be non-null if given these slots..fit_to_slots may be called for that
-#  
-
-
-    def fit_to_slot(self, slot_time, delivery_size):
-        assert delivery_size >= self.getBaseSize()
-
-        print(f"TimeData {self._t0} requested to fit to time slot at time {slot_time}, delivery size {delivery_size}")
-
-        out = np.array([self._a, self._b, self._c, self._d], dtype = np.float32)
-
-        assert len(out) == delivery_size
-
-        return out
 
 """c"""
+
+t = TimeData(11)
+
+t.getT0()
+
 
 
 
@@ -949,6 +1044,7 @@ class CreditCardBalance:
 """c"""
 
 from general.TimeSlotAllocator import slot_allocator
+
 
 
 q = get_on_sk_id_curr([456233], 'ccb')
