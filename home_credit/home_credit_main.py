@@ -142,7 +142,6 @@ def sort_values(x):
 e.apply(sort_values)
 
 
-
 def get_element_value(x, idx):
     if len(x) >= -idx:
         return x[idx]
@@ -165,17 +164,21 @@ for slot in [0,1,2,3,4]:
 
 
 
-def designate_slots(x):
+def designate_slots(x, tolerance):
     x.sort(reverse = True)
-    return slot_allocator(x, l_slots, 305, False)
+    return slot_allocator(x, l_slots, tolerance, False)
 
 
 
 
-q = e.apply(designate_slots)
+q = e.apply(designate_slots, args = (305, ))
 
 
 q
+
+
+######################################################
+
 
 
 def crit(x, threshold):
