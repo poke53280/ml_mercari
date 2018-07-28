@@ -164,14 +164,14 @@ for slot in [0,1,2,3,4]:
 
 
 
-def designate_slots(x, tolerance):
+def designate_slots(x, tolerance, assigned_slots):
     x.sort(reverse = True)
-    return slot_allocator(x, l_slots, tolerance, False)
+    return slot_allocator(x, assigned_slots, tolerance, False)
 
 
 
 
-q = e.apply(designate_slots, args = (305, ))
+q = e.apply(designate_slots, args = (400, l_slots,))
 
 
 q
