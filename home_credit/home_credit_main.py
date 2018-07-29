@@ -117,24 +117,53 @@ an = np.concatenate([l_user, l_user2])
 
 
 b = d['b']
-q = b[['SK_ID_CURR', 'DAYS_CREDIT']]
+
+q = b[['SK_ID_CURR', 'DAYS_CREDIT', 'SK_ID_BUREAU']]
 
 q = q[q.SK_ID_CURR.isin(an)]
 
-
 g = q.groupby(by = 'SK_ID_CURR')
 
-
 e = g['DAYS_CREDIT'].apply(lambda x: x.tolist())
+f = g['SK_ID_BUREAU'].apply(lambda x: x.tolist())
 
 
-#verify:
-m = q.SK_ID_CURR ==162297
-q[m]
+q = pd.concat([e, f], axis=1)
 
-# equals:
 
-e[162297]
+q['SK_ID_CURR'] = q.index
+
+q = q.reset_index(drop = True)
+
+
+
+def create_dict(x):
+    dictionary = dict(zip(x['SK_ID_BUREAU'], x['DAYS_CREDIT']))
+    return dictionary
+
+
+e = q.apply(create_dict, axis = 1)
+
+q = q.assign(D = e)
+
+q = q.drop(['DAYS_CREDIT', 'SK_ID_BUREAU'], axis = 1)
+
+q = q.set_index('SK_ID_CURR', drop = True)
+
+s = q.D
+
+#
+#
+# Series s: Index is SK_ID_CURR, returns dictionary with key bureau ID  - value days-credit.
+#
+#
+
+# Not sorted: (Careful, dictionaries are not ordered)
+#s[456241]
+#{5573238: -2180, 5573235: -2488, 5573237: -2397, 5573239: -314, 5573240: -617}
+
+
+
 
 def sort_values(x):
     x.sort()
@@ -170,11 +199,36 @@ def designate_slots(x, tolerance, assigned_slots):
 
 
 
-
 q = e.apply(designate_slots, args = (400, l_slots,))
 
 
-q
+# Status: For all SK_ID_CURR. Got bureau indices and their location into the preset time slot. Got mean values for time slot.
+# 
+# SK_ID_CURR
+# 100009         [0, 1, 3, 5, 6]
+
+#l_slots
+#[-490.9426083430616, -768.0775395302904, -984.4369219882931, -1159.70530952933, -1302.8734670245803]
+#
+#
+#
+# Need bureau id, sk_id_curr, what slot to fit/ slot mean value.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ######################################################
