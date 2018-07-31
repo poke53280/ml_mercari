@@ -104,7 +104,13 @@
     <Compile Include="home_credit\oliver_fun_lgbm.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="p0\p3.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="p0\p0.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="p0\p1.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="porto_seguro\porto_seguro.py">
