@@ -87,10 +87,13 @@ def get_minima(a, bandwidth, isPlot):
 
     e = kde.score_samples(s)
 
-    # Fill in low values on -inf for a derivable function
-    #e_min = np.min(e[np.isfinite(e)])
+    e = np.exp(e)
 
-    #e [np.isneginf(e) ] = (e_min - 1)
+
+    # Fill in low values on -inf for a derivable function
+    #
+    # e_min = np.min(e[np.isfinite(e)])
+    # e [np.isneginf(e) ] = (e_min - 1)
 
     if isPlot:
         plt.plot(s, e)
@@ -160,18 +163,21 @@ def group_sorted_unique_integers(a, bandwidth, isPlot):
 def test_example():
 
     # Input data
-    n_bandwidth = 2
+    n_bandwidth = 3
 
     # Input sorted integers, no duplicates
 
-    a = np.array([ 9, 11, 12, 14, 22, 24, 25, 27, 29, 34, 35, 38, 39, 50, 52, 54, 60, 90, 110,112, 120])
+    a = np.array([ 3, 4, 5, 7, 8, 9, 11, 12, 13, 16, 17, 18, 22, 23, 24, 29, 30, 31]) 
 
     l = group_sorted_unique_integers(a, n_bandwidth, True)
 
 
+    a = np.array(range(9, 3000))
+    b = np.array(range(3050, 6000))
 
+    c = np.concatenate([a, b])
 
-
+    l = group_sorted_unique_integers(a, n_bandwidth, True)
 
     
 
