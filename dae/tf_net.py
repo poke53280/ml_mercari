@@ -152,8 +152,6 @@ def multilayer_perceptron(x):
     return out_layer
 
 
-
-
 my_model = multilayer_perceptron(X)
 
 loss_op = tf.losses.mean_squared_error(labels=Y, predictions=my_model)
@@ -161,7 +159,6 @@ loss_op = tf.losses.mean_squared_error(labels=Y, predictions=my_model)
 
 # Define optimizer
 optimizer = tf.train.AdamOptimizer(learning_rate=0.003)
-
 
 train_op = optimizer.minimize(loss_op)
 
@@ -171,9 +168,7 @@ sess = tf.Session()
 
 sess.run(init)
 
-
 nRows = data.shape[0]
-
 
 # Create a small batch
 
