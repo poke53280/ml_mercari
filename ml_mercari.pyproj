@@ -44,6 +44,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="cython_test.py" />
+    <Compile Include="dae\denoising.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="dae\dae_mnist.py">
       <SubType>Code</SubType>
     </Compile>
