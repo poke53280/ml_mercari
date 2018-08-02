@@ -110,11 +110,7 @@ correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(Y, 1))
 # Calculate accuracy
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 
-print("Accuracy:", accuracy.eval({X: mnist.test.images, Y: mnist.test.labels}))
-
-
-
-
+print("Accuracy:", accuracy.eval(session=sess, feed_dict={X: mnist.test.images, Y: mnist.test.labels}))
 
 
 import tensorflow as tf

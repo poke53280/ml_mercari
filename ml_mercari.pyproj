@@ -47,16 +47,10 @@
     <Compile Include="dae\dae_mnist.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="dae\denoising.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="dae\EncToPrediction.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="dae\noise_study.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="dae\SimpleTabular.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="dae\tf_net.py">
