@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>cc77cf4b-e52a-4996-852b-eba94c92124b</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>santander_3\sparse_to_nn.py</StartupFile>
+    <StartupFile>tf-tpu\iris_tf.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -181,6 +181,9 @@
     <Compile Include="mercari\study_mercaring_2nd_place.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="tf-tpu\iris_tf.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="tgs\starter.py">
       <SubType>Code</SubType>
     </Compile>
@@ -227,6 +230,7 @@
     <Folder Include="favorita\" />
     <Folder Include="avito\" />
     <Folder Include="dae\" />
+    <Folder Include="tf-tpu\" />
     <Folder Include="tgs\" />
     <Folder Include="p0\" />
     <Folder Include="porto_seguro\" />
