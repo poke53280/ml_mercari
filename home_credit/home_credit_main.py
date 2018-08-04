@@ -1058,10 +1058,37 @@ avMem = avMem.reshape(datasize * num_slots )
 class CreditCardBalanceRecord:
     
     # Data per time slot
+
+    _datasize = 11
     
     def __init__(self, s):
         print(f"Constructing CCB object, amount is {s.AMT_BALANCE}")
-        self._balance = s.AMT_BALANCE
+
+        self._MONTHS_BALANCE = s.MONTHS_BALANCE
+
+        self._AMT_CREDIT_LIMIT_ACTUAL = s.AMT_CREDIT_LIMIT_ACTUAL
+        self._AMT_BALANCE = s.AMT_BALANCE
+        self._AMT_DRAWINGS_CURRENT = s.AMT_DRAWINGS_CURRENT
+
+    def staticGetDataSize():
+        return CreditCardBalanceRecord._datasize
+
+    def getKeyTime(self):
+        return self._MONTHS_BALANCE
+
+    def getData(self, size, time_offset):
+        assert size == CreditCardBalanceRecord.staticGetDataSize()
+
+        # print(f"CreditCardBalance: Found item at time= {time_value}. Asked to provide offset data, offset = {valueOffset}")
+
+        an = np.zeros(CreditCardBalanceRecord._datasize, dtype = np.float32)  # todo: Zero -> empty
+
+        an[0] = self._AMT_CREDIT_LIMIT_ACTUAL
+        an[1] = self._AMT_BALANCE
+        an[2] = self._AMT_DRAWINGS_CURRENT
+
+        return an
+
 
 """c"""
 
@@ -1073,14 +1100,15 @@ class CreditCardBalance:
 
         for i in range(len(q)):
             s = q.iloc[i]
-            time = s.MONTHS_BALANCE
             rec = CreditCardBalanceRecord(s)
+
+            time = rec.getKeyTime()
 
             assert not (time in self._records), "month balance duplicates"
             self._records[time] = rec
 
     def getDataPerElement(self):
-        return 10
+        return CreditCardBalanceRecord.staticGetDataSize()
 
     def getTimeStamps(self):
         l = list (self._records.keys())
@@ -1089,15 +1117,11 @@ class CreditCardBalance:
     def getTimeRecord(self, time_value, valueOffset, data_size):
         assert time_value in self._records, "time value not found"
 
-        assert data_size == 10
+        assert data_size == CreditCardBalanceRecord.staticGetDataSize()
 
         rec = self._records[time_value]
 
-        # print(f"CreditCardBalance: Found item at time= {time_value}. Asked to provide offset data, offset = {valueOffset}")
-
-        an = np.empty(10, dtype = np.float32)
-
-        an.fill(time_value)
+        an = rec.getData(data_size, valueOffset)
 
         return an
 
@@ -1119,22 +1143,24 @@ from general.TimeSlotAllocator import get_slot_data
 q = get_on_sk_id_curr([456233], 'ccb')
 
 
-# Inputs
-# 
-# Data provider
-data_provider = CreditCardBalance(q)
+c = CreditCardBalance(q)
+
+slots = [-1,-2, -3, -4, -5.1, -6, -7, -8, -9]
+
+rTolerance = 0.9
+
+data = get_slot_data(c, slots, rTolerance, False)
 
 
-# data_provider must implement:
-# list_values = getTimeStamps()
-# data = getTimeRecord(timeActualValue, valueOffset, data_per_element)
+c.getTimeRecord(-1, 0, 10)
+
+time_value = -1
+
+valueOffset = 0
+
+data_size = 10
+
+c.getTimeRecord(time_value, valueOffset, data_size)
 
 
-list_time_slots_configuration = [-1,-2, -5.1]
-
-rTimeTolerance = 0.9
-
-# Returns data array, sized data_per_element * slots
-
-data = get_slot_data(data_provider, list_time_slots_configuration, rTimeTolerance, False)
-
+s = q.iloc[0]
