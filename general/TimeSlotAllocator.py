@@ -1,12 +1,15 @@
 
-# Values are input as sorted from big to small. Fitting large values has the priority
+import numpy as np
 
-# Slots are given with target values from big to small.
-
-# Returned list sized like input slots, with indices into the sorted value array. -1 if no value found to match.
-# tolerance is max appected difference between condidate data value and slot target value for insertion to slot.
-# slots are filled greedily igh values first.
+# Values are input as sorted from big to small.
+# Slots are input with target values from big to small.
 #
+# Returned list sized like input slots. Values are indices into the sorted value array. -1 if no value found to match.
+# Tolerance is max appected difference between condidate data value and slot target value for insertion to slot.
+# Slots are filled greedily - high values first.
+#
+# See example() for usage
+
 
 def slot_allocator(data, slots, tolerance, isVerbose):
     
@@ -54,6 +57,61 @@ def slot_allocator(data, slots, tolerance, isVerbose):
     return filled_slot
 
 """c"""
+
+##############################################################################
+#
+#    get_slot_data()
+#
+#
+
+def get_slot_data(data_provider, list_time_slots_configuration, rTimeTolerance, isVerbose):
+
+    assert hasattr(data_provider, 'getTimeStamps'), "data_provider must support getTimeStamps()"
+    assert hasattr(data_provider, 'getTimeRecord'), "data_provider must support getTimeRecord()"
+    assert hasattr(data_provider, 'getDataPerElement'), "data_provider must support getDataPerElement()"
+
+    data_per_element = data_provider.getDataPerElement()
+
+    n_slots = len (list_time_slots_configuration)
+
+    data = np.empty(n_slots * data_per_element, dtype = np.float32)
+
+    data.fill(np.nan)
+
+    list_time_values = data_provider.getTimeStamps()
+
+    l_slot_allocation = slot_allocator(list_time_values, list_time_slots_configuration, rTimeTolerance, isVerbose)
+
+    assert len(l_slot_allocation) == n_slots, "slot allocater bad return"
+
+    for i, alloc_location in enumerate(l_slot_allocation):
+        iSlotIndex = i
+        iDataIndex = alloc_location
+
+        if iDataIndex == -1:
+            if isVerbose: print(f"{iSlotIndex}: Empty")
+
+        else:
+            assert (iDataIndex >= 0) and (iDataIndex <= len(list_time_values)), "index out of range"
+
+            timeSlotTargetValue = list_time_slots_configuration[iSlotIndex]
+            timeActualValue = list_time_values[iDataIndex]
+            valueOffset = timeActualValue - timeSlotTargetValue
+            if isVerbose: print(f"{iSlotIndex}: Insert data idx = {iDataIndex}. Values {timeActualValue} => {timeSlotTargetValue}. value offset= {valueOffset}")
+
+            # Request data provider to prepare item at iDataIndex to offset valueOffset
+            data_record = data_provider.getTimeRecord(timeActualValue, valueOffset, data_per_element)
+
+            assert data_record.shape[0] == data_per_element, "data record size incorrect"
+
+            data_offset = iSlotIndex * data_per_element
+
+            data[data_offset:data_offset + data_per_element] = data_record
+
+    return data                
+
+"""c"""
+
 
 
 def example():

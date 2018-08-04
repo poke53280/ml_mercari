@@ -1,7 +1,6 @@
 
 
 import time
-from general.TimeSlotAllocator import slot_allocator
 import pandas as pd
 import numpy as np
 import gc
@@ -213,21 +212,6 @@ q = e.apply(designate_slots, args = (400, l_slots,))
 #
 #
 # Need bureau id, sk_id_curr, what slot to fit/ slot mean value.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1073,8 +1057,7 @@ avMem = avMem.reshape(datasize * num_slots )
 
 class CreditCardBalanceRecord:
     
-    # An amount of data per time slot
-    _balance = 0
+    # Data per time slot
     
     def __init__(self, s):
         print(f"Constructing CCB object, amount is {s.AMT_BALANCE}")
@@ -1084,40 +1067,74 @@ class CreditCardBalanceRecord:
 
 class CreditCardBalance:
 
-    _records = {}
-
     def __init__(self, q):
+
+        self._records = {}
 
         for i in range(len(q)):
             s = q.iloc[i]
             time = s.MONTHS_BALANCE
             rec = CreditCardBalanceRecord(s)
-            assert not (time in self._records)
+
+            assert not (time in self._records), "month balance duplicates"
             self._records[time] = rec
+
+    def getDataPerElement(self):
+        return 10
 
     def getTimeStamps(self):
         l = list (self._records.keys())
         return list (np.sort(np.array(l))[::-1])
+
+    def getTimeRecord(self, time_value, valueOffset, data_size):
+        assert time_value in self._records, "time value not found"
+
+        assert data_size == 10
+
+        rec = self._records[time_value]
+
+        # print(f"CreditCardBalance: Found item at time= {time_value}. Asked to provide offset data, offset = {valueOffset}")
+
+        an = np.empty(10, dtype = np.float32)
+
+        an.fill(time_value)
+
+        return an
+
+
 """c"""
 
-from general.TimeSlotAllocator import slot_allocator
+import sys
+import os
 
+sys.path
+
+cwd = os.getcwd()
+
+os.chdir('C:\\Users\\T149900\\ml_mercari')
+
+from general.TimeSlotAllocator import get_slot_data
 
 
 q = get_on_sk_id_curr([456233], 'ccb')
 
-c = CreditCardBalance(q)
 
-list_time_slots_configuration = [-1,-2, -17]
-
-list_time_values = c.getTimeStamps()
-
-l_slot_allocation = slot_allocator(list_time_values, list_time_slots_configuration, 0.0, False)
+# Inputs
+# 
+# Data provider
+data_provider = CreditCardBalance(q)
 
 
-for i, alloc_location in enumerate(l_slot_allocation):
-    print(f"slot {i}, requesting data index = {alloc_location}")
+# data_provider must implement:
+# list_values = getTimeStamps()
+# data = getTimeRecord(timeActualValue, valueOffset, data_per_element)
 
 
+list_time_slots_configuration = [-1,-2, -5.1]
 
-list_time_values
+rTimeTolerance = 0.9
+
+# Returns data array, sized data_per_element * slots
+
+data = get_slot_data(data_provider, list_time_slots_configuration, rTimeTolerance, False)
+
