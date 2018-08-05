@@ -1047,7 +1047,6 @@ avMem
 
 avMem = avMem.reshape(datasize * num_slots )
 
-
 #
 # ccb with home credit.
 #
@@ -1059,36 +1058,33 @@ class CreditCardBalanceRecord:
     
     # Data per time slot
 
-    _datasize = 11
-    
     def __init__(self, s):
         print(f"Constructing CCB object, amount is {s.AMT_BALANCE}")
 
         self._MONTHS_BALANCE = s.MONTHS_BALANCE
-
         self._AMT_CREDIT_LIMIT_ACTUAL = s.AMT_CREDIT_LIMIT_ACTUAL
         self._AMT_BALANCE = s.AMT_BALANCE
         self._AMT_DRAWINGS_CURRENT = s.AMT_DRAWINGS_CURRENT
 
     def staticGetDataSize():
-        return CreditCardBalanceRecord._datasize
+        return 4
 
     def getKeyTime(self):
         return self._MONTHS_BALANCE
 
     def getData(self, size, time_offset):
-        assert size == CreditCardBalanceRecord.staticGetDataSize()
+        assert size == CreditCardBalanceRecord.staticGetDataSize(), "size == CreditCardBalanceRecord.staticGetDataSize()"
 
         # print(f"CreditCardBalance: Found item at time= {time_value}. Asked to provide offset data, offset = {valueOffset}")
 
-        an = np.zeros(CreditCardBalanceRecord._datasize, dtype = np.float32)  # todo: Zero -> empty
+        an = np.zeros(size, dtype = np.float32)  # todo: Zero -> empty
 
         an[0] = self._AMT_CREDIT_LIMIT_ACTUAL
         an[1] = self._AMT_BALANCE
         an[2] = self._AMT_DRAWINGS_CURRENT
+        an[3] = self._MONTHS_BALANCE
 
         return an
-
 
 """c"""
 
@@ -1117,14 +1113,13 @@ class CreditCardBalance:
     def getTimeRecord(self, time_value, valueOffset, data_size):
         assert time_value in self._records, "time value not found"
 
-        assert data_size == CreditCardBalanceRecord.staticGetDataSize()
+        assert data_size == CreditCardBalanceRecord.staticGetDataSize(), "data_size == CreditCardBalanceRecord.staticGetDataSize()"
 
         rec = self._records[time_value]
 
         an = rec.getData(data_size, valueOffset)
 
         return an
-
 
 """c"""
 
@@ -1139,28 +1134,23 @@ os.chdir('C:\\Users\\T149900\\ml_mercari')
 
 from general.TimeSlotAllocator import get_slot_data
 
+slots = [-1,-2, -3, -4, -5.1, -6, -7, -8, -9]
+rTolerance = 0.9
 
-q = get_on_sk_id_curr([456233], 'ccb')
-
+q = get_on_sk_id_curr([370747], 'ccb')
 
 c = CreditCardBalance(q)
 
-slots = [-1,-2, -3, -4, -5.1, -6, -7, -8, -9]
+data = get_slot_data(c, slots, rTolerance, True)
 
-rTolerance = 0.9
+data_size_per_element = c.getDataPerElement()
 
-data = get_slot_data(c, slots, rTolerance, False)
+assert data.shape[0] == (data_size_per_element * len (slots)), "data.shape[0] == data_size_per_element * len (slots)"
 
-
-c.getTimeRecord(-1, 0, 10)
-
-time_value = -1
-
-valueOffset = 0
-
-data_size = 10
-
-c.getTimeRecord(time_value, valueOffset, data_size)
+data.shape
 
 
-s = q.iloc[0]
+
+
+
+
