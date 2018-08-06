@@ -6,6 +6,8 @@ import pandas as pd
 import numpy as np
 import datetime
 
+from general.TimeAndDate import *
+
 ##############################################################################
 #
 #   TimeLineText
@@ -341,6 +343,7 @@ class TimeLineText:
         acc_set = self.GetRaster(acRange)
         self.RenderRasterized(acc_set, token)
 
+
     ##############################################################################
     #
     #   DescribeScale()
@@ -348,11 +351,11 @@ class TimeLineText:
     #
 
     def DescribeScale(self):
-        date_start = datetime.datetime(1970,1,1,0,0) + datetime.timedelta(int(self._view_0))
-        date_end   = datetime.datetime(1970,1,1,0,0) + datetime.timedelta(int(self._view_1))
+        date_start = TimeAndDate_GetDateTimeFromEpochDays(int(self._view_0))
+        date_end   = TimeAndDate_GetDateTimeFromEpochDays(int(self._view_1))
 
-        zStart = date_start.strftime("%d.%m.%Y")
-        zEnd =    date_end.strftime("%d.%m.%Y")
+        zStart = TimeAndDate_GetDateTimeDescription(date_start)
+        zEnd =  TimeAndDate_GetDateTimeDescription(date_end)
 
         rastersize = (self._view_1 - self._view_0) / self._rastersize
 
@@ -586,12 +589,18 @@ def describe_intervals(acMinMax):
 
 """c"""
 
-########################################################
+##############################################################################
 #
-#    get_m_ranges
+#    get_F1_Q_ranges
+#
+#
+#  df requirements:
+#  id: IDX
+#  F1: From inclusive
+#  Q: To Inclusive
 #
 
-def get_m_ranges(df, idx):
+def get_F1_Q_ranges(df, idx):
     lf1 = []
     lq = []
 
@@ -602,33 +611,12 @@ def get_m_ranges(df, idx):
         pass
     else:
         lf1 = pt.F1.values
-        lq = pt.Q.values + 1     # Assumes database values are incluse : Convert from incluse to exclusive termination value.
+        lq = pt.Q.values + 1     # Assumes database values are inclusive : Convert from incluse to exclusive termination value.
 
     return np.array((lf1,lq)).T
 
 """c"""
 
-########################################################
-#
-#    get_l_ranges
-#
-
-def get_l_ranges(df, idx):
-    lf = []
-    lq = []
-
-    m = (df.IDX == idx)
-    pt = df[m]
-    
-    if len(pt) == 0:
-        pass
-    else:
-        lf = pt.F.values
-        lq = pt.Q.values + 1      # Assumes database values are incluse : Convert from incluse to exclusive termination value.
-
-    return np.array((lf,lq)).T
-
-"""c"""
 
 ########################################################
 #
@@ -639,7 +627,7 @@ def GetTargetInterval(df_m, t_start, t_end):
 
     line_size = t_end - t_start
 
-    is_draw_small = False        # Maintain day resolution to not lose small M intervals.
+    is_draw_small = False        # Maintain day resolution to not lose small intervals.
     is_draw_point_only = False
     isVerbose = False
     isClipEdge = True
@@ -655,7 +643,7 @@ def GetTargetInterval(df_m, t_start, t_end):
 
     for idx in ridx:
 
-        r_m = get_m_ranges(df_m, idx)
+        r_m = get_F1_Q_ranges(df_m, idx)
         r_m_processed = t.CombineIntervals(r_m, growConst)
 
         isEmpty = len(r_m_processed) == 0
@@ -703,7 +691,7 @@ def DisplayTargetInterval(df_m, start_target):
 
         t = TimeLineText(t_start, t_end, line_size, True, False, False, False)
 
-        r_m = get_m_ranges(df_m, idx)
+        r_m = get_F1_Q_ranges(df_m, idx)
 
         t.Render(r_m, 'x')
 
@@ -742,10 +730,7 @@ def AnalyzeTargetCondition(df, out, idx):
     m = df.IDX == idx
     pt = df[m]
 
-    m = (pt.C == "M") 
-    pt = pt[m]
-
-    m = (pt.F >= t_start) 
+    m = (pt.F1 >= t_start) 
     pt = pt[m]
 
     m = (pt.Q < t_end)

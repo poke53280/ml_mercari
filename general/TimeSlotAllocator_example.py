@@ -18,13 +18,15 @@ def TimeSlotAllocator_example():
 
     class DataProviderImpl:
 
+        # Time points, sorted from high to low for which data is available.
         def getTimeStamps(self):
             return [3,2,1, -4]
 
+        # Number of float32 elements for each time point.
         def getDataPerElement(self):
             return 2
 
-
+        # Provide data for time point time_value adjusted with time offset valueOffset.
         def getTimeRecord(self, time_value, valueOffset, data_size):
             assert time_value in [3,2,1,-4]
 
@@ -32,7 +34,7 @@ def TimeSlotAllocator_example():
 
             # rec = ...
 
-            an = np.zeros(data_size)
+            an = np.zeros(data_size, dtype = np.float32)
 
             return an
 

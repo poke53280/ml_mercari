@@ -23,11 +23,11 @@ def TimeAndDate_GetSecondsSinceEpochSeries(s):
 
 ###########################################################
 #
-#    GetDaysSinceEpoch
+#    TimeAndDate_GetDaysSinceEpoch
 #
 #
 
-def GetDaysSinceEpoch(s, epoch, na_date):
+def TimeAndDate_GetDaysSinceEpoch(s, epoch, na_date):
     # From string to datetime, set NaT at error
     s_out = pd.to_datetime(s, errors = 'coerce')
 
@@ -48,10 +48,10 @@ def GetDaysSinceEpoch(s, epoch, na_date):
 
 ##########################################################################
 #
-# get_random_epoch_birth_day
+# TimeAndDate_Get_random_epoch_birth_day
 #
 
-def get_random_epoch_birth_day(fid):
+def TimeAndDate_Get_random_epoch_birth_day(fid):
     assert (len(fid) == 11)
 
     birth_year = int (fid[4:6])
@@ -74,14 +74,36 @@ def get_random_epoch_birth_day(fid):
     return days_since_epocy
 
 
-w = 90
+##############################################################################
+#
+#   TimeAndDate_GetDateTimeFromEpochDays()
+#
+#
+
+def TimeAndDate_GetDateTimeFromEpochDays(nEpochDays):
+    return datetime.datetime(1970,1,1,0,0) + datetime.timedelta(nEpochDays)
+
+"""c"""
+
+
+##############################################################################
+#
+#   TimeAndDate_GetDateTimeDescription()
+#
+#
+
+def TimeAndDate_GetDateTimeDescription(datetime):
+    return datetime.strftime("%d.%m.%Y")
+
+"""c"""
+
 
 ########################################################################
 #
-#   get_birth_year_from_fid
+#   TimeAndDate_Get_birth_year_from_fid
 #
 
-def get_birth_year_from_fid(fid):
+def TimeAndDate_Get_birth_year_from_fid(fid):
     if len(fid) == 11:
         try:
             b = fid[4:6]
@@ -96,12 +118,12 @@ def get_birth_year_from_fid(fid):
 
 ###############################################################################
 #
-#   addNoise
+#   TimeAndDate_AddNoise
 #
 #   Returns numpy array with value randomly changed +/- input number of days
 #
 
-def addNoise(s, num_days):
+def TimeAndDate_AddNoise(s, num_days):
 
     null_count = s.isnull().sum()
     assert (null_count == 0)

@@ -1125,8 +1125,6 @@ class CreditCardBalance:
 
 
 
-
-
 import sys
 import os
 
@@ -1140,7 +1138,7 @@ from general.TimeSlotAllocator import get_slot_data
 
 
 
-slots = [-1,-2, -3, -4, -5.1, -6, -7, -8, -9]
+slots = [-1, -2, -3, -4, -5.1, -6, -7, -8, -9]
 
 rTolerance = 0.9
 
@@ -1159,11 +1157,15 @@ assert data.shape[0] == (data_size_per_element * len (slots)), "data.shape[0] ==
 data.shape
 
 
-
-
 #
 # To general nav-ikt. With examples.
 #
 # Time slot system.
 # KDE, wielding, rasterizing, viz.
+
+
+# Time line tool, 
+# driver_time_grouping
+
+from general.TimeLineTool import TimeLineText
 
