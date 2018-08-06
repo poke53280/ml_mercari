@@ -86,9 +86,6 @@
     <Compile Include="general\SymSpell.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="general\TimeLineTool_example.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="general\TimeSlotAllocator.py">
       <SubType>Code</SubType>
     </Compile>

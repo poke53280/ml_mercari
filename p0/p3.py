@@ -182,7 +182,6 @@ def check_periods(df, idx):
     else:
         print(f" Off min = NA")
 
-
 """c"""
 
 df = pd.read_pickle(DATA_DIR + "noised_30JUL2018_cleaned.pkl")
@@ -192,6 +191,7 @@ df.shape[0]
 df = df.drop_duplicates()
 
 df.shape[0]
+
 
 
 #

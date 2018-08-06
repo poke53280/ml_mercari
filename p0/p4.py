@@ -2,9 +2,9 @@
 
 ###############################################################################
 #
-# Analysis - timings with TimeLineTool.py
+#       Analysis - timings with TimeLineTool.py
 #
-
+#
 
 import pandas as pd
 import numpy as np
@@ -32,25 +32,12 @@ DATA_DIR = DATA_DIR_PORTABLE
 df = pd.read_pickle(DATA_DIR + "noised_30JUL2018_cleaned.pkl")
 
 df.shape[0]
-
 df = df.drop_duplicates()
-
 df.shape[0]
 
-df.dtypes
 
 
-t_start = 14000
-t_end = 17000
-
-
-
-################################################################################
-#
-#  GetTargetIntervals - example
-#
-# Setup:
-
+# Prepare dataframe for TimeLineTool.
 
 df_m = pd.DataFrame()
 
@@ -62,33 +49,84 @@ m = (df_m.Q < df_m.F1)
 
 assert len (df[m]) == 0, "Invalid intervals given"
 
-# t_start, t_end defined a time line interval
+# t_start, t_end defined a time line interval:
 
-min_t = np.min(df_m.F1)
-max_t = np.max(df_m.Q)
-
-L = max_t - min_t
-
-rGrow = .1
-
-min_t = int(min_t - rGrow * L)
-max_t =int (max_t + rGrow * L)
-
-t_start = min_t
-t_end = max_t
+t_start, t_end  = TimeLineText.GetPaddedFullRangeMinMax(df_m)
 
 
+# Display one line:
+
+is_draw_small = False                                           # Maintain day resolution to not lose small intervals.
+is_draw_point_only = False
+isVerbose = False
+isClipEdge = True
+growConst = 2
+
+line_size = t_end - t_start
+
+timelineText = TimeLineText(t_start, t_end, line_size, is_draw_small, is_draw_point_only, isVerbose, isClipEdge)
+
+timelineText.DescribeScale()
+
+idx = 194
+
+l = timelineText.GetTargetInterval(df_m, idx)
+
+target_begin = l[0]
+target_end   = l[1]- 1    # -1: Now including last given day
+
+target_length = 1 + target_end - target_begin
+
+print(f"idx = {idx}: [{target_begin}, {target_end}], L = {target_length}")
+
+#
+#
+# Preliminary preprocessing:
+#
+#
+# For one individual:
+#
+# Create intervals as above/ p3.py
+#
+# Rasterize, see overlaps. Take note of warnings.
+# For now - discard overlapping.
+#
+#
+# Find air distances.
+#
+# Take note of small distances. (1,2,3,4,5)
+#
+# For now discard air gap cases.
 
 
 
-l = GetTargetInterval(df_m, min_t, max_t)
 
 
-l[89]
-(31220, 31455, 1)
 
-q = df_m.IDX == 89
-df[q]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

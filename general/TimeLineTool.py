@@ -5,7 +5,6 @@
 import pandas as pd
 import numpy as np
 import datetime
-
 from general.TimeAndDate import *
 
 ##############################################################################
@@ -14,14 +13,6 @@ from general.TimeAndDate import *
 #
 
 class TimeLineText:
-
-    _view_0 = 0
-    _view_1 = 0
-    _rastersize = 0
-    _is_draw_small = False
-    _is_draw_point_only = False
-    _isVerbose = False
-    _isClipEdge = False
 
 
     ##############################################################################
@@ -41,24 +32,43 @@ class TimeLineText:
 
     ##############################################################################
     #
-    #   GetCameraCoord()
+    #   GetPaddedFullRangeMinMax
+    #
+
+    def GetPaddedFullRangeMinMax(df_m):
+        min_value = np.min(df_m.F1)
+        max_value = np.max(df_m.Q)
+
+        L = max_value - min_value
+
+        rGrow = .1
+
+        min_value = int(min_value - rGrow * L)
+        max_value = int (max_value + rGrow * L)
+
+        return (min_value, max_value)
+
+    """c"""
+
+    ##############################################################################
+    #
+    #   _GetCameraCoord()
     #
     # Returns location in camera space [0,1]
     #
 
-    def GetCameraCoord(self, r):
+    def _GetCameraCoord(self, r):
         x = (r - self._view_0) / (self._view_1 - self._view_0)
         return x
 
     ##############################################################################
     #
-    #   GetRasterLocationFromCameraCoord()
+    #   _GetRasterLocationFromCameraCoord()
     #
 
-    def GetRasterLocationFromCameraCoord(self, c):
+    def _GetRasterLocationFromCameraCoord(self, c):
 
         pf = c * self._rastersize
-
         return pf
    
     ##############################################################################
@@ -127,11 +137,11 @@ class TimeLineText:
 
         for idx, row in enumerate(acMinMax):
 
-            min = row[0]
-            max = row[1]
+            min_value = row[0]
+            max_value = row[1]
 
-            newMin = self.GetInputFromRasterized(min)
-            newMax = self.GetInputFromRasterized(max)
+            newMin = self.GetInputFromRasterized(min_value)
+            newMax = self.GetInputFromRasterized(max_value)
         
             assert(newMax >= newMin)
 
@@ -159,13 +169,13 @@ class TimeLineText:
 
         for idx, row in enumerate(acMinMax):
 
-            min = row[0]
-            max = row[1]
+            min_value = row[0]
+            max_value = row[1]
 
-            assert (max > min)
+            assert (max_value > min_value)
 
-            newMin = min - nGrow
-            newMax = max + nGrow
+            newMin = min_value - nGrow
+            newMax = max_value + nGrow
 
             assert (newMax > newMin)
 
@@ -241,8 +251,8 @@ class TimeLineText:
 
         assert (r1 >= r0)
 
-        c0 = self.GetCameraCoord(r0)
-        c1 = self.GetCameraCoord(r1)
+        c0 = self._GetCameraCoord(r0)
+        c1 = self._GetCameraCoord(r1)
 
         assert (c1 >= c0)
 
@@ -252,12 +262,12 @@ class TimeLineText:
         if c0 >= 1:
             pass
 
-        pf0 = self.GetRasterLocationFromCameraCoord(c0)
+        pf0 = self._GetRasterLocationFromCameraCoord(c0)
 
         if (pf0 < 0):
             pf0 = 0
 
-        pf1 = self.GetRasterLocationFromCameraCoord(c1)
+        pf1 = self._GetRasterLocationFromCameraCoord(c1)
 
         rSize = pf1 - pf0
 
@@ -384,8 +394,8 @@ class TimeLineText:
 
         for idx, row in enumerate(acMinMax):
 
-            min = row[0]
-            max = row[1]
+            min_value = row[0]
+            max_value = row[1]
 
             countLeft = acCount[idx][0]
             countRight = acCount[idx][1]
@@ -405,10 +415,10 @@ class TimeLineText:
                 applicationLeft = 0
                 applicactionRight = countLeft + countRight
 
-            min = min + applicationLeft
-            max = max - applicactionRight
+            min_value = min_value + applicationLeft
+            max_value = max_value - applicactionRight
 
-            acMinMaxNew[idx] = [min, max]
+            acMinMaxNew[idx] = [min_value, max_value]
 
         return acMinMaxNew
 
@@ -476,7 +486,27 @@ class TimeLineText:
 
         return acResult
 
-"""c"""
+    """c"""
+
+    ##############################################################################
+    #
+    #   GetTargetInterval()
+    #
+
+    def GetTargetInterval(self, df_m, idx):
+
+        r_m = get_F1_Q_ranges(df_m, idx)
+        r_m_processed = self.CombineIntervals(r_m, growConst)
+
+        isEmpty = len(r_m_processed) == 0
+    
+        if isEmpty:
+            return (0, 0, 0)
+        else:
+            m_last = r_m_processed[-1]
+            return (m_last[0], m_last[1], m_last[2])
+
+    """c"""
 
 
 #############################################################################
@@ -564,10 +594,10 @@ def GetSetFromRanges(acMinMax):
 
     for idx, row in enumerate(acMinMax):
 
-        min = row[0]
-        max = row[1]
+        min_value = row[0]
+        max_value = row[1]
 
-        r = range (min, max)
+        r = range (min_value, max_value)
         s = s.union(r)
 
     return s
@@ -614,48 +644,6 @@ def get_F1_Q_ranges(df, idx):
         lq = pt.Q.values + 1     # Assumes database values are inclusive : Convert from incluse to exclusive termination value.
 
     return np.array((lf1,lq)).T
-
-"""c"""
-
-
-########################################################
-#
-#    GetTargetInterval
-#
-
-def GetTargetInterval(df_m, t_start, t_end):
-
-    line_size = t_end - t_start
-
-    is_draw_small = False        # Maintain day resolution to not lose small intervals.
-    is_draw_point_only = False
-    isVerbose = False
-    isClipEdge = True
-    growConst = 2
-
-    t = TimeLineText( t_start, t_end, line_size, is_draw_small, is_draw_point_only, isVerbose, isClipEdge)
-
-    t.DescribeScale()
-
-    start_target = []
-
-    ridx = range(0,200)
-
-    for idx in ridx:
-
-        r_m = get_F1_Q_ranges(df_m, idx)
-        r_m_processed = t.CombineIntervals(r_m, growConst)
-
-        isEmpty = len(r_m_processed) == 0
-    
-        if isEmpty:
-            start_target.append( (0, 0, 0))
-        else:
-            m_last = r_m_processed[-1]
-            start_target.append( (m_last[0], m_last[1], m_last[2]))
-
-
-    return start_target
 
 """c"""
 
@@ -802,10 +790,10 @@ def TimeLineTool_cluster_events(acData):
 
     n = len (acData)
 
-    min = acData.min()
-    max = acData.max()
+    min_value = acData.min()
+    max_value = acData.max()
 
-    print(f" {n} event(s). min: {min} max: {max}. length = {1 + max - min}")
+    print(f" {n} event(s). min: {min_value} max: {max_value}. length = {1 + max_value - min_value}")
 
     lcNCluster = []
     lcClusterChange = []
@@ -977,83 +965,3 @@ def TimeLineTool_GetOptimalGroupSize(acData, isGraph, max_grow):
     return maxIndex
 
 """c"""    
-
-
-################## DRIVERS #######################
-
-def driver_restart_portable():
-
-
-    df = pd.read_csv("data_sm.txt", encoding = "ISO-8859-1")
-
-    df.C = df.C.astype('category')
-    df.D = df.D.astype('category')
-
-    t_start = (2009 - 1970) * 365  
-    t_end =   (2013 - 1970) * 365  
-
-    m = (df.C == "M")
-    df_m = df[m]
-
-    out = GetTargetInterval(df_m, t_start, t_end)
-
-    DisplayTargetInterval(df_m, out)
-
-    # Applying day filter:
-    m = (df.Q > t_d) & (df.F <= t_d)
-    q = df[m]
-
-
-    v_counts = pt.C.value_counts()
-
-    i =  (2**0)* (v_counts['A'] != 0) + (2**1)*(v_counts['B'] != 0) + (2**2)*(v_counts['C'] != 0)
-
-    print(f"IDX: {idx} t_d {t_d} value {i}")
-
-
-    ## Many s with same range
-    df.sort_values(by =['C', 'IDX', 'F', 'Q'])
-
-    m = (df.C == "M")
-
-    q = df[m]
-
-    q.sort_values(by = ['IDX', 'F', 'Q'])
-
-
-#XXX Complete rasterization above.
-
-# Consider how to bring in did and d into rasterization. (Embedding?)
-
-
-
-#XXX First find target value (s)
-#
-# Parametrized. On started SYKF, store shift day value (param: amount). param how many days into SYKF
-# For both SYKM and SYKF
-
-# Applying user filter:
-
-#
-# Staging and merge
-#
-
-    df_aa.head()
-
-    s = addNoise(df_aa.FRA, 3)
-    t = addNoise(df_aa.TIL, 3)
-
-    s = s.reset_index()
-    s.columns = ['i', 'd']
-
-    se = pd.Series(s['d'])
-
-    t = t.reset_index()
-    t.columns = ['i', 'd']
-    te = pd.Series(t['d'])
-
-    df_aa = df_aa.reset_index()
-
-    df_aa['F'] = se
-    df_aa['T'] = te
-

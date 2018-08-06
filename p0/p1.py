@@ -1,4 +1,10 @@
 
+#########
+#
+#       Further preprocessing
+#
+#
+
 import pandas as pd
 import numpy as np
 
@@ -13,7 +19,8 @@ df = pd.read_pickle(DATA_DIR + "noised_30JUL2018.pkl")
 # Convert data types
 
 ###### MD ######################################################################
-# No nan. in uint16 range
+#
+# No nan in uint16 range
 
 aMD = np.array(df.MD)
 

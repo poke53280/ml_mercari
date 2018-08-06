@@ -55,7 +55,6 @@ for idx, c in tup:
         print(f"factor is {factor*100:.1f}%")
 
 
-
 """c"""
 
 
@@ -127,12 +126,6 @@ u0_a = [450]
 
 
 
-import interval
-
-a = interval.interval([0, 1], [2, 3], [10, 15])
-b = interval.interval([0,3], [11, 14])
-
-a | b
 
 
 
