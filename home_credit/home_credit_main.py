@@ -1123,6 +1123,10 @@ class CreditCardBalance:
 
 """c"""
 
+
+
+
+
 import sys
 import os
 
@@ -1134,12 +1138,17 @@ os.chdir('C:\\Users\\T149900\\ml_mercari')
 
 from general.TimeSlotAllocator import get_slot_data
 
+
+
 slots = [-1,-2, -3, -4, -5.1, -6, -7, -8, -9]
+
 rTolerance = 0.9
 
 q = get_on_sk_id_curr([370747], 'ccb')
 
 c = CreditCardBalance(q)
+
+
 
 data = get_slot_data(c, slots, rTolerance, True)
 
@@ -1152,5 +1161,9 @@ data.shape
 
 
 
-
+#
+# To general nav-ikt. With examples.
+#
+# Time slot system.
+# KDE, wielding, rasterizing, viz.
 
