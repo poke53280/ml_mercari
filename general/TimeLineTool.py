@@ -488,25 +488,7 @@ class TimeLineText:
 
     """c"""
 
-    ##############################################################################
-    #
-    #   GetTargetInterval()
-    #
-
-    def GetTargetInterval(self, df_m, idx):
-
-        r_m = get_F1_Q_ranges(df_m, idx)
-        r_m_processed = self.CombineIntervals(r_m, growConst)
-
-        isEmpty = len(r_m_processed) == 0
-    
-        if isEmpty:
-            return (0, 0, 0)
-        else:
-            m_last = r_m_processed[-1]
-            return (m_last[0], m_last[1], m_last[2])
-
-    """c"""
+   
 
 
 #############################################################################
@@ -619,33 +601,7 @@ def describe_intervals(acMinMax):
 
 """c"""
 
-##############################################################################
-#
-#    get_F1_Q_ranges
-#
-#
-#  df requirements:
-#  id: IDX
-#  F1: From inclusive
-#  Q: To Inclusive
-#
 
-def get_F1_Q_ranges(df, idx):
-    lf1 = []
-    lq = []
-
-    m = (df.IDX == idx)
-    pt = df[m]
-    
-    if len(pt) == 0:
-        pass
-    else:
-        lf1 = pt.F1.values
-        lq = pt.Q.values + 1     # Assumes database values are inclusive : Convert from incluse to exclusive termination value.
-
-    return np.array((lf1,lq)).T
-
-"""c"""
 
 ########################################################
 #
