@@ -37,70 +37,6 @@ df.shape[0]
 
 
 
-# Prepare dataframe for TimeLineTool.
-
-df_m = pd.DataFrame()
-
-df_m['IDX'] = df.ID  #Individual ID.
-df_m['F1'] =  df.F1  #From day inclusive
-df_m['Q'] =   df.T0  #To day inclusive
-
-m = (df_m.Q < df_m.F1)
-
-assert len (df[m]) == 0, "Invalid intervals given"
-
-# t_start, t_end defined a time line interval:
-
-t_start, t_end  = TimeLineText.GetPaddedFullRangeMinMax(df_m)
-
-
-# Display one line:
-
-is_draw_small = False                                           # Maintain day resolution to not lose small intervals.
-is_draw_point_only = False
-isVerbose = False
-isClipEdge = True
-growConst = 2
-
-line_size = t_end - t_start
-
-timelineText = TimeLineText(t_start, t_end, line_size, is_draw_small, is_draw_point_only, isVerbose, isClipEdge)
-
-timelineText.DescribeScale()
-
-idx = 194
-
-l = timelineText.GetTargetInterval(df_m, idx)
-
-target_begin = l[0]
-target_end   = l[1]- 1    # -1: Now including last given day
-
-target_length = 1 + target_end - target_begin
-
-print(f"idx = {idx}: [{target_begin}, {target_end}], L = {target_length}")
-
-#
-#
-# Preliminary preprocessing:
-#
-#
-# For one individual:
-#
-# Create intervals as above/ p3.py
-#
-# Rasterize, see overlaps. Take note of warnings.
-# For now - discard overlapping.
-#
-#
-# Find air distances.
-#
-# Take note of small distances. (1,2,3,4,5)
-#
-# For now discard air gap cases.
-
-
-
-
 def get_target(r_m, t_start, t_end, nGrow):
 
     r_m_excl = r_m.copy()
@@ -108,7 +44,7 @@ def get_target(r_m, t_start, t_end, nGrow):
 
     line_size = t_end - t_start
 
-    timelineText = TimeLineText(t_start, t_end, line_size, True, False, False, True)
+    timelineText = TimeLineText(t_start, t_end, True, False, False, True)
 
     r_m_processed = timelineText.CombineIntervals(r_m_excl, nGrow)
 
@@ -185,9 +121,6 @@ def get_target(r_m, t_start, t_end, nGrow):
 
 """c"""    
     
-
-
-
 # Input: Unsorted non null intervals. Both end points are inclusive elements.
 
 # Test
@@ -202,13 +135,6 @@ nGrow = 2
 get_target(r_m, t_start, t_end, nGrow)
 
 # Test end
-
-
-
-t_start = 20000
-t_end =   35000
-idx = 92
-nGrow = 2
 
 
 def get_target_df(df, t_start, t_end, nGrow, idx):
@@ -244,21 +170,51 @@ def get_target_df(df, t_start, t_end, nGrow, idx):
 
 """c"""
 
+
+t_start = 20000
+t_end =   35000
+nGrow = 2
+
+
+# OK
+r_m = np.array([[27534, 27534]])
+res = get_target(r_m, t_start, t_end, nGrow)
+
+# BAD
+r_m = np.array([[27535, 27535]])
+res = get_target(r_m, t_start, t_end, nGrow)
+
+# BAD
+r_m = np.array([[27536, 27536]])
+res = get_target(r_m, t_start, t_end, nGrow)
+
+# BAD
+r_m = np.array([[27537, 27537]])
+res = get_target(r_m, t_start, t_end, nGrow)
+
+# OK
+r_m = np.array([[27538, 27538]])
+res = get_target(r_m, t_start, t_end, nGrow)
+
+
+
 aID = np.unique(df.ID)
 
-for x in aID:
+res_list = []
+
+for x in range(26222, 500000):
+    print(f"Processing element {x}/ {aID.shape[0]}")
+
     r, q = get_target_df(df, t_start, t_end, 2, x)
+    res_list.append(r)
+
     
 
-# BUG:    
 
-== > 26221, 
-assert nAssignedElements == r_m.shape[0], f"Not all intervals are grouped"
-
-# See verbose, seems single day or two day period moved ('d'). This can cause original intervals to be outside cluster interval.
-
-
-
+t_start = 20000
+t_end =   35000
+idx = 92
+nGrow = 2
 
 
 

@@ -20,15 +20,22 @@ class TimeLineText:
     #   Constructor
     #
 
-    def __init__(self, view0, view1, rastersize, is_draw_small, is_draw_point_only, isVerbose, isClipEdge):
+    def __init__(self, view0, view1, is_draw_small, is_draw_point_only, isVerbose, isClipEdge):
       self._view_0 = view0
       self._view_1 = view1
-      self._rastersize = rastersize
+      self._rastersize = view1 - view0
       self._is_draw_small = is_draw_small
       self._is_draw_point_only = is_draw_point_only
       self._isVerbose = isVerbose
       self._isClipEdge = isClipEdge
 
+    ##############################################################################
+    #
+    #   SetCustomRasterSize
+    #
+
+    def SetCustomRasterSize(self, rastersize):
+        self._rastersize = rastersize
 
     ##############################################################################
     #
@@ -631,9 +638,7 @@ def DisplayTargetInterval(df_m, start_target):
         t_start = x[0] - 10
         t_end   = x[1] + 10
 
-        line_size = t_end - t_start
-
-        t = TimeLineText(t_start, t_end, line_size, True, False, False, False)
+        t = TimeLineText(t_start, t_end, True, False, False, False)
 
         r_m = get_F1_Q_ranges(df_m, idx)
 
