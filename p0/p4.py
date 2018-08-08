@@ -42,8 +42,6 @@ def get_target(r_m, t_start, t_end, nGrow):
     r_m_excl = r_m.copy()
     r_m_excl[:, 1] += 1
 
-    line_size = t_end - t_start
-
     timelineText = TimeLineText(t_start, t_end, True, False, False, True)
 
     r_m_processed = timelineText.CombineIntervals(r_m_excl, nGrow)
@@ -121,21 +119,6 @@ def get_target(r_m, t_start, t_end, nGrow):
 
 """c"""    
     
-# Input: Unsorted non null intervals. Both end points are inclusive elements.
-
-# Test
-
-r_m = np.array( [ [4,4], [11, 13], [10, 16], [17, 18], [20, 21], [22, 24], [28, 29], [40, 45] ])
-
-t_start = -3
-t_end = 54
-
-nGrow = 2
-
-get_target(r_m, t_start, t_end, nGrow)
-
-# Test end
-
 
 def get_target_df(df, t_start, t_end, nGrow, idx):
 
@@ -175,52 +158,59 @@ t_start = 20000
 t_end =   35000
 nGrow = 2
 
-
-# OK
-r_m = np.array([[27534, 27534]])
-res = get_target(r_m, t_start, t_end, nGrow)
-
-# BAD
-r_m = np.array([[27535, 27535]])
-res = get_target(r_m, t_start, t_end, nGrow)
-
-# BAD
-r_m = np.array([[27536, 27536]])
-res = get_target(r_m, t_start, t_end, nGrow)
-
-# BAD
-r_m = np.array([[27537, 27537]])
-res = get_target(r_m, t_start, t_end, nGrow)
-
-# OK
-r_m = np.array([[27538, 27538]])
-res = get_target(r_m, t_start, t_end, nGrow)
-
-
-
 aID = np.unique(df.ID)
 
 res_list = []
 
-for x in range(26222, 500000):
-    print(f"Processing element {x}/ {aID.shape[0]}")
+# Estimate: Two hours processing on local host.
 
-    r, q = get_target_df(df, t_start, t_end, 2, x)
+for x in aID:
+    if x % 500 == 0 and x > 0:
+        print(f"Processing element {x}/ {aID.shape[0]}")
+
+    r, q = get_target_df(df, t_start, t_end, nGrow, x)
     res_list.append(r)
 
-    
-
-
-t_start = 20000
-t_end =   35000
-idx = 92
-nGrow = 2
 
 
 
+r, q = get_target_df(df, t_start, t_end, nGrow, 9009)
+
+
+r
+
+start_day = r['begin']
+
+L_full = 1+ r['end'] - start_day
+
+print(f"Length with stich = {L_full}")
+
+L_adjusted = L_full - r['stitch']
+
+print(f"Length adjusted = {L_adjusted}")
+
+
+a = q.sort_values(by= 'F1')
+
+aMD = a.MD
+aD  = a.D
+
+first_MD = aMD.values[0]
+first_D  = aD.values[0]
+
+ID = a.ID.values[0]
+
+print(f"ID: {ID}: Start = {start_day}. L = {L_adjusted}. MD = {first_MD}, D = {first_D}")
 
 
 
+
+
+
+q
+          ID      B    S     F0     F1     T0     MD   D
+109262  9009  24992  101  33232  33232  33244  53189  19
+109263  9009  24992  101  33232  33245  33250  48262  19
 
 
 

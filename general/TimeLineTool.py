@@ -254,6 +254,8 @@ class TimeLineText:
 
     def Rasterize(self, r0, r1):
 
+        ROUND_EPSILON = 0.001
+
         s = set()
 
         assert (r1 >= r0)
@@ -286,7 +288,7 @@ class TimeLineText:
         if nSize == 0:
             pass
         else:
-            pn0 = int (pf0)
+            pn0 = int (pf0 + ROUND_EPSILON)
 
             if self._is_draw_point_only:
                 pn1 = pn0
