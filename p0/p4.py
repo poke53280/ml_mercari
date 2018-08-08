@@ -96,6 +96,9 @@ def get_target_df(df, t_start, t_end, nGrow, idx):
 #     generate_target_data
 #
 
+def get_unsigned_series(l):
+    return pd.Series(pd.to_numeric(l, errors='raise', downcast = 'unsigned'))
+
 def generate_target_data(df, t_start, t_end, nGrow, nCut):
 
     aID = np.unique(df.ID)
@@ -140,13 +143,13 @@ def generate_target_data(df, t_start, t_end, nGrow, nCut):
             l_D.append(r['D'])
         
 
-    sID = pd.Series(l_ID)
-    sStart = pd.Series(l_start)
-    sN = pd.Series(l_N)
-    sL = pd.Series(l_L)
-    sFill = pd.Series(l_Fill)
-    sMD = pd.Series(l_MD)
-    sD = pd.Series(l_D)
+    sID = get_unsigned_series(l_ID)
+    sStart = get_unsigned_series(l_start)
+    sN = get_unsigned_series(l_N)
+    sL = get_unsigned_series(l_L)
+    sFill = get_unsigned_series(l_Fill)
+    sMD = get_unsigned_series(l_MD)
+    sD = get_unsigned_series(l_D)
 
     # df_t = pd.DataFrame( {'ID': sID, 'begin_target': sStart, 'num_periods' : sN, 'length_target' :sL, 'fill_target': sFill, 'MD':sMD, 'D':sD})
 
@@ -161,14 +164,15 @@ nGrow = 15
 
 nAllIDS = len (np.unique(df.ID))
 
-nCut = 10000  # nAllIDS for no cut
+nCut = 10000  #  = nAllIDS for no cut
+
+# First cut historic data 
+m = (df.ID < nCut)
+df = df[m]
 
 df_t = generate_target_data(df, t_start, t_end, nGrow, nCut)
 
-# Cut historic data as well
 
-m = (df.ID < nCut)
-df = df[m]
 
 # Move individual info from historic dataframe to id dataframe.
 
@@ -183,6 +187,8 @@ df_t['K'] = q.S
 df = df.drop(['B', 'S'], axis = 1)
 
 df_t = df_t[['ID', 'B', 'K', 'N', 'MD', 'D', 'S', 'F', 'Y']]
+
+
 
 s = df_t.S
 
@@ -203,3 +209,27 @@ print(f"Additional data elements: {rAdditionalDataFactor:.0f}%")
 
 # Got historic data in df, future cut.
 # Got target information in df_t
+
+# Prepare training set
+
+y = df_t['Y'].values
+
+# Remember 'F' - fill - is a future feature. Remove from train set.
+df_t = df_t.drop(['F', 'Y'], axis = 1)
+
+df_t.dtypes
+
+# Todo: Fix so that types are of minimal size. Many int64 in df_t.
+
+df.dtypes
+
+#
+# => Looks tidy
+#
+# Go to categorical.
+#
+# Train basic LGBM model.
+#
+
+
+
