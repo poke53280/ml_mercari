@@ -497,7 +497,77 @@ class TimeLineText:
 
     """c"""
 
+    ##################################################################################
+    #
+    #     GetTarget
+    #
+    #
+    # Todo: Provide documentation and example
+    #
+
+    def GetTarget(self, r_m, nGrow):
+
+        r_m_excl = r_m.copy()
+        r_m_excl[:, 1] += 1
+
+        r_m_processed = self.CombineIntervals(r_m_excl, nGrow)
+
+        # Go to end inclusive mode
+        r_m_processed[:, 1] -= 1
+
+        # Working on inclusive end values - i.e. both begin and end contained in interval.
+
+        r_m_start = r_m[:, 0]
+        r_m_end   = r_m[:, 1]
+
+        group_idx = np.zeros(r_m.shape[0])
+
+        for idx, p in enumerate(r_m_processed):
+            a = p[0]
+            b = p[1]
+
+            # Fully inside range:
+            m = (r_m_start >= a) & (r_m_end <= b)
+
+            # Inside range a, b:
+            # nInside = len(r_m[m])
+
+            group_idx[m] = idx
+
+            # print(f"#intervals in range [{a}, {b}]: {nInside}")
+
+
+        isEmpty = len(r_m_processed) == 0
+
+        result = {}
+        result['nperiods'] = len(r_m_processed)
+
+        if isEmpty:
+            pass
+        else:
+            target_idx = len (r_m_processed) - 1
+        
+            # Pick last period as target period
+
+            target_info = r_m_processed[-1]
+
+            target_begin, target_end, target_stitch = target_info[0], target_info[1], target_info[2]
+
+            result['begin'] = target_begin
+            result['end'] = target_end
+            result['stitch'] = target_stitch
+
+            result['ids'] = []
    
+            m = (group_idx == target_idx)
+
+            interval_list = np.where(m)
+
+            for x in interval_list[0]:
+                val = r_m[x]
+                result['ids'].append(x)
+
+        return result
 
 
 #############################################################################

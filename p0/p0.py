@@ -130,7 +130,6 @@ def group_periods(df, p_id, n_bandwidth):
     
     return l
 
-
 """c"""
 
 
