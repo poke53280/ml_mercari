@@ -496,7 +496,8 @@ class TimeLineText:
         return acResult
 
     """c"""
-
+    
+    
     ##################################################################################
     #
     #     GetTarget
@@ -545,9 +546,9 @@ class TimeLineText:
         if isEmpty:
             pass
         else:
-            target_idx = len (r_m_processed) - 1
-        
             # Pick last period as target period
+
+            target_idx = len (r_m_processed) - 1
 
             target_info = r_m_processed[-1]
 
@@ -567,8 +568,21 @@ class TimeLineText:
                 val = r_m[x]
                 result['ids'].append(x)
 
-        return result
+            # Collect non-target, earlier intervals:
+            
+            m = (group_idx != target_idx)
 
+            checked_list = []
+
+            interval_list = np.where(m)
+            for x in interval_list[0]:
+                val = r_m[x]
+                if val[1] < target_begin:
+                    checked_list.append(( val[0], val[1]))
+
+            result['historic_intervals'] = checked_list
+
+        return result
 
 #############################################################################
 #

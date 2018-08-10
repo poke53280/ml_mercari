@@ -14,11 +14,6 @@ from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
-from sklearn.decomposition import PCA
-from sklearn.decomposition import TruncatedSVD
-from sklearn.decomposition import FastICA
-from sklearn.random_projection import SparseRandomProjection
-from sklearn.random_projection import GaussianRandomProjection
 
 import lightgbm as lgb
 
@@ -27,52 +22,6 @@ DATA_DIR_PORTABLE = "C:\\p_data\\"
 DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
 DATA_DIR = DATA_DIR_PORTABLE
 
-class DReduction:
-
-    _N_COMP = 0            ### Number of decomposition components ###
-
-    _pca    = 0
-    _tsvd   = 0
-    _ica    = 0
-    _grp    = 0
-    _srp    = 0
-
-    def __init__(self, nComp):
-        self._N_COMP = nComp
-        self._pca = PCA(n_components=self._N_COMP, random_state=17)
-        self._tsvd = TruncatedSVD(n_components=self._N_COMP, random_state=17)
-        self._ica = FastICA(n_components=self._N_COMP, random_state=17)
-        self._grp = GaussianRandomProjection(n_components=self._N_COMP, eps=0.1, random_state=17)
-        self._srp = SparseRandomProjection(n_components=self._N_COMP, dense_output=True, random_state=17)
-
-
-    def fit(self, X):
-        self._pca.fit(X)
-        self._tsvd.fit(X)
-        self._ica.fit(X)
-        self._grp.fit(X)
-        self._srp.fit(X)
-
-
-    def transform(self, X):
-        res_pca  = self._pca.transform(X)
-        res_tsvd = self._tsvd.transform(X)
-        res_ica  = self._ica.transform(X)
-        res_grp  = self._grp.transform(X)
-        res_srp  = self._srp.transform(X)
-
-
-        df = pd.DataFrame()
-
-        for i in range(1, self._N_COMP + 1):
-            df['pca_' + str(i)] = res_pca[:, i - 1]
-            df['tsvd_' + str(i)] = res_tsvd[:, i - 1]
-            df['ica_' + str(i)] = res_ica[:, i - 1]
-            df['grp_' + str(i)] = res_grp[:, i - 1]
-            df['srp_' + str(i)] = res_srp[:, i - 1]
-
-        return df
-"""c"""
 
 
 ##################################################################################
@@ -219,20 +168,7 @@ def get_stats_on_array(v):
 
     return d
 
-##################################################################################################
-#
-#       get_prefixed_dict
-#
 
-def get_prefixed_dict(d, prefix):
-    d_prefixed = {}
-
-    for key, value in d.items():
-        d_prefixed[prefix + key] = value
-
-    return d_prefixed
-
-"""c"""
 
 
 ##################################################################################################
@@ -464,145 +400,10 @@ X, y = load_boston(return_X_y=True)
 
 
 
-class LGBMTrainer:
-
-    lgbm_params =  {
-        'task': 'train',
-        'boosting_type': 'gbdt',
-        'objective': 'regression',
-        'metric': 'rmse',
-        "learning_rate": 0.001,
-        "num_leaves": 300,
-        "max_bin": 400,
-        "zero_as_missing": True
-    }
-
-
-    _clf = 0
-
-    def __init__(self):
-        pass
-
-    def train_with_validation(self, X_train, y_train, X_test, y_test):
-
-        lgtrain = lgb.Dataset(X_train, y_train, feature_name = "auto")
-        lgvalid = lgb.Dataset(X_test, y_test, feature_name = "auto")
-
-        self._clf = lgb.train(self.lgbm_params, lgtrain, num_boost_round=5000, early_stopping_rounds=1000, valid_sets= [lgtrain, lgvalid], verbose_eval=1)
-
-    def predict(self, X_test):
-        return self._clf.predict(X_test)
-
-"""c"""
 
 
 
-#################################################################################
-#
-#       train(X, y)
-#
-#
-    
-def train(X, y):
 
-    THRESHOLD = 60
-
-    NUM_FOLDS = 7
-
-    kf = KFold(n_splits=NUM_FOLDS, shuffle=True, random_state=22)
-
-    lKF = list (enumerate(kf.split(X)))
-
-    lRMS = []
-    l_gini = []
-
-    a_conf_acc = np.zeros((2,2), dtype = np.int32)
-
-    y_oof = np.zeros(len (y))
-
-    auc_warning_issued = False
-
-    while len(lKF) > 0:
-        iLoop, (train_index, test_index) = lKF.pop(0)
-
-        print(f"--- Fold: {iLoop +1}/ {NUM_FOLDS} ---")
-        
-        X_train = X[train_index]
-        y_train = y[train_index]
-    
-        X_valid = X[test_index]
-        y_valid = y[test_index]
-
-        d = DReduction(9)
-
-        d.fit(X_train)
-
-        X_train_d = np.array(d.transform(X_train))
-        X_valid_d = np.array(d.transform(X_valid))
-
-
-        isIncludeRaw = True
-
-        if isIncludeRaw:
-            X_train = np.hstack([X_train, X_train_d])
-            X_valid = np.hstack([X_valid, X_valid_d])
-
-        else:
-            X_train = X_train_d
-            X_valid = X_valid_d
-
-                
-        l = LGBMTrainer()
-        l.train_with_validation(X_train, y_train, X_valid, y_valid)
-
-        y_p = l.predict(X_valid)
-
-        y_oof[test_index] = y_p
-
-        rmse_error = np.sqrt(mean_squared_error(y_p, y_valid))
-        print(f"Rmse: {rmse_error}")
-
-        lRMS.append(rmse_error)
-
-        # 0: Short, 1: Long
-        y_true_classifier = (y_valid > THRESHOLD)
-        y_pred_classifier = (y_p > THRESHOLD)
-        
-        n = len (y_true_classifier)
-        n_positive_true = (y_true_classifier).sum()
-        n_positive_pred = (y_pred_classifier).sum()
-
-        isTrueDegenerate = (n_positive_true == 0) or (n_positive_true == len(y_true_classifier))
-        isPredDegenerate = (n_positive_pred == 0) or (n_positive_pred == len(y_true_classifier))
-
-        if isTrueDegenerate or isPredDegenerate:
-            print("Warning missing pos/negs for AUC")
-            auc_warning_issued = True
-
-        gini_score = 2 * roc_auc_score(y_true_classifier, y_pred_classifier) - 1
-
-        print(f"Gini: {gini_score}")
-
-        a_confusion = confusion_matrix(y_true_classifier, y_pred_classifier)
-
-        a_conf_acc = a_conf_acc + a_confusion
-
-        l_gini.append(gini_score)
-
-
-    anRMS = np.array(lRMS)
-    anGINI = np.array(l_gini)
-
-    print(f"N = {X.shape[0]}, Folds = {NUM_FOLDS}")
-    print(f"RMS  {anRMS.mean()} +/- {anRMS.std()}")
-    print(f"GINI {anGINI.mean()} +/- {anGINI.std()} @positive > {THRESHOLD}. Degeneration warning issued: {auc_warning_issued}" )
-
-
-    print(f"{a_conf_acc}")
-
-    return y_oof
-
-"""c"""
 
 y_p = train(X,y)
 

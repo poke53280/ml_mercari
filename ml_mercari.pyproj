@@ -119,6 +119,9 @@
     <Compile Include="p0\p4.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="p0\p5.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="porto_seguro\porto_seguro.py">
       <SubType>Code</SubType>
     </Compile>
