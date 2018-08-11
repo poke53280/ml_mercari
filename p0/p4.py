@@ -35,6 +35,46 @@ df.shape[0]
 """c"""
 
 
+#############################################
+#
+#  Investigate D, MD and Length
+# Obs: Investigate after T_cut.
+
+df = df.assign(L = (1 + df.T0 - df.F0))
+
+df = df.drop(['F1', 'T0', 'B', 'S'], axis = 1)
+df = df.drop(['ID'], axis = 1)
+
+l = list(df['L'].groupby(by = df['D']))
+
+for a in l:
+    d_id = a[0]
+    data = a[1]
+    an = np.array(data)
+    d = get_stats_on_array(an)
+    print (d)
+
+l = list(df['L'].groupby(by = df['MD']))
+
+for a in l:
+    d_id = a[0]
+    data = a[1]
+    an = np.array(data)
+    d = get_stats_on_array(an)
+    print (d)
+
+
+l = list(df['D'].groupby(by = df['MD']))
+
+for a in l:
+    d_id = a[0]
+    data = a[1]
+    an = np.array(data)
+    print (an)
+
+
+
+
 ##################################################################################
 #
 #     get_target_df
@@ -67,7 +107,6 @@ def get_target_df(df, t_start, t_end, nGrow, idx):
         pass
 
     else:
-
         ids = res['ids']
 
         ids_target = pt.index[ids]
