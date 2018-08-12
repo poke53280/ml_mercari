@@ -77,7 +77,7 @@ DATA_DIR = DATA_DIR_PORTABLE
 
 
 
-df_t = pd.read_pickle(DATA_DIR + "df_t_10AUG2018.pkl")
+df_t = pd.read_pickle(DATA_DIR + "df_t_12AUG2018.pkl")
 
 
 y = df_t['Y'].values
@@ -88,13 +88,12 @@ df_t = df_t.drop(['ID'], axis = 1)
 
 df_t.dtypes
 
-df_t = df_t.assign(K = df_t.K.astype('category'))
-df_t = df_t.assign(MD = df_t.MD.astype('category'))
-df_t = df_t.assign(D = df_t.D.astype('category'))
 
-# Todo category to stats for MD, D
+df_t = df_t.drop(['D', 'MD'], axis = 1)
 
+df_t = df_t.assign(K = df_t.K.astype('int'))
 
+X = np.array(df_t, dtype = np.float32)
 
 
 ############################################################################
@@ -103,7 +102,12 @@ df_t = df_t.assign(D = df_t.D.astype('category'))
 #
 
 
-def train_classification(df_t, y, params):
+# from 1st seguro: gbdt,  max bin 255, learn 0.01, min data in leaf 1500, feature frac 0.7
+# bagging freq 1 , bagging fraq 0.7, lambda l1 = 1, lambda l2  = 1
+
+
+
+def train_classification(X, y):
     
     
     THRESHOLD = 17
@@ -114,7 +118,7 @@ def train_classification(df_t, y, params):
 
     kf = KFold(n_splits=NUM_FOLDS, shuffle=True, random_state=22)
 
-    lKF = list (enumerate(kf.split(df_t)))
+    lKF = list (enumerate(kf.split(X)))
 
     l_gini = []
 
@@ -127,35 +131,28 @@ def train_classification(df_t, y, params):
 
         print(f"--- Fold: {iLoop +1}/ {NUM_FOLDS} ---")
         
-        X_train = df_t.iloc[train_index]
+        X_train = X[train_index]
         y_train = y_b[train_index]
     
-        X_valid = df_t.iloc[test_index]
+        X_valid = X[test_index]
         y_valid = y_b[test_index]
 
-        isOneHot = False
-
-        if isOneHot:
-            X_train = pd.get_dummies(X_train)
-            X_valid = pd.get_dummies(X_valid)
-
-        else:
-            pass
-
-
-        dr = DReduction(20)
+        dr = DReduction(5)
 
         dr.fit(X_train)
 
-        X_train = pd.concat([X_train.reset_index(), dr.transform(X_train).reset_index()], axis = 1, ignore_index = True)
-        X_valid = pd.concat([X_valid.reset_index(), dr.transform(X_valid).reset_index()], axis = 1, ignore_index = True)
+        X_train_dr = dr.transform(X_train)
+        X_train = np.hstack([X_train, X_train_dr])
 
-        lgtrain = lgb.Dataset(data=X_train, label=y_train)
-        lgvalid = lgb.Dataset(data=X_valid, label=y_valid)
 
-        clf = lgb.train(params, lgtrain, num_boost_round=15000, early_stopping_rounds=300, valid_sets= [lgtrain, lgvalid], verbose_eval=50)
+        X_valid_dr = dr.transform(X_valid)
+        X_valid = np.hstack([X_valid, X_valid_dr])
 
-        y_p = clf.predict(X_valid)
+        clf = lgb.LGBMClassifier(n_estimators  = 5000, objective='binary', metric = 'auc', max_bin = 255, num_leaves=127, learning_rate = 0.005, silent = False, feature_fraction = 0.8, bagging_fraction = 0.75, bagging_freq = 5)
+
+        clf.fit(X_train, y_train, verbose = True, eval_metric = 'auc', eval_set = [(X_train, y_train), (X_valid, y_valid)], early_stopping_rounds  = 150)
+
+        y_p = clf.predict_proba(X_valid)[:,1]
 
         y_oof[test_index] = y_p
 
@@ -177,48 +174,9 @@ def train_classification(df_t, y, params):
 
 """c"""
 
-
-def getParams():
-    params = {}
-    params['task'] = 'train'
-    params['boosting_type'] = 'gbdt'
-    params['objective'] = 'binary'
-    params['metric'] = 'auc'
-    params['max_bin'] = 255
-    params['feature_fraction'] = 0.8
-    
-    params['learning_rate'] = 0.005
-    
-    params['num_leaves'] = np.random.choice([ 63])
-    params['bagging_freq'] = 3
-    params['boosting_type'] = np.random.choice(['gbdt'])
-    
-    params['bagging_fraction'] = 0.75
-
-    return params
-
-
 gini_mean = []
-param_list = []
 
-for x in range(4):
-
-    params = getParams()
-    print (params)
-    anGINI = train_classification(df_t, y, params)
-    gini_mean.append(anGINI.mean())
-    param_list.append(params)
+anGINI = train_classification(X, y)
+gini_mean.append(anGINI.mean())
 
 
-
-# Feature engineering D -> Length stats. MD -> Length stats. (D, MD) -> Length stats. Then remove D, MD.
-
-df_t.D.value_counts()
-
-m = df_t.D == 5924
-
-q = df_t[m]
-
-y_q = y[m]
-
-y_q.min()

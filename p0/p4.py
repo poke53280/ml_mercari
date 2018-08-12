@@ -35,43 +35,6 @@ df.shape[0]
 """c"""
 
 
-#############################################
-#
-#  Investigate D, MD and Length
-# Obs: Investigate after T_cut.
-
-df = df.assign(L = (1 + df.T0 - df.F0))
-
-df = df.drop(['F1', 'T0', 'B', 'S'], axis = 1)
-df = df.drop(['ID'], axis = 1)
-
-l = list(df['L'].groupby(by = df['D']))
-
-for a in l:
-    d_id = a[0]
-    data = a[1]
-    an = np.array(data)
-    d = get_stats_on_array(an)
-    print (d)
-
-l = list(df['L'].groupby(by = df['MD']))
-
-for a in l:
-    d_id = a[0]
-    data = a[1]
-    an = np.array(data)
-    d = get_stats_on_array(an)
-    print (d)
-
-
-l = list(df['D'].groupby(by = df['MD']))
-
-for a in l:
-    d_id = a[0]
-    data = a[1]
-    an = np.array(data)
-    print (an)
-
 
 
 
@@ -156,11 +119,11 @@ def get_prefixed_dict(d, prefix):
 def get_stats_on_array(v):
 
     if len(v) == 0:
-        return {'mean': 0, 'std': 0, 'max': 0, 'min':0, 'sum': 0, 'skewness': 0, 'kurtosis': 0, 'median': 0, 'q1': 0, 'q3': 0,'count': 0}
+        return {'count': 0, 'mean': 0, 'std': 0, 'max': 0, 'min':0, 'sum': 0, 'skewness': 0, 'kurtosis': 0, 'median': 0, 'q1': 0, 'q3': 0}
 
 
-    d = {'mean': v.mean(), 'std': v.std(), 'max': v.max(), 'min':v.min(), 'sum': v.sum(), 'skewness': skew(v), 'kurtosis': kurtosis(v), 'median': np.median(v),
-         'q1': np.percentile(v, q=25), 'q3': np.percentile(v, q=75),'count': len(v)}
+    d = {'count': len(v), 'mean': v.mean(), 'std': v.std(), 'max': v.max(), 'min':v.min(), 'sum': v.sum(), 'skewness': skew(v), 'kurtosis': kurtosis(v), 'median': np.median(v),
+         'q1': np.percentile(v, q=25), 'q3': np.percentile(v, q=75)}
 
     return d
 
@@ -400,4 +363,49 @@ print(f"Additional data elements: {rAdditionalDataFactor:.0f}%")
 
 df_t.to_pickle(DATA_DIR + "df_t_10AUG2018.pkl")
 
+df.to_pickle(DATA_DIR + "df_12AUG2018.pkl")
 
+
+
+#############################################
+#
+#  Investigate D, MD and Length
+
+df = df.assign(L = (1 + df.T0 - df.F1))
+
+df = df.drop(['F0', 'T0', 'B', 'S'], axis = 1)
+df = df.drop(['ID'], axis = 1)
+
+l = list(df['L'].groupby(by = df['D']))
+
+d_info = {}
+
+for a in l:
+    d_id = a[0]
+    data = a[1]
+    an = np.array(data)
+    d = get_stats_on_array(an)
+    print (d)
+    d_info[d_id] = d
+
+
+def d_frame(x):
+    d = {}
+
+    if x in d_info:
+        d = d_info[x]
+    else:
+        d = get_stats_on_array([])
+
+
+    d = get_prefixed_dict(d, 'd_')
+    return pd.Series(d)
+
+
+q = df_t.D.apply(d_frame)
+
+
+df_t = pd.concat([df_t, q], axis = 1)
+
+
+df_t.to_pickle(DATA_DIR + "df_t_12AUG2018.pkl")
