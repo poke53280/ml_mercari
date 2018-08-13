@@ -19,6 +19,31 @@ from sklearn.random_projection import SparseRandomProjection
 from sklearn.random_projection import GaussianRandomProjection
 
 
+######################################################################
+#
+#
+#       get_cut_off_threshold
+#
+#
+
+def get_cut_off_threshold(false_factor, y_p):
+    
+    assert false_factor > 0 and false_factor < 1
+ 
+    y_p_sorted = np.sort(np.array(y_p))
+
+    y_false_number = false_factor * len (y_p_sorted)
+
+    iCutIndex = int (y_false_number)
+
+    threshold_prob = y_p_sorted[iCutIndex]
+
+    return threshold_prob
+
+
+
+
+
 
 class DReduction:
 
@@ -68,9 +93,6 @@ class DReduction:
 """c"""
 
 
-
-
-
 DATA_DIR_PORTABLE = "C:\\p_data\\"
 DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
 DATA_DIR = DATA_DIR_PORTABLE
@@ -101,14 +123,12 @@ X = np.array(df_t, dtype = np.float32)
 #       train_classification()
 #
 
-
 # from 1st seguro: gbdt,  max bin 255, learn 0.01, min data in leaf 1500, feature frac 0.7
 # bagging freq 1 , bagging fraq 0.7, lambda l1 = 1, lambda l2  = 1
 
 
 
 def train_classification(X, y):
-    
     
     THRESHOLD = 17
     
@@ -137,20 +157,47 @@ def train_classification(X, y):
         X_valid = X[test_index]
         y_valid = y_b[test_index]
 
-        dr = DReduction(5)
+        dr = DReduction(6)
+
+       
 
         dr.fit(X_train)
 
         X_train_dr = dr.transform(X_train)
-        X_train = np.hstack([X_train, X_train_dr])
+
+        cols = X_train_dr.columns
+        matching = [s for s in cols if "pca" in s]
+        q = X_train_dr[matching]
+
+        X_train = np.array(q, dtype = np.float32)
+
+        
+
+        # X_train = np.hstack([X_train, X_train_dr])
 
 
         X_valid_dr = dr.transform(X_valid)
-        X_valid = np.hstack([X_valid, X_valid_dr])
 
-        clf = lgb.LGBMClassifier(n_estimators  = 5000, objective='binary', metric = 'auc', max_bin = 255, num_leaves=127, learning_rate = 0.005, silent = False, feature_fraction = 0.8, bagging_fraction = 0.75, bagging_freq = 5)
+        q = X_valid_dr[matching]
 
-        clf.fit(X_train, y_train, verbose = True, eval_metric = 'auc', eval_set = [(X_train, y_train), (X_valid, y_valid)], early_stopping_rounds  = 150)
+        X_valid = np.array(q, dtype = np.float32)
+
+
+
+        # X_valid = np.hstack([X_valid, X_valid_dr])
+
+
+
+       
+
+
+
+
+        rPosWeight = 1.0 / (y_b.sum() / (len (y_b) - y_b.sum()))
+
+        clf = lgb.LGBMClassifier(scale_pos_weight = rPosWeight, n_estimators  = 5000, objective='binary', metric = 'auc', max_bin = 255, num_leaves=127, learning_rate = 0.005, silent = False, feature_fraction = 0.8, bagging_fraction = 0.75, bagging_freq = 1, subsample_freq = 1, subsample = 0.75)
+
+        clf.fit(X_train, y_train, verbose = 50, eval_metric = 'auc', eval_set = [(X_train, y_train), (X_valid, y_valid)], early_stopping_rounds  = 150)
 
         y_p = clf.predict_proba(X_valid)[:,1]
 
@@ -164,11 +211,31 @@ def train_classification(X, y):
 
         l_gini.append(gini)
 
+        # False frequency.
+        fFalseRatio = (len (y_b) - y_b.sum()) / len (y_b)
+
+        cut_off_value = get_cut_off_threshold(fFalseRatio, y_p)
+
+        y_pred = (y_p >= cut_off_value)
+
+        conf_this = confusion_matrix(y_valid, y_pred)
+
+        a_conf_acc += conf_this
+
 
     anGINI = np.array(l_gini)
 
     print(f"N = {df_t.shape[0]}, Folds = {NUM_FOLDS}")
+    print(f"True lo: {len (y_b) - y_b.sum()}, true hi: { y_b.sum()} ")
     print(f"GINI {anGINI.mean()} +/- {anGINI.std()} @positive > {THRESHOLD}." )
+
+    a_conf_acc = a_conf_acc / len (y)
+    a_conf_acc *= 100.0
+
+    df = pd.DataFrame(a_conf_acc,columns=['pred_lo', 'pred_hi'])
+    df.index = pd.Series(['true_lo', 'true_hi'])
+
+    print(df)
 
     return anGINI
 
@@ -177,6 +244,9 @@ def train_classification(X, y):
 gini_mean = []
 
 anGINI = train_classification(X, y)
-gini_mean.append(anGINI.mean())
+t6gini_mean.append(anGINI.mean())
+
+
+
 
 
