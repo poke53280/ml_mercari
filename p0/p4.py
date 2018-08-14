@@ -109,13 +109,6 @@ def get_prefixed_dict(d, prefix):
 
 """c"""
 
-#
-# Erik Vattekar
-#
-# V153753
-#
-#
-
 def get_stats_on_array(v):
 
     if len(v) == 0:

@@ -11,7 +11,6 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import confusion_matrix
 
 
-
 from sklearn.decomposition import PCA
 from sklearn.decomposition import TruncatedSVD
 from sklearn.decomposition import FastICA
@@ -40,6 +39,23 @@ def get_cut_off_threshold(false_factor, y_p):
 
     return threshold_prob
 
+
+
+# Basic feature importance
+
+from sklearn.ensemble import RandomForestClassifier
+model = RandomForestClassifier(n_estimators= 1000)
+
+y_p = y > 17
+
+model.fit(df_t, y_p)
+
+# display the relative importance of each attribute
+importances = model.feature_importances_
+
+print ("Sorted Feature Importance:")
+sorted_feature_importance = sorted(zip(importances, list(df_t)), reverse=True)
+print (sorted_feature_importance)
 
 
 
@@ -173,7 +189,7 @@ def train_classification(X, y):
 
         
 
-        # X_train = np.hstack([X_train, X_train_dr])
+        X_train = np.hstack([X_train, X_train_dr])
 
 
         X_valid_dr = dr.transform(X_valid)
@@ -184,7 +200,7 @@ def train_classification(X, y):
 
 
 
-        # X_valid = np.hstack([X_valid, X_valid_dr])
+        X_valid = np.hstack([X_valid, X_valid_dr])
 
 
 
