@@ -316,7 +316,7 @@ nGrow = 15
 
 nAllIDS = len (np.unique(df.ID))
 
-nCut = 200000  #  = nAllIDS for no cut
+nCut = nAllIDS  #  = nAllIDS for no cut
 
 # First cut historic data 
 m = (df.ID < nCut)
@@ -336,7 +336,6 @@ df_t['K'] = q.S
 
 df = df.drop(['B', 'S'], axis = 1)
 
-
 s = df_t.S
 
 df = df.assign(TCUT = df.ID.apply(lambda x: s[x]) )
@@ -354,51 +353,8 @@ rAdditionalDataFactor = 100.0 * nGotAdditionalData/ nCut
 
 print(f"Additional data elements: {rAdditionalDataFactor:.0f}%")
 
-df_t.to_pickle(DATA_DIR + "df_t_10AUG2018.pkl")
-
-df.to_pickle(DATA_DIR + "df_12AUG2018.pkl")
-
+df_t.to_pickle(DATA_DIR + "df_t_14AUG2018.pkl")
+df.to_pickle(DATA_DIR + "df_14AUG2018.pkl")
 
 
-#############################################
-#
-#  Investigate D, MD and Length
 
-df = df.assign(L = (1 + df.T0 - df.F1))
-
-df = df.drop(['F0', 'T0', 'B', 'S'], axis = 1)
-df = df.drop(['ID'], axis = 1)
-
-l = list(df['L'].groupby(by = df['D']))
-
-d_info = {}
-
-for a in l:
-    d_id = a[0]
-    data = a[1]
-    an = np.array(data)
-    d = get_stats_on_array(an)
-    print (d)
-    d_info[d_id] = d
-
-
-def d_frame(x):
-    d = {}
-
-    if x in d_info:
-        d = d_info[x]
-    else:
-        d = get_stats_on_array([])
-
-
-    d = get_prefixed_dict(d, 'd_')
-    return pd.Series(d)
-
-
-q = df_t.D.apply(d_frame)
-
-
-df_t = pd.concat([df_t, q], axis = 1)
-
-
-df_t.to_pickle(DATA_DIR + "df_t_12AUG2018.pkl")

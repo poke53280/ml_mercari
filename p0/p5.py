@@ -18,6 +18,109 @@ from sklearn.random_projection import SparseRandomProjection
 from sklearn.random_projection import GaussianRandomProjection
 
 
+from scipy.stats import skew, kurtosis
+
+def get_prefixed_dict(d, prefix):
+    d_prefixed = {}
+
+    for key, value in d.items():
+        d_prefixed[prefix + key] = value
+
+    return d_prefixed
+
+"""c"""
+
+def get_stats_on_array(v):
+
+    if len(v) == 0:
+        return {'count': 0, 'mean': 0, 'std': 0, 'max': 0, 'min':0, 'sum': 0, 'skewness': 0, 'kurtosis': 0, 'median': 0, 'q1': 0, 'q3': 0}
+
+
+    d = {'count': len(v), 'mean': v.mean(), 'std': v.std(), 'max': v.max(), 'min':v.min(), 'sum': v.sum(), 'skewness': skew(v), 'kurtosis': kurtosis(v), 'median': np.median(v),
+         'q1': np.percentile(v, q=25), 'q3': np.percentile(v, q=75)}
+
+    return d
+
+DATA_DIR_PORTABLE = "C:\\p_data\\"
+DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
+DATA_DIR = DATA_DIR_PORTABLE
+
+
+df_t = pd.read_pickle(DATA_DIR + "df_t_14AUG2018.pkl")
+df = pd.read_pickle(DATA_DIR + "df_14AUG2018.pkl")
+
+
+#############################################
+#
+#  Investigate D, MD and Length
+
+df = df.assign(L = (1 + df.T0 - df.F1))
+
+df = df.drop(['F0', 'T0'], axis = 1)
+df = df.drop(['ID'], axis = 1)
+
+l = list(df['L'].groupby(by = df['D']))
+
+d_info = {}
+
+for a in l:
+    d_id = a[0]
+    data = a[1]
+    an = np.array(data)
+    d = get_stats_on_array(an)
+    d_info[d_id] = d
+
+
+def d_frame(x):
+    d = {}
+
+    if x in d_info:
+        d = d_info[x]
+    else:
+        d = get_stats_on_array([])
+
+
+    d = get_prefixed_dict(d, 'dcurr_')
+    return pd.Series(d)
+
+q = df_t.D.apply(d_frame)
+
+df_t = pd.concat([df_t, q], axis = 1)
+
+
+l = list(df['L'].groupby(by = df['MD']))
+
+d_info = {}
+
+for a in l:
+    d_id = a[0]
+    data = a[1]
+    an = np.array(data)
+    d = get_stats_on_array(an)
+    d_info[d_id] = d
+
+
+def d_frame(x):
+    d = {}
+
+    if x in d_info:
+        d = d_info[x]
+    else:
+        d = get_stats_on_array([])
+
+
+    d = get_prefixed_dict(d, 'mdcurr_')
+    return pd.Series(d)
+
+
+q = df_t.D.apply(d_frame)
+
+df_t = pd.concat([df_t, q], axis = 1)
+
+
+df_t.to_pickle(DATA_DIR + "df_t_p5_14AUG2018.pkl")
+
+
 ######################################################################
 #
 #
@@ -38,24 +141,6 @@ def get_cut_off_threshold(false_factor, y_p):
     threshold_prob = y_p_sorted[iCutIndex]
 
     return threshold_prob
-
-
-
-# Basic feature importance
-
-from sklearn.ensemble import RandomForestClassifier
-model = RandomForestClassifier(n_estimators= 1000)
-
-y_p = y > 17
-
-model.fit(df_t, y_p)
-
-# display the relative importance of each attribute
-importances = model.feature_importances_
-
-print ("Sorted Feature Importance:")
-sorted_feature_importance = sorted(zip(importances, list(df_t)), reverse=True)
-print (sorted_feature_importance)
 
 
 
@@ -109,13 +194,8 @@ class DReduction:
 """c"""
 
 
-DATA_DIR_PORTABLE = "C:\\p_data\\"
-DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
-DATA_DIR = DATA_DIR_PORTABLE
 
-
-
-df_t = pd.read_pickle(DATA_DIR + "df_t_12AUG2018.pkl")
+df_t = pd.read_pickle(DATA_DIR + "df_t_14AUG2018p5 FIXFILENAMEpkl")
 
 
 y = df_t['Y'].values
@@ -126,12 +206,22 @@ df_t = df_t.drop(['ID'], axis = 1)
 
 df_t.dtypes
 
+# Basic feature importance
 
-df_t = df_t.drop(['D', 'MD'], axis = 1)
+from sklearn.ensemble import RandomForestClassifier
+model = RandomForestClassifier(n_estimators= 100)
 
-df_t = df_t.assign(K = df_t.K.astype('int'))
 
-X = np.array(df_t, dtype = np.float32)
+model.fit(df_t, (y > 17))
+
+importances = model.feature_importances_
+
+sorted_feature_importance = sorted(zip(importances, list(df_t)), reverse=True)
+print (sorted_feature_importance)
+
+#df_t = df_t.drop(['D', 'MD'], axis = 1)
+#df_t = df_t.assign(K = df_t.K.astype('int'))
+
 
 
 ############################################################################
@@ -139,12 +229,7 @@ X = np.array(df_t, dtype = np.float32)
 #       train_classification()
 #
 
-# from 1st seguro: gbdt,  max bin 255, learn 0.01, min data in leaf 1500, feature frac 0.7
-# bagging freq 1 , bagging fraq 0.7, lambda l1 = 1, lambda l2  = 1
-
-
-
-def train_classification(X, y):
+def train_classification(df_t, y):
     
     THRESHOLD = 17
     
@@ -154,7 +239,7 @@ def train_classification(X, y):
 
     kf = KFold(n_splits=NUM_FOLDS, shuffle=True, random_state=22)
 
-    lKF = list (enumerate(kf.split(X)))
+    lKF = list (enumerate(kf.split(df_t)))
 
     l_gini = []
 
@@ -167,53 +252,43 @@ def train_classification(X, y):
 
         print(f"--- Fold: {iLoop +1}/ {NUM_FOLDS} ---")
         
-        X_train = X[train_index]
+        X_train = df_t.iloc[train_index]
         y_train = y_b[train_index]
     
-        X_valid = X[test_index]
+        X_valid = df_t.iloc[test_index]
         y_valid = y_b[test_index]
 
         dr = DReduction(6)
-
-       
 
         dr.fit(X_train)
 
         X_train_dr = dr.transform(X_train)
 
-        cols = X_train_dr.columns
-        matching = [s for s in cols if "pca" in s]
-        q = X_train_dr[matching]
+        #cols = X_train_dr.columns
+        #matching = [s for s in cols if "pca" in s]
+        #q = X_train_dr[matching]
 
-        X_train = np.array(q, dtype = np.float32)
+        X_train_dr = np.array(X_train_dr, dtype = np.float32)
+        X_train = np.array(X_train, dtype = np.float32)
 
-        
 
         X_train = np.hstack([X_train, X_train_dr])
 
 
         X_valid_dr = dr.transform(X_valid)
 
-        q = X_valid_dr[matching]
+        #q = X_valid_dr[matching]
 
-        X_valid = np.array(q, dtype = np.float32)
-
-
+        X_valid_dr = np.array(X_valid_dr, dtype = np.float32)
+        X_valid = np.array(X_valid, dtype = np.float32)
 
         X_valid = np.hstack([X_valid, X_valid_dr])
 
-
-
-       
-
-
-
-
         rPosWeight = 1.0 / (y_b.sum() / (len (y_b) - y_b.sum()))
 
-        clf = lgb.LGBMClassifier(scale_pos_weight = rPosWeight, n_estimators  = 5000, objective='binary', metric = 'auc', max_bin = 255, num_leaves=127, learning_rate = 0.005, silent = False, feature_fraction = 0.8, bagging_fraction = 0.75, bagging_freq = 1, subsample_freq = 1, subsample = 0.75)
+        clf = lgb.LGBMClassifier(scale_pos_weight = rPosWeight, n_estimators  = 5000, objective='binary', metric = 'auc', max_bin = 255, num_leaves=63, learning_rate = 0.01, silent = False, feature_fraction = 0.8, bagging_fraction = 0.75, bagging_freq = 1, subsample_freq = 1, subsample = 0.75)
 
-        clf.fit(X_train, y_train, verbose = 50, eval_metric = 'auc', eval_set = [(X_train, y_train), (X_valid, y_valid)], early_stopping_rounds  = 150)
+        clf.fit(X_train, y_train, verbose = 50, eval_metric = 'auc', eval_set = [(X_train, y_train), (X_valid, y_valid)], early_stopping_rounds  = 200)
 
         y_p = clf.predict_proba(X_valid)[:,1]
 
@@ -259,7 +334,7 @@ def train_classification(X, y):
 
 gini_mean = []
 
-anGINI = train_classification(X, y)
+anGINI = train_classification(df_t, y)
 t6gini_mean.append(anGINI.mean())
 
 
