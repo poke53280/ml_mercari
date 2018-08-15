@@ -193,6 +193,9 @@
     <Compile Include="tf-tpu\iris_tf.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="tf-tpu\mnist_tpu.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="tgs\starter.py">
       <SubType>Code</SubType>
     </Compile>

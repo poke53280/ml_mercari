@@ -194,8 +194,13 @@ class DReduction:
 """c"""
 
 
+import pandas as pd
 
-df_t = pd.read_pickle(DATA_DIR + "df_t_14AUG2018p5 FIXFILENAMEpkl")
+DATA_DIR_PORTABLE = "C:\\p_data\\"
+DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
+DATA_DIR = DATA_DIR_PORTABLE
+
+df_t = pd.read_pickle(DATA_DIR + "df_t_p5_14AUG2018.pkl")
 
 
 y = df_t['Y'].values

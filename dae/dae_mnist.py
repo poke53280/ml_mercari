@@ -15,7 +15,7 @@
 # http://kvfrans.com/variational-autoencoders-explained/
 #
 #
-asdfsdfasdf
+
 from keras.layers import Input, Dense
 from keras.models import Model
 
@@ -42,7 +42,6 @@ autoencoder.summary()
 
 # Access to encode model
 encoder = Model(input_img, encoded)
-
 
 
 # As well as the decoder model:
