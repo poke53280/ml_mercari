@@ -50,11 +50,18 @@ b = DataProviderImpl()
 b.getTimeRecord(3, [0,3], 2)
 
 
-values = [90, 80, 4, 3, -1]
-slots = [40, 40, 3, 3]
+values = [9, 4.9, 3, -10]
+slots = [8, 5, 3, 2]
 
 
 slot_allocator_best_value(values, slots, 5, True)
+
+
+values = values[::-1]
+slots = slots[::-1]
+
+values
+slots
 
 slot_allocator_multi_value(values, slots, 5)
 
