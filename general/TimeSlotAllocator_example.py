@@ -2,7 +2,6 @@
 
 import sys
 import os
-
 import numpy as np
 
 sys.path
@@ -22,10 +21,20 @@ class DataEntry:
         self._c = c
         self._d = d
 
-
     def getKeyTime(self):
         return self._a
 
+    def getDataPerElement(self):
+        return 4
+
+    def getData(self, offset):
+        res = np.empty(4, dtype = np.float32)
+        res[0] = self._a - offset
+        res[1] = self._b
+        res[2] = self._c - offset
+        res[3] = self._d
+
+        return res
 
 
 class DataProviderImpl:
@@ -39,7 +48,7 @@ class DataProviderImpl:
         self._d = {}
 
 
-    # Time points, sorted from high to low for which data is available.
+    # Time points, sorted from low to high for which data is available.
     def getTimeStamps(self):
         return list (b._d.keys())
 
@@ -48,6 +57,24 @@ class DataProviderImpl:
     def getDataPerElement(self):
         return 2
 
+    # Combine input data list into single slot. Adjust wit input offset.
+    def _getDataFromValues(self, l_requested_data, offset):
+
+        sum_c = 0
+
+        for v in l_requested_data:
+            anResultElement = v.getData(offset)
+            
+            assert anResultElement.shape[0] == 4
+            
+            sum_c += anResultElement[2]
+
+        anResult = np.empty(self.getDataPerElement(), dtype = np.float32 )
+
+        anResult[0] = len (l_requested_data)
+        anResult[1] = sum_c
+
+        return anResult
 
     def getData(self, l_requested_data_idx, offset):
         
@@ -60,20 +87,9 @@ class DataProviderImpl:
             assert k in self._d, f"key {k} not in data dictionary"
             l_requested_data.append(self._d[k])
 
-
-        sum_c = 0
-
-        for v in l_requested_data:
-            sum_c +=  (v._c - offset)
-     
-
-        anResult = np.empty(self.getDataPerElement(), dtype = np.float32 )
-
-        anResult[0] = len (l_requested_data)
-        anResult[1] = sum_c
+        anResult = self._getDataFromValues(l_requested_data, offset)
 
         return anResult
-
 
     # Provide data for time point time_value adjusted with time offset valueOffset.
     def getTimeRecord(self, time_slot_value, alloc_location_list):
@@ -98,9 +114,7 @@ class DataProviderImpl:
         return an
 
 """c"""
-
-
-    
+  
 b = DataProviderImpl()
 
 b.addEntry(DataEntry(-10,2,3,4))
@@ -108,13 +122,11 @@ b.addEntry(DataEntry(3,2,31,4))
 b.addEntry(DataEntry(5,2,31,4))
 b.addEntry(DataEntry(9,2,31,4))
 
-
-
 slots = [-6,2,3,4]
 
-
-
 d = get_slot_data(b, slots, 5, True)
+
+print (d)
 
 
 

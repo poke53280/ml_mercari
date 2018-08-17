@@ -139,9 +139,7 @@ def get_slot_data(data_provider, list_time_slots_configuration, rTimeTolerance, 
 
     assert len(l_slot_allocation) == n_slots, "slot allocater bad return"
 
-    for i, alloc_location_list in enumerate(l_slot_allocation):
-        iSlotIndex = i
-        iDataIndexList = alloc_location_list
+    for iSlotIndex, alloc_location_list in enumerate(l_slot_allocation):
 
         if len (alloc_location_list) == 0:
             if isVerbose: print(f"{iSlotIndex}: Empty")
