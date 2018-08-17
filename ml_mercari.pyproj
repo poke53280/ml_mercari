@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>cc77cf4b-e52a-4996-852b-eba94c92124b</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>tf-tpu\iris_tf.py</StartupFile>
+    <StartupFile>general\TimeSlotAllocator_example.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>

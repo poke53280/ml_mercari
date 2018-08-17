@@ -53,6 +53,12 @@ df = pd.read_pickle(DATA_DIR + "df_14AUG2018.pkl")
 #############################################
 #
 #  Investigate D, MD and Length
+#
+#
+# L - all raw lengths 
+#
+
+# Todo : Use T1
 
 df = df.assign(L = (1 + df.T0 - df.F1))
 
@@ -113,12 +119,12 @@ def d_frame(x):
     return pd.Series(d)
 
 
-q = df_t.D.apply(d_frame)
+q = df_t.MD.apply(d_frame)
 
 df_t = pd.concat([df_t, q], axis = 1)
 
 
-df_t.to_pickle(DATA_DIR + "df_t_p5_14AUG2018.pkl")
+df_t.to_pickle(DATA_DIR + "df_t_p5_17AUG2018.pkl")
 
 
 ######################################################################
@@ -200,7 +206,7 @@ DATA_DIR_PORTABLE = "C:\\p_data\\"
 DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
 DATA_DIR = DATA_DIR_PORTABLE
 
-df_t = pd.read_pickle(DATA_DIR + "df_t_p5_14AUG2018.pkl")
+df_t = pd.read_pickle(DATA_DIR + "df_t_p5_17AUG2018.pkl")
 
 
 y = df_t['Y'].values
@@ -263,7 +269,7 @@ def train_classification(df_t, y):
         X_valid = df_t.iloc[test_index]
         y_valid = y_b[test_index]
 
-        dr = DReduction(6)
+        dr = DReduction(5)
 
         dr.fit(X_train)
 
@@ -291,9 +297,9 @@ def train_classification(df_t, y):
 
         rPosWeight = 1.0 / (y_b.sum() / (len (y_b) - y_b.sum()))
 
-        clf = lgb.LGBMClassifier(scale_pos_weight = rPosWeight, n_estimators  = 5000, objective='binary', metric = 'auc', max_bin = 255, num_leaves=63, learning_rate = 0.01, silent = False, feature_fraction = 0.8, bagging_fraction = 0.75, bagging_freq = 1, subsample_freq = 1, subsample = 0.75)
+        clf = lgb.LGBMClassifier(scale_pos_weight = rPosWeight, n_estimators  = 9000, objective='binary', metric = 'auc', max_bin = 255, num_leaves=63, learning_rate = 0.01, silent = False, feature_fraction = 0.8, bagging_fraction = 0.75, bagging_freq = 3)
 
-        clf.fit(X_train, y_train, verbose = 50, eval_metric = 'auc', eval_set = [(X_train, y_train), (X_valid, y_valid)], early_stopping_rounds  = 200)
+        clf.fit(X_train, y_train, verbose = 50, eval_metric = 'auc', eval_set = [(X_train, y_train), (X_valid, y_valid)], early_stopping_rounds  = 300)
 
         y_p = clf.predict_proba(X_valid)[:,1]
 
@@ -340,9 +346,7 @@ def train_classification(df_t, y):
 gini_mean = []
 
 anGINI = train_classification(df_t, y)
-t6gini_mean.append(anGINI.mean())
-
-
+gini_mean.append(anGINI.mean())
 
 
 

@@ -11,135 +11,112 @@ cwd = os.getcwd()
 
 os.chdir('C:\\Users\\T149900\\ml_mercari')
 
-from general.TimeSlotAllocator import get_slot_data
+from general.TimeSlotAllocator import *
 
+
+class DataEntry:
+
+    def __init__(self, a, b, c, d):
+        self._a = a
+        self._b = b
+        self._c = c
+        self._d = d
+
+
+    def getKeyTime(self):
+        return self._a
 
 
 
 class DataProviderImpl:
 
+    def addEntry(self, d):
+        assert not d.getKeyTime() in self._d, f"Entry at key time = {d.getKeyTime()} already exists"
+        self._d[d.getKeyTime()] = d
+
+
+    def __init__(self):
+        self._d = {}
+
+
     # Time points, sorted from high to low for which data is available.
     def getTimeStamps(self):
-        return [3,2,1, -4]
+        return list (b._d.keys())
+
 
     # Number of float32 elements for each time point.
     def getDataPerElement(self):
         return 2
 
-    # Provide data for time point time_value adjusted with time offset valueOffset.
-    def getTimeRecord(self, time_slot_value, alloc_location_list, data_size):
 
+    def getData(self, l_requested_data_idx, offset):
+        
+        # 'count' and 'mean'
+        assert len(l_requested_data_idx) > 0, "Requested data list is empty"
+
+        l_requested_data = []
+
+        for k in l_requested_data_idx:
+            assert k in self._d, f"key {k} not in data dictionary"
+            l_requested_data.append(self._d[k])
+
+
+        sum_c = 0
+
+        for v in l_requested_data:
+            sum_c +=  (v._c - offset)
+     
+
+        anResult = np.empty(self.getDataPerElement(), dtype = np.float32 )
+
+        anResult[0] = len (l_requested_data)
+        anResult[1] = sum_c
+
+        return anResult
+
+
+    # Provide data for time point time_value adjusted with time offset valueOffset.
+    def getTimeRecord(self, time_slot_value, alloc_location_list):
+
+        assert len(alloc_location_list) > 0
 
         data_points = self.getTimeStamps()
 
+        l_requested_data = []
+
         for x in alloc_location_list:
             assert x >= 0 and x < len(self.getTimeStamps()), "time stamp index out of range"
-
-            print(f" Requesting element idx = {x}, value = {data_points[x]}")
+            l_requested_data.append(data_points[x])
+            
         
+        print(f" time slot at {time_slot_value}: Requesting elements {l_requested_data}")
 
-        an = np.zeros(data_size, dtype = np.float32)
+        an = self.getData(l_requested_data, time_slot_value)
+
+        assert an.shape[0] == self.getDataPerElement()
 
         return an
 
 """c"""
 
+
     
 b = DataProviderImpl()
 
-b.getTimeRecord(3, [0,3], 2)
-
-
-values = [9, 4.9, 3, -10]
-slots = [8, 5, 3, 2]
-
-
-slot_allocator_best_value(values, slots, 5, True)
-
-
-values = values[::-1]
-slots = slots[::-1]
-
-values
-slots
-
-slot_allocator_multi_value(values, slots, 5)
-
-
-b.getTimeStamps()
-
-
-d = get_slot_data(b, [40, 40, 3, 3], 5, True)
+b.addEntry(DataEntry(-10,2,3,4))
+b.addEntry(DataEntry(3,2,31,4))
+b.addEntry(DataEntry(5,2,31,4))
+b.addEntry(DataEntry(9,2,31,4))
 
 
 
-# Find nearest value in slot for values
-# First make work on ascending order;
-
-# Slots must be unique valued
-
-import bisect
-
-values = [-1, 3, 4, 4.9,5.5, 6, 6, 7]
-slots = [3,4,5, 6]
+slots = [-6,2,3,4]
 
 
 
-def slot_allocator_multi_value(values, slots, rTolerance):
-
-    s_res = []
-
-    for s in slots:
-        s_res.append([])
-
-    bisect_lo = 0
-
-
-    for idx, value in enumerate(values):
-
-        bisect_lo = bisect.bisect_left(slots, value, lo = bisect_lo, hi = len (slots))
-
-        if bisect_lo == len(slots):
-            slot_idx = len(slots) -1
-        else:
-            slot_idx = bisect_lo
-
-        slot_value = slots[slot_idx]
-
-
-        if np.abs(value - slot_value) > rTolerance:
-            pass
-        else:
-            s_res[slot_idx].append(idx)
-
-
-    return s_res    
-
-"""c"""
-    
-
-slot_allocator_multi_value(values, slots, 0.01)
-
-     
+d = get_slot_data(b, slots, 5, True)
 
 
 
 
-
-
-    slots = [-1,-2, -3, -4, -5.1, -6, -7, -8, -9]
-    rTolerance = 0.9
-
-    data = get_slot_data(b, slots, rTolerance, False)
-
-    print (data)
-
-"""c"""
-
-# DataProviderImpl provides data at times 3, 2, 1, -4
-
-#
-
-
-TimeSlotAllocator_example()
 
