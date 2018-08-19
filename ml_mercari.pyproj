@@ -242,6 +242,7 @@
     <Folder Include="favorita\" />
     <Folder Include="avito\" />
     <Folder Include="dae\" />
+    <Folder Include="ga\" />
     <Folder Include="tf-tpu\" />
     <Folder Include="tgs\" />
     <Folder Include="p0\" />
@@ -252,6 +253,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="batch\description.py" />
+    <Content Include="ga\Refs.txt" />
     <Content Include="home_credit\read.txt" />
     <Content Include="mercari\Refs.txt" />
     <Content Include="toxic\Refs.txt" />
