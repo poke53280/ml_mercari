@@ -28,16 +28,7 @@ mu, sigma = 0, 0.1
 
 y_true = 10 + 1.1 * np.arange(nRows) + np.random.normal(mu + 0, sigma * 0.3, nRows)
 
-predictions = []
 
-predictions.append(1.2 * y_true + 9 + np.random.normal(mu + 0, sigma * 1, nRows))
-predictions.append(0.9 * y_true + 4 + np.random.normal(mu + 0.3, sigma * 2, nRows))
-predictions.append(1.1 * y_true + 3 + np.random.normal(mu - 0.3, sigma * 3, nRows))
-predictions.append(0.9 * y_true - 1  + 2 * np.random.normal(mu + 0, sigma * 4, nRows))
-predictions.append(0.9 * y_true + 4 + 3* np.random.normal(mu + 0.3, sigma * 2, nRows))
-predictions.append(1.05 * y_true + 1 + 4* np.random.normal(mu - 0.5, sigma * 3, nRows))
-predictions.append(0.95 * y_true - 3  + 3* np.random.normal(mu + 0, sigma * 6, nRows))
-predictions.append(1.0 * np.ones(nRows))
 
 #################################################################
 #
