@@ -92,7 +92,7 @@
     <Compile Include="general\TimeSlotAllocator_example.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="general\__init__py.py">
+    <Compile Include="general\__init__.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="home_credit\AutoEncoding.py">
@@ -122,7 +122,13 @@
     <Compile Include="p0\p5.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="p0\p_general.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="p0\p_init.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="p0\__init__.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="porto_seguro\porto_seguro.py">

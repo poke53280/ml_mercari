@@ -1,358 +1,64 @@
 
 
-
 import sys
 import pandas as pd
 import os
 
 print(sys.version)
-import cx_Oracle
-import getpass
+
 import json
 import random
 
 import numpy as np
 import bisect
 
+import datetime
+import time
+
 os.environ['NLS_NCHAR_CHARACTERSET']='AL16UTF16'
 os.environ['NLS_CHARACTERSET']='WE8ISO8859P15'
 os.environ['NLS_LANG']='AMERICAN_AMERICA.WE8ISO8859P15'
 
-import datetime
-import time
 
 
 """"c"""
 
-#
-# Returns series with value randomly changed +/- input number of days
-#
-
-def addNoise(s, num_days):
-
-    sn = s.values
-    noise = np.random.randint(-num_days, num_days +1, size = len(s))
-
-    sn = sn + noise
-    return pd.Series(sn, dtype=np.int)
-
-"""c"""
-
-##########################################################################
-#
-#   create_json_IDX_F_T_SAKSKODE
-#
-
-def create_json_IDX_F_T_SAKSKODE(df):
-
-    d = {}
-
-    for index, row in df.iterrows():
-        id = row['IDX']
-        f  = row['F']
-        t  = row['T']
-        s  = row['SAKSKODE']
-
-        if id not in d:
-            d[id] = { }
-
-        if s not in d[id]:
-            d[id][s] = {}
-            d[id][s] = []
-
-        d[id][s].append(f)
-        d[id][s].append(t)
-
-
-    return d
-
-"""c"""
-
-##########################################################################
-#
-#   create_json_IDX_F_T_SAKSKODE_VIRKID
-#
-
-def create_json_IDX_F_T_SAKSKODE_VIRKID(df):
-
-    d = {}
-
-    for index, row in df.iterrows():
-        id = row['IDX']
-        f  = row['F']
-        t  = row['T']
-        s  = row['SAKSKODE']
-        v  = row['VIRK_ID']
-
-        if id not in d:
-            d[id] = { }
-
-        if s not in d[id]:
-            d[id][s] = {}
-            d[id][s] = []
-
-        d[id][s].append(f)
-        d[id][s].append(t)
-        d[id][s].append(v)
-
-
-    return d
-
-"""c"""
-
-##########################################################################
-#
-#   create_json_IDX_F_F_T_SAKSKODE_DOCID_DIAG_
-#
-# ['DOCID', 'F0', 'F1', 'T1', 'DIAG', 'FID', 'SAKSKODE', 'IDX']
-
-def create_json_IDX_F_F_T_SAKSKODE_DOCID_DIAG_(df):
-
-    d = {}
-
-    for index, row in df.iterrows():
-        id = row['IDX']
-        s  = row['SAKSKODE']
-
-        if id not in d:
-            d[id] = { }
-
-        if s not in d[id]:
-            d[id][s] = {}
-            d[id][s] = []
-
-        d[id][s].append(row['F0'])
-        d[id][s].append(row['F1'])
-        d[id][s].append(row['T1'])
-        d[id][s].append(row['DIAG']) 
-        d[id][s].append(row['DOCID']) 
-        
-    return d
-
-"""c"""
-
-
-##########################################################################
-#
-#   write_json
-#
-
-def write_json(filename, json_struct):
-    with open(filename, 'w') as outfile:
-        json.dump(json_struct, outfile, sort_keys = True, indent = 4, ensure_ascii = False)
-
-
-def create_json(df):
-
-    d = {}
-
-    for index, row in df.iterrows():
-        id = row['ID']
-        f  = row['F']
-        t  = row['T']
-        s  = row['SAKSKODE']
-
-        if id not in d:
-            d[id] = { }
-
-        if s not in d[id]:
-            d[id][s] = {}
-            d[id][s] = []
-
-        d[id][s].append(f)
-        d[id][s].append(t)
-
-
-    return d
-
-"""c"""
-
-def write_json(filename, json_struct):
-    with open(filename, 'w') as outfile:
-        json.dump(json_struct, outfile, sort_keys = True, indent = 4, ensure_ascii = False)
-
-"""c"""
-
-
-def serial_date_to_string(srl_no):
-    new_date = datetime.datetime(1970,1,1,0,0) + datetime.timedelta(srl_no - 1)
-    return new_date.strftime("%Y-%m-%d")
-
-
-"""c"""
-
-
-def serial_date_to_string(srl_no):
-    new_date = datetime.datetime(1970,1,1,0,0) + datetime.timedelta(srl_no - 1)
-    return new_date.strftime("%Y-%m-%d")
-
-
-"""c"""
 
 # ---- Read in configuration file and create json dictionary.
 
-# Create class for config. Include 'reload' method.
-
-config_file = "X:\\XXXX\\XXXX\\db_connection.json"
+config_file = "X:\\XXX\\XXX\\db_connection.json"
 
 f = open(config_file,"r")
 config = f.read()
 f.close()
 
-config_data = json.loads(config)
-print(f"config_data size = {len(config_data)}")
-
-
-##########################################################################
-#
-#   getConnection
-#
-
-def getConnection(key):
-    db_conf = config_data[key]
-
-    con_string      = db_conf['connection']
-    con_user        = db_conf['user']
-    con_password    = db_conf['password']
-
-    c = cx_Oracle.connect(user=con_user, password=con_password, dsn=con_string)
-
-    print(key + ": " + c.version)
-    return c
-
-"""c"""
-
-##########################################################################
-#
-#   getQuery
-#
-
-def getQuery(key, queryKey):
-    query_string = ""
-    try:
-        db_conf = config_data[key]
-        query_string = db_conf[queryKey]
-
-    except KeyError:
-        print ("Key(s) not found : '" + key + "' -> '" + queryKey + "'")
-        pass
-
-    assert len(query_string) > 0
-
-    if type(query_string) is list:
-        query_string = " ".join(query_string)
-
-    return query_string
-
-
-"""c"""
-
-def apply_FID_COL(df, GetFID):
-    start_time = time.time()
-    s = df.FK_PERSON1.apply(GetFID)
-    print('[{}] Done FK_FID conversion'.format(time.time() - start_time))
-
-    df = df.assign(FID=s.values)
-
-    df_no_FID = df[(df.FID == "None")]
-
-    nPMissing = 100 * len (df_no_FID)/ len (df_syk)
-
-    print(f"Missing FID on {nPMissing:.2f}% - removing...")
-
-    df2 = df[(df.FID != "None")]
-
-    return df2
-
-"""c"""
-
-#####################################################################
-#
-#   mem_info_MB
-#
-#
-
-def mem_info_MB(df):
-    mem = df.memory_usage(index=True).sum()
-    return mem/ 1000 / 1000
-
-"""c"""
-
-#####################################################################
-#
-#   report_bandwidth
-#
-#
-
-def report_bandwidth(start_time, end_time, df):
-    
-    processing_time = end_time - start_time
-    memMB = mem_info_MB (df)
-    rBandwidth = memMB / processing_time
-
-    print(f"[Time: {processing_time:.2f}s] [Data: {memMB:.1f} MB] [Bandwidth: {rBandwidth:.2f} MB/s]")
-
-"""c"""
-
-#####################################################################
-#
-#   read_df
-#
-#
-
-def read_df (db_name, db_query):
-    conn = getConnection(db_name)
-    sql = getQuery(db_name, db_query)
-    
-    start_time = time.time()
-
-    cur = conn.cursor()
-
-    cur.arraysize = 100000
-
-    my_exec = cur.execute(sql)
-
-    results = my_exec.fetchall()
-
-    my_exec.close()
-
-    end_time = time.time()
-
-    conn.close()
-
-    df = pd.DataFrame(results)
-
-    report_bandwidth(start_time, end_time, df)
-
-    return df
-
-"""c"""
+dp = DataProvider(config)
 
 #########################################################################
 #
 #   db_load
 #
 
-def db_load(isAlna):
+def db_load(dp, isAlna):
 
     d = {}
 
     start_time = time.time()
 
-    d['syk'] = read_df("A", "sql_syk3")
+    d['syk'] = dp.read_df("A", "sql_syk3")
 
-    d['fravar'] = read_df("A", "sql_fravar")
+    d['fravar'] = dp.read_df("A", "sql_fravar")
 
-    d['pmap'] = read_df("A", "sql_pmap")
+    d['pmap'] = dp.read_df("A", "sql_pmap")
 
-    d['vedtak'] = read_df("B", "sql_vedtak")
+    d['vedtak'] = dp.read_df("B", "sql_vedtak")
 
-    d['meldekort'] = read_df("B", "sql_meldekort")
+    d['meldekort'] = dp.read_df("B", "sql_meldekort")
 
-    d['aa'] = read_df("C", "select_large")
+    d['aa'] = dp.read_df("C", "select_large")
 
     if isAlna:
-        d['alna_pop'] = read_df("B", "sql_population")
+        d['alna_pop'] = dp.read_df("B", "sql_population")
 
     end_time = time.time()
 
@@ -364,7 +70,7 @@ def db_load(isAlna):
 
 """c"""
 
-d_Keep123 = db_load(False)
+d_Keep123 = db_load(dp, False)
 
 ####################### ID CONVERTERS #################################
 
@@ -1123,7 +829,6 @@ df_aa.drop(['ID'], axis = 1, inplace = True)
 df_aa.head()
 
 df_aa.to_csv("AA")
-
 
 ###########################################
 #
