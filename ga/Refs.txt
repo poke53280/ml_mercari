@@ -5,4 +5,10 @@
 #
 # Evolving Solutions With Genetic Algorithms
 
-
+#
+# DEAP
+#
+#
+#
+# DEAP - sklearn
+#
