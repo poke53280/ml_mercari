@@ -16,10 +16,7 @@ import datetime
 import time
 
 import concurrent
-
 from concurrent.futures import ThreadPoolExecutor
-
-
 
 
 os.environ['NLS_NCHAR_CHARACTERSET']='AL16UTF16'
@@ -28,12 +25,9 @@ os.environ['NLS_LANG']='AMERICAN_AMERICA.WE8ISO8859P15'
 
 
 
-""""c"""
-
-
 # ---- Read in configuration file and create json dictionary.
 
-config_file = "S:\\F0326\\Grupper\\Gruppe18\\Datadrevet oppfølging\\home\\anders\\db_connection.json"
+config_file = "X:\\XXX\\XXX\\db_connection.json"
 
 f = open(config_file,"r")
 config = f.read()
@@ -76,6 +70,35 @@ for future in concurrent.futures.as_completed(l_tasks):
 
 
 end_time = time.time()
+=======
+dp = DataProvider(config)
+
+#########################################################################
+#
+#   db_load
+#
+
+def db_load(dp, isAlna):
+
+    d = {}
+
+    start_time = time.time()
+
+    d['syk'] = dp.read_df("A", "sql_syk3")
+
+    d['fravar'] = dp.read_df("A", "sql_fravar")
+
+    d['pmap'] = dp.read_df("A", "sql_pmap")
+
+    d['vedtak'] = dp.read_df("B", "sql_vedtak")
+
+    d['meldekort'] = dp.read_df("B", "sql_meldekort")
+
+    d['aa'] = dp.read_df("C", "select_large")
+
+    if isAlna:
+        d['alna_pop'] = dp.read_df("B", "sql_population")
+>>>>>>> 9787bf0618b2468d9a7325592da30373dac15089
 
 processing_time = end_time - start_time
 

@@ -9,7 +9,3 @@
 # DEAP
 #
 #
-#
-# DEAP - sklearn
-#
-# Edit

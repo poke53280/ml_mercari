@@ -98,6 +98,7 @@ class DataProvider:
         self.report_bandwidth(start_time, end_time, df)
         return df
 
+
 """c"""
 
 def addNoise(s, num_days):

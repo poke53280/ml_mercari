@@ -74,6 +74,9 @@
     <Compile Include="favorita\study_weiwei.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ga\code.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="general\dataset.py">
       <SubType>Code</SubType>
     </Compile>
