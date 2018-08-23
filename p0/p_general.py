@@ -8,6 +8,92 @@ import pandas as pd
 import cx_Oracle
 import json
 
+import concurrent
+from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
+
+class IDConverter:
+    
+
+    def __init__(self, p):
+
+        self.dictFK_TO_FID =  {}
+        self.dictFID_TO_FK = {}
+        self.dictA_TO_FID = {}
+        self.dictFID_TO_A = {}
+
+        # Remove entries with invalid FK
+        m = (p.FK != -1)
+        p = p[m]
+
+        #Check length of FID string
+        q = p.FID.apply(lambda x: len(x))
+
+        m = (q == 11)
+        del q
+
+        m.value_counts()
+        #All FIDs at len 11
+
+        l_fid = p.FID.tolist()
+        l_fk = p.FK.tolist()
+
+        self.dictFK_TO_FID = dict(zip (l_fk, l_fid))
+        self.dictFID_TO_FK = dict(zip (l_fid, l_fk))
+
+        s_fid = set(l_fid)
+        s_fk  = set(l_fk)
+
+        #More FIDs than FKs.
+        print(f"More FIDs than FKs: {(len (s_fid) - len (s_fk))}")
+
+        # Several entries with invalid A.
+        m = (p.A >= 0)
+        m.value_counts()
+
+        # Remove them
+        p = p[m]
+
+        len (p)
+
+        l_fid = p.FID.tolist()
+        l_a   = p.A.tolist()
+
+        self.dictA_TO_FID  = dict(zip (l_a, l_fid))
+        self.dictFID_TO_A  = dict(zip (l_fid, l_a))
+
+        print(f"A very few more FIDS than A: {(len (self.dictFID_TO_A) - len (self.dictA_TO_FID))}")
+
+    def GetFID_FROM_FK(self, fk_person1):
+        try:
+            fid = self.dictFK_TO_FID[fk_person1]
+            assert (len(fid) == 11)
+            return fid
+        except:
+            return "None"
+
+    def GetFK_FROM_FID(self, fid):
+        try:
+            return self.dictFID_TO_FK[fid]
+        except:
+            return "None"
+
+
+"""c"""
+
+def Arena_to_IDX(arena_id):
+    isFound_Arena_to_FID = arena_id in dict_ARENA_ID_TO_FID
+
+    if isFound_Arena_to_FID:
+        fid_str = dict_ARENA_ID_TO_FID[arena_id]
+
+        if fid_str in dictFID_TO_IDX:
+            return dictFID_TO_IDX[fid_str]
+    return -1
+
+"""c"""
+
+
 #########################################################################
 #
 # DataProvider
@@ -98,6 +184,38 @@ class DataProvider:
         self.report_bandwidth(start_time, end_time, df)
         return df
 
+    def async_load(self, l_queries):
+
+        def task(n):
+            print(f"Launching task {n[0]}: {n[1]}")
+            key = n[2]
+            df = self.read_df(n[0], n[1])
+            return (key, df)
+
+        executor = ThreadPoolExecutor(max_workers=20)
+
+
+        start_time = time.time()
+
+        l_tasks = []
+
+        for query in l_queries:
+            l_tasks.append(executor.submit(task, query))
+    
+        d = {}
+
+        for future in concurrent.futures.as_completed(l_tasks):
+            key, df = future.result()
+            d[key] = df
+
+
+        end_time = time.time()
+
+        processing_time = end_time - start_time
+
+        print(f"Database async load compete. Time: {processing_time:.2f}s]")
+
+        return d
 
 """c"""
 
@@ -264,14 +382,14 @@ def serial_date_to_string(srl_no):
 
 def apply_FID_COL(df, GetFID):
     start_time = time.time()
-    s = df.FK_PERSON1.apply(GetFID)
+    s = df.FK.apply(GetFID)
     print('[{}] Done FK_FID conversion'.format(time.time() - start_time))
 
     df = df.assign(FID=s.values)
 
     df_no_FID = df[(df.FID == "None")]
 
-    nPMissing = 100 * len (df_no_FID)/ len (df_syk)
+    nPMissing = 100 * len (df_no_FID)/ len (df)
 
     print(f"Missing FID on {nPMissing:.2f}% - removing...")
 
@@ -280,5 +398,135 @@ def apply_FID_COL(df, GetFID):
     return df2
 
 """c"""
+
+
+##########################################################################
+#
+# get_gender_from_fid
+#
+
+def get_gender_from_fid(x):
+    assert len(x) == 11
+    g = int (x[8])
+    return g % 2 == 0
+    
+"""c"""
+
+##########################################################################
+#
+# get_random_epoch_birth_day
+#
+
+def get_random_epoch_birth_day(fid):
+    assert (len(fid) == 11)
+
+    birth_year = int (fid[4:6])
+
+    if birth_year > 20:
+        birth_year = birth_year + 1900
+    else:
+        birth_year = birth_year + 2000
+
+    start_date = datetime.date(day=1, month=1, year=birth_year).toordinal()
+
+    end_date = datetime.date(day=31, month=12, year=birth_year).toordinal()
+
+    random_day = datetime.date.fromordinal(random.randint(start_date, end_date))
+
+    epoch_day = datetime.date(1970, 1, 1)
+
+    days_since_epocy = (random_day - epoch_day).days 
+
+    return days_since_epocy
+
+"""c"""
+
+def toDaysSinceEpoch(x):
+    x = pd.to_datetime(x)
+    return (x - pd.datetime(1970, 1, 1)).days
+
+"""c"""
+
+def toDateTimeFromEpoch(x):
+    x = pd.datetime(1970, 1, 1) + timedelta(days=x)
+    return x
+
+##########################################################################
+#
+#   get_chunk_end
+#
+
+def get_chunk_end(df, start_idx, colname) :
+
+    if (start_idx >= len (df)):
+        return len(df)
+
+    id = df.iloc[start_idx][colname]
+    idx = start_idx + 1
+
+    while idx < len (df):
+        isIDEqual = df.iloc[idx][colname] == id
+
+        if (isIDEqual):
+            pass
+        else:
+            break
+    
+        idx = idx + 1
+
+    return idx
+
+w = 90
+
+##########################################################################
+#
+#   get_chunks
+#
+
+def get_chunks(df, size, colname):
+
+    start = 0
+    end = 0
+
+    l = []
+
+    while (end < len(df)):
+
+        end = get_chunk_end(df, start + size, colname)
+
+        l.append( (start, end ))
+
+        start = end
+
+    return l
+
+w = 90
+
+l = get_chunks(df, 100000, 'ID')
+
+idx = 0
+for x in l:
+    start = x[0]
+    end   = x[1]
+
+    print("df[" + str(start) + ":" + str(end) + "]")
+
+    df_p = df[start:end]
+
+    q = create_json(df_p)
+    filename = "data_all_5MAR2018" + str(idx) + ".json"
+    write_json(filename, q)
+
+    idx = idx + 1
+
+w = 90
+
+
+# trim_down:
+
+
+
+
+
 
 

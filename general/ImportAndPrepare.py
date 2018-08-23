@@ -889,24 +889,6 @@ def preprocess_vedtak(df_vedtak):
 
 
 
-############################################################################
-#
-#   preprocess_syk
-#
-
-df_syk = d_all['syk']
-
-def preprocess_syk(df_syk):
-    df_syk.columns = ["FK", "DID", "F0", "F1", "T0", "D"]
-
-    df_syk = id_converter.Add_FID_FROM_FK_Delete_Missing(df_syk)
-
-    df_syk['C'] = 'SYKM'
-
-    return df_syk
-
-"""c"""
-
 ##############################################################
 #
 #   preprocess_fravar
@@ -958,29 +940,6 @@ def preprocess_fravar(df_fravar):
     return df_fravar
 
 """c"""
-
-##########################################################################
-#
-#   toTupleFromNumberList
-#
-
-def toTupleFromNumberList(l):
-
-    data = []
-
-    idx = 0
-
-    for x in l:
-       
-        t = (x, idx)
-        data.append(t)
-        idx = idx + 1
-
-    data.sort(key=lambda tup: tup[0])
-    return data
-
-"""c"""
-
 
 
 ##################################################################################
