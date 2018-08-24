@@ -110,6 +110,9 @@
     <Compile Include="home_credit\oliver_fun_lgbm.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="imageai\main.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="p0\p3.py">
       <SubType>Code</SubType>
     </Compile>
@@ -255,6 +258,7 @@
     <Folder Include="avito\" />
     <Folder Include="dae\" />
     <Folder Include="ga\" />
+    <Folder Include="imageai\" />
     <Folder Include="tf-tpu\" />
     <Folder Include="tgs\" />
     <Folder Include="p0\" />
