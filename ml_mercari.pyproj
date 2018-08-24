@@ -119,9 +119,6 @@
     <Compile Include="p0\p0.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="p0\p1.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="p0\p4.py">
       <SubType>Code</SubType>
     </Compile>

@@ -12,74 +12,8 @@ import concurrent
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
-class IDConverter:
-    
+import time
 
-    def __init__(self, p):
-
-        self.dictFK_TO_FID =  {}
-        self.dictFID_TO_FK = {}
-        self.dictA_TO_FID = {}
-        self.dictFID_TO_A = {}
-
-        # Remove entries with invalid FK
-        m = (p.FK != -1)
-        p = p[m]
-
-        #Check length of FID string
-        q = p.FID.apply(lambda x: len(x))
-
-        m = (q == 11)
-        del q
-
-        m.value_counts()
-        #All FIDs at len 11
-
-        l_fid = p.FID.tolist()
-        l_fk = p.FK.tolist()
-
-        self.dictFK_TO_FID = dict(zip (l_fk, l_fid))
-        self.dictFID_TO_FK = dict(zip (l_fid, l_fk))
-
-        s_fid = set(l_fid)
-        s_fk  = set(l_fk)
-
-        #More FIDs than FKs.
-        print(f"More FIDs than FKs: {(len (s_fid) - len (s_fk))}")
-
-        # Several entries with invalid A.
-        m = (p.A >= 0)
-        m.value_counts()
-
-        # Remove them
-        p = p[m]
-
-        len (p)
-
-        l_fid = p.FID.tolist()
-        l_a   = p.A.tolist()
-
-        self.dictA_TO_FID  = dict(zip (l_a, l_fid))
-        self.dictFID_TO_A  = dict(zip (l_fid, l_a))
-
-        print(f"A very few more FIDS than A: {(len (self.dictFID_TO_A) - len (self.dictA_TO_FID))}")
-
-    def GetFID_FROM_FK(self, fk_person1):
-        try:
-            fid = self.dictFK_TO_FID[fk_person1]
-            assert (len(fid) == 11)
-            return fid
-        except:
-            return "None"
-
-    def GetFK_FROM_FID(self, fid):
-        try:
-            return self.dictFID_TO_FK[fid]
-        except:
-            return "None"
-
-
-"""c"""
 
 def Arena_to_IDX(arena_id):
     isFound_Arena_to_FID = arena_id in dict_ARENA_ID_TO_FID
@@ -412,13 +346,29 @@ def get_gender_from_fid(x):
     
 """c"""
 
+
 ##########################################################################
 #
-# get_random_epoch_birth_day
+# classifyFID
+#
+# 'E': Error: Code is not a valid FID, D nor H number
+# 'F': Valid F-number
+# 'D': Valid D-number
+# 'H': valid H-number
 #
 
-def get_random_epoch_birth_day(fid):
-    assert (len(fid) == 11)
+
+def classifyFID(fid):
+
+    n = len(fid)
+
+    if n != 11:
+        return 'E'
+
+    try:
+        i = int(fid)
+    except ValueError:
+        return 'E'
 
     birth_year = int (fid[4:6])
 
@@ -426,20 +376,95 @@ def get_random_epoch_birth_day(fid):
         birth_year = birth_year + 1900
     else:
         birth_year = birth_year + 2000
+    
+    birth_day_hi = int (fid[0])
+    birth_day_lo = int (fid[1])
 
-    start_date = datetime.date(day=1, month=1, year=birth_year).toordinal()
+    number_state = 'F'
+    
+    if birth_day_hi >= 4:
+        birth_day_hi = birth_day_hi - 4
+        number_state = 'D'
 
-    end_date = datetime.date(day=31, month=12, year=birth_year).toordinal()
+    birth_day = birth_day_lo + 10 * birth_day_hi
 
-    random_day = datetime.date.fromordinal(random.randint(start_date, end_date))
+    birth_month_hi = int (fid[2])
+    birth_month_lo = int (fid[3])
 
-    epoch_day = datetime.date(1970, 1, 1)
+    if birth_month_hi >= 4:
+        if number_state == 'D':
+            number_state = 'E'  # Error - cannot be both D and H
+        else:
+            number_state = 'H'
+            birth_month_hi = birth_month_hi - 4
+            print(f"Found H-nummer: {fid}")
 
-    days_since_epocy = (random_day - epoch_day).days 
+    birth_month = birth_month_lo + 10 * birth_month_hi
 
-    return days_since_epocy
+    delta = 0
 
-"""c"""
+    try:
+        delta = (pd.datetime(birth_year, birth_month, birth_day)  - pd.datetime(1970, 1, 1)).days
+
+    except ValueError:
+        print(f"Error creating date for fid = {fid}. year = {birth_year}, month = {birth_month}, day = {birth_day}")
+        number_state = 'E'
+
+    return number_state
+
+
+##########################################################################
+#
+# toDaysSinceEpochFromFID
+#
+# asserts on invalid FID.
+# Run classifyFID first and get rid of bad data before this conversion.
+#
+
+
+def toDaysSinceEpochFromFID(fid):
+
+    n = len(fid)
+
+    assert n== 11, f"Error {fid} - len = {len(fid)}"
+
+    birth_year = int (fid[4:6])
+
+    if birth_year > 20:
+        birth_year = birth_year + 1900
+    else:
+        birth_year = birth_year + 2000
+    
+    birth_day_hi = int (fid[0])
+    birth_day_lo = int (fid[1])
+    
+    
+    isD = False
+
+    if birth_day_hi >= 4:
+        birth_day_hi = birth_day_hi - 4
+        isD = True
+
+
+    birth_day = birth_day_lo + 10 * birth_day_hi
+
+    birth_month_hi = int (fid[2])
+    birth_month_lo = int (fid[3])
+
+    if birth_month_hi >= 4:
+        assert not isD, f"Both D and H number: {fid}"
+        birth_month_hi = birth_month_hi - 4
+        print(f"Found H-nummer: {fid}")
+        
+
+    birth_month = birth_month_lo + 10 * birth_month_hi
+    
+    delta = (pd.datetime(birth_year, birth_month, birth_day)  - pd.datetime(1970, 1, 1)).days
+    # Let throw ValueError
+
+    return delta
+
+
 
 def toDaysSinceEpoch(x):
     x = pd.to_datetime(x)
@@ -500,29 +525,6 @@ def get_chunks(df, size, colname):
 
     return l
 
-w = 90
-
-l = get_chunks(df, 100000, 'ID')
-
-idx = 0
-for x in l:
-    start = x[0]
-    end   = x[1]
-
-    print("df[" + str(start) + ":" + str(end) + "]")
-
-    df_p = df[start:end]
-
-    q = create_json(df_p)
-    filename = "data_all_5MAR2018" + str(idx) + ".json"
-    write_json(filename, q)
-
-    idx = idx + 1
-
-w = 90
-
-
-# trim_down:
 
 
 
