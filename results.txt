@@ -1,0 +1,129 @@
+
+torsdag 9.aug 2018
+
++ 's', 'n', d, md categorical
+
+pparams['task'] = 'train'
+params['boosting_type'] = 'gbdt'
+params['objective'] = 'binary'
+params['metric'] = 'auc'
+params['learning_rate'] = 0.01
+params['feature_fraction'] = 0.9
+params['bagging_fraction'] = 0.75
+params['num_leaves'] = 301
+params['bagging_freq'] = 1
+params['max_bin'] = 500
+
+
+N = 200000, Folds = 7
+
+GINI 0.6524357331998075 +/- 0.004270254672588483 @positive > 17.
+=> auc 0.825
+
+-------------------------------------------------------------------------------------------
+
+
+fredag 10.aug 2018
+
++ stat features on historic periods.
+
+params['task'] = 'train'
+params['boosting_type'] = 'gbdt'
+params['objective'] = 'binary'
+params['metric'] = 'auc'
+params['max_bin'] = 255
+params['feature_fraction'] = 0.8
+params['learning_rate'] = 0.005
+params['num_leaves'] = np.random.choice([ 63])
+params['bagging_freq'] = 3
+params['boosting_type'] = np.random.choice(['gbdt'])
+params['bagging_fraction'] = 0.75
+
+N = 200000, Folds = 7
+
+GINI 0.6692852414389578 +/- 0.003421886540165659 @positive > 17.
+
+---------------------------------------------------------------------------------------------
+
++ decomp stats
+
+N = 200000, Folds = 7
+
+
+GINI 0.6708188325050032 +/- 0.0034430813995009707 @positive > 17.
+
+---------------------------------------------------------------------------------------------
+
+søn 12.aug 2018
++ D stats + change lgb train -> Classifier.
+
+clf = lgb.LGBMClassifier(n_estimators  = 5000, objective='binary', metric = 'auc', max_bin = 255, num_leaves=127, learning_rate = 0.005, silent = False, feature_fraction = 0.8, bagging_fraction = 0.75, bagging_freq = 5)
+clf.fit(X_train, y_train, verbose = True, eval_metric = 'auc', eval_set = [(X_train, y_train), (X_valid, y_valid)], early_stopping_rounds  = 150)
+
+dr = DReduction(5)
+
+N = 200000, Folds = 7
+
+GINI 0.6796095268145843 +/- 0.0034403983619668917 @positive > 17.
+
+----------------------------------------------------------------------------------------------
+
+tir 14 aug 2018
+
++ md_stats, + N
+N = 500000, Folds = 7
+
+True lo: 251278, true hi: 248722
+
+GINI 0.687240596005019 +/- 0.004037394547867632 @positive > 17.
+
+-----------------------------------------------------------------------------------------------------
+
+fre 17 aug 2018
+
++ fix to md_stats
+Dred6, leaves 63, traning 0.01: Config above very slightly better.
+
+N = 500000, Folds = 7
+
+True lo: 251278, true hi: 248722
+
+GINI 0.6925270957019652 +/- 0.0038424280140077743 @positive > 17.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

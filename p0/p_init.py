@@ -12,8 +12,8 @@ import os
 local_dir = os.getenv('LOCAL_PY_DIR')
 assert local_dir is not None, "Set environment variable LOCAL_DIR to location of this python file."
 print(f"Local python directoy is set to {local_dir}")
-
 os.chdir(local_dir)
+
 config_file = os.getenv('DB_DATA')
 assert config_file is not None, "No config file found in environment variable DB_DATA"
 print(f"Using database connection file '{config_file}'")
@@ -225,6 +225,11 @@ df = df[m]
 # Save point
 
 
+df = pd.read_pickle("C:\\p_data\\tmp2.pkl")
+
+df = df.sort_values(by = 'IDX')
+
+df = df.reset_index(drop = True)
 
 # Diagnose FE
 q = df.D.apply(len)
@@ -233,12 +238,14 @@ df = df.assign(D_L = q)
 
 q = df.D.apply(lambda x: x[0])
 
+
+# First letter
 df = df.assign(D_H = q)
 
 q = df.D.apply(lambda x: x[1:])
 
-# Todo - code number per D_L and D_H group gives orthogonal information.
 df = df.assign(D_C = q)
+
 
 df = df.assign(D_H = df.D_H.astype('category'))
 df = df.assign(D_C = df.D_C.astype('category'))
@@ -293,6 +300,29 @@ df = df.drop(['FID_S', 'MD'], axis = 1)
 
 
 from TimeLineTool import TimeLineText
+
+
+
+def get_target_df_new(df, t_start, t_end, nGrow, idx):
+    lf1 = []
+    lq = []
+
+    m = (df.IDX == idx)
+
+    pt = df[m]
+    
+    if len(pt) == 0:
+        pass
+    else:
+        lf1 = pt.F1.values
+        lq = pt.T0.values
+
+    r_m = np.array((lf1,lq)).T
+
+    timelineText = TimeLineText(t_start, t_end, True, False, False, True)
+
+
+
 
 #
 # Decides on sub period groupings and target definition.

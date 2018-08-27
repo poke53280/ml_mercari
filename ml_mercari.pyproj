@@ -190,7 +190,7 @@
     <Compile Include="general\svd.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="general\TimeAndDate.py">
+    <Compile Include="p0\TimeAndDate.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="mercari\study_Lavrikov_Ridge.py">
