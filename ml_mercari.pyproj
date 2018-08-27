@@ -223,7 +223,7 @@
     <Compile Include="general\IDConverter.py" />
     <Compile Include="general\ImportAndPrepare.py" />
     <Compile Include="general\text_processor.py" />
-    <Compile Include="general\TimeLineTool.py" />
+    <Compile Include="p0\TimeLineTool.py" />
     <Compile Include="general\WeightDeterminator.py" />
     <Compile Include="mercari\ml_mercari.py" />
     <Compile Include="mercari\run_analyzer.py" />
