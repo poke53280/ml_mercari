@@ -99,7 +99,6 @@ d_FK_TO_S = dict (zip (l_fk, l_s))
 
 
 
-
 df_syk = d['syk'].copy()
 
 df_syk.columns = ["FK", "DID", "F0", "F1", "T0", "D"]
@@ -285,12 +284,9 @@ df = df.drop(['FID_S', 'MD'], axis = 1)
 
 # Todo
 
-
-
-
-
+#
 # Logical save point
-
+#
 # Main continutes below functions
 
 ##################################################################################
@@ -300,6 +296,144 @@ df = df.drop(['FID_S', 'MD'], axis = 1)
 
 
 from TimeLineTool import TimeLineText
+
+#
+#  Interesting groups
+#
+# Indices of all target intervals 
+# Indices of all too early intervals
+# Indices of all too late intervals (beyond target)
+# Indices of all feature intervals
+#
+# Early -- Feature -- Target -- Late
+#
+
+# All intervals are in one and only one group.
+# Groups are ordered in time.
+#
+# 1. Create groups.
+# 2. Determine their usage.
+
+
+#
+#
+# TODO - GET 'TIME INTO'
+#
+#
+
+
+
+
+idx = 0
+lf1 = []
+lq = []
+
+m = (df.IDX == idx)
+pt = df[m]
+
+lf1 = pt.F1.values
+lq = pt.T0.values
+
+r_m = np.array((lf1,lq)).T
+
+# Ensure all intervals are within accepted range
+t_start = lf1.min() - 5
+t_end = lq.max() + 5
+
+nGrow = 9
+
+timelineText = TimeLineText(t_start, t_end, True, False, False, True)
+
+
+r_m_excl = r_m.copy()
+r_m_excl[:, 1] += 1
+
+r_m_processed = timelineText.CombineIntervals(r_m_excl, nGrow)
+
+assert len(r_m_processed) > 0, "No resulting groups"
+
+
+group_idx = np.zeros(r_m.shape[0])
+
+group_idx[:] = -1
+
+r_m_start = r_m[:, 0]
+r_m_end   = r_m[:, 1]
+
+# Place all intervals into the groups
+
+for idx, p in enumerate(r_m_processed):
+    a = p[0]
+    b = p[1]
+
+    # Fully inside range:
+    m = (r_m_start >= a) & (r_m_end <= b)
+
+    # Inside range a, b:
+    # nInside = len(r_m[m])
+
+    group_idx[m] = idx
+
+    # print(f"#intervals in range [{a}, {b}]: {nInside}")
+
+assert (group_idx < 0).sum() == 0, "Input interval(s) not assigned to any group"
+assert len(np.unique(group_idx)) == len(r_m_processed), "Found empty groups"
+
+
+# Filter out too early and too late
+
+nEarly = 32000  # -1 to disable early filter.
+nLate = 33600   # -1 to disable late filter.
+
+lEarly = []
+lLate = []
+
+lInterest = []
+
+
+for idx, p in enumerate(r_m_processed):
+    a = p[0]
+    b = p[1]
+
+    if nEarly > 0 and b < nEarly:
+        lEarly.append(idx)
+
+    elif nLate > 0 and a > nLate:
+        lLate.append(idx)
+
+    else:
+        lInterest.append(idx)
+
+
+if len(lInterest) == 0:
+    print("No data in interest zone")
+    
+assert len(lInterest) > 0
+
+target_idx = len (lInterest) - 1
+
+target_info = r_m_processed[lInterest[-1]]
+
+target_begin, target_end, target_stitch = target_info[0], target_info[1], target_info[2]
+
+            result['begin'] = target_begin
+            result['end'] = target_end
+            result['stitch'] = target_stitch
+
+
+
+
+
+
+
+
+
+
+
+
+
+res = timelineText.GetTarget(r_m, nGrow)
+
 
 
 
@@ -319,8 +453,7 @@ def get_target_df_new(df, t_start, t_end, nGrow, idx):
 
     r_m = np.array((lf1,lq)).T
 
-    timelineText = TimeLineText(t_start, t_end, True, False, False, True)
-
+    
 
 
 

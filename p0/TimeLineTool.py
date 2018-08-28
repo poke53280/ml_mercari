@@ -503,7 +503,6 @@ class TimeLineText:
     #     GetTarget
     #
     #
-    # Todo: Provide documentation and example
     #
 
     def GetTarget(self, r_m, nGrow):
