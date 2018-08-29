@@ -224,7 +224,7 @@ df = df[m]
 # Save point
 
 
-df = pd.read_pickle("C:\\p_data\\tmp2.pkl")
+df = pd.read_pickle(DATA_DIR + "tmp2.pkl")
 
 df = df.sort_values(by = 'IDX')
 
@@ -297,231 +297,207 @@ df = df.drop(['FID_S', 'MD'], axis = 1)
 
 from TimeLineTool import TimeLineText
 
-#
-#  Interesting groups
-#
-# Indices of all target intervals 
-# Indices of all too early intervals
-# Indices of all too late intervals (beyond target)
-# Indices of all feature intervals
-#
-# Early -- Feature -- Target -- Late
-#
 
-# All intervals are in one and only one group.
-# Groups are ordered in time.
-#
-# 1. Create groups.
-# 2. Determine their usage.
+def analyze_target(df, idx):
 
+    CONF_NGROW = 9
+    CONF_CUT_INTO_LEAVE = 7
+    CONF_L_TARGET_MIN = 17
 
-#
-#
-# TODO - GET 'TIME INTO'
-#
-#
 
+#idx = 97   => Early large F1 to T0. In addition to other run.
+#Grad?
 
-
-
-idx = 0
-lf1 = []
-lq = []
-
-m = (df.IDX == idx)
-pt = df[m]
-
-lf1 = pt.F1.values
-lq = pt.T0.values
-
-r_m = np.array((lf1,lq)).T
-
-# Ensure all intervals are within accepted range
-t_start = lf1.min() - 5
-t_end = lq.max() + 5
-
-nGrow = 9
-
-timelineText = TimeLineText(t_start, t_end, True, False, False, True)
-
-
-r_m_excl = r_m.copy()
-r_m_excl[:, 1] += 1
-
-r_m_processed = timelineText.CombineIntervals(r_m_excl, nGrow)
-
-assert len(r_m_processed) > 0, "No resulting groups"
-
-
-group_idx = np.zeros(r_m.shape[0])
-
-group_idx[:] = -1
-
-r_m_start = r_m[:, 0]
-r_m_end   = r_m[:, 1]
-
-# Place all intervals into the groups
-
-for idx, p in enumerate(r_m_processed):
-    a = p[0]
-    b = p[1]
-
-    # Fully inside range:
-    m = (r_m_start >= a) & (r_m_end <= b)
-
-    # Inside range a, b:
-    # nInside = len(r_m[m])
-
-    group_idx[m] = idx
-
-    # print(f"#intervals in range [{a}, {b}]: {nInside}")
-
-assert (group_idx < 0).sum() == 0, "Input interval(s) not assigned to any group"
-assert len(np.unique(group_idx)) == len(r_m_processed), "Found empty groups"
-
-
-# Filter out too early and too late
-
-nEarly = 32000  # -1 to disable early filter.
-nLate = 33600   # -1 to disable late filter.
-
-lEarly = []
-lLate = []
-
-lInterest = []
-
-
-for idx, p in enumerate(r_m_processed):
-    a = p[0]
-    b = p[1]
-
-    if nEarly > 0 and b < nEarly:
-        lEarly.append(idx)
-
-    elif nLate > 0 and a > nLate:
-        lLate.append(idx)
-
-    else:
-        lInterest.append(idx)
-
-
-if len(lInterest) == 0:
-    print("No data in interest zone")
-    
-assert len(lInterest) > 0
-
-target_idx = len (lInterest) - 1
-
-target_info = r_m_processed[lInterest[-1]]
-
-target_begin, target_end, target_stitch = target_info[0], target_info[1], target_info[2]
-
-            result['begin'] = target_begin
-            result['end'] = target_end
-            result['stitch'] = target_stitch
-
-
-
-
-
-
-
-
-
-
-
-
-
-res = timelineText.GetTarget(r_m, nGrow)
-
-
-
-
-def get_target_df_new(df, t_start, t_end, nGrow, idx):
-    lf1 = []
-    lq = []
-
-    m = (df.IDX == idx)
-
-    pt = df[m]
-    
-    if len(pt) == 0:
-        pass
-    else:
-        lf1 = pt.F1.values
-        lq = pt.T0.values
-
-    r_m = np.array((lf1,lq)).T
-
-    
-
-
-
-#
-# Decides on sub period groupings and target definition.
-#
-
-def get_target_df(df, t_start, t_end, nGrow, idx):
 
     lf1 = []
     lq = []
 
     m = (df.IDX == idx)
-
     pt = df[m]
-    
-    if len(pt) == 0:
-        pass
-    else:
-        lf1 = pt.F1.values
-        lq = pt.T0.values
+
+    lf1 = pt.F1.values
+    lq = pt.T0.values
 
     r_m = np.array((lf1,lq)).T
+
+    nEdgeAir = 2 * CONF_NGROW + 5
+
+    # To ensure all intervals are within accepted range
+    t_start = lf1.min() - nEdgeAir
+    t_end = lq.max() + nEdgeAir
+
 
     timelineText = TimeLineText(t_start, t_end, True, False, False, True)
 
-    res = timelineText.GetTarget(r_m, nGrow)
 
-    res['ID'] = idx
+    r_m_excl = r_m.copy()
+    r_m_excl[:, 1] += 1
 
-    if res['nperiods'] == 0:
-        pass
+    r_m_processed = timelineText.CombineIntervals(r_m_excl, nGrow)
 
-    else:
-        ids = res['ids']
+    # Back to inclusive mode
+    r_m_processed[:, 1] -= 1
 
-        ids_target = pt.index[ids]
-        m = pt.index.isin(ids_target)
-
-        q = pt[m]
-
-        a = q.sort_values(by= 'F1')
-
-        aMD = a.MD
-        
-        aD_L = a.D_L
-        aD_H = a.D_H
-        aD_C = a.D_C
-
-        assert idx == a.IDX.values[0]
-        
-        first_MD = aMD.values[0]
-
-        first_D_L  = aD_L.values[0]
-        first_D_H  = aD_H.values[0]
-        first_D_C  = aD_C.values[0]
-
-        res['MD'] = first_MD
-
-        res['D_L'] = first_D_L
-        res['D_H'] = first_D_H
-        res['D_C'] = first_D_C
+    assert len(r_m_processed) > 0, "No resulting groups"
 
 
+    group_idx = np.zeros(r_m.shape[0])
 
-    return res
+    group_idx[:] = -1
+
+    r_m_start = r_m[:, 0]
+    r_m_end   = r_m[:, 1]
+
+    # Place all intervals into the groups
+
+    for idx, p in enumerate(r_m_processed):
+        a = p[0]
+        b = p[1]
+
+        # Fully inside range:
+        m = (r_m_start >= a) & (r_m_end <= b)
+
+        # Inside range a, b:
+        # nInside = len(r_m[m])
+
+        group_idx[m] = idx
+
+        # print(f"#intervals in range [{a}, {b}]: {nInside}")
+
+    assert (group_idx < 0).sum() == 0, "Input interval(s) not assigned to any group"
+    assert len(np.unique(group_idx)) == len(r_m_processed), "Found empty groups"
+
+
+    return r_m_processed, group_idx
 
 """c"""
+
+
+
+
+def getTargetInterval9(r_m_processed):
+
+    # Filter out too early and too late
+
+    nEarly = 32000  # -1 to disable early filter.
+    nLate = 33600   # -1 to disable late filter.
+
+    lEarly = []
+    lLate = []
+
+    lInterest = []
+
+    for idx, p in enumerate(r_m_processed):
+        a = p[0]
+        b = p[1]
+
+        if nEarly > 0 and b < nEarly:
+            lEarly.append(idx)
+
+        elif nLate > 0 and a > nLate:
+            lLate.append(idx)
+
+        else:
+            lInterest.append(idx)
+
+
+    if len(lInterest) == 0:
+        print("No data in interest zone")
+        return -1
+    
+    idx_target_candidate = -1
+
+    for idx, p in enumerate(r_m_processed):
+
+        target_begin, target_end, target_stitch = p[0], p[1], p[2]
+
+        L_full = 1 + target_end - target_begin
+        L_adj  = L_full - target_stitch
+
+
+        if idx in lEarly:
+            print(f"Early: {idx}")
+
+        elif idx in lLate:
+            print(f"Late: {idx}")
+    
+        else:
+            print(f"Feature space {idx}. L_adj = {L_adj}. L_full = {L_full}")
+
+            if L_adj >= CONF_L_TARGET_MIN:
+                print(f"{idx} is a target candidate")
+                idx_target_candidate = idx
+
+    return idx_target_candidate    
+"""c"""
+
+
+def cut_target_interval(idx_target_candidate, r_m_processed, group_idx, pt):
+    assert idx_target_candidate >= 0
+
+    print(f"Candidate interval found for L_target_min={L_target_min}. Idx = {idx_target_candidate}")
+
+    targetData = r_m_processed[idx_target_candidate]
+
+    target_begin, target_end, target_stitch = targetData
+
+    L_full = 1 + target_end - target_begin
+    L_adj  = L_full - target_stitch
+
+    assert L_adj >= L_target_min, "Interval length < configured min target length"
+
+    m = group_idx == idx_target_candidate
+
+    target_cut_day = target_begin + CONF_CUT_INTO_LEAVE
+
+
+    # All data for target leave interval.
+    q = pt[m]
+
+    print("------- ALL TARGET DATA -------")
+    print (q)
+
+    # Data for target leave interval available CONF_CUT_INTO_LEAVE days(s) into leave.
+    m = q.F1 <= target_cut_day
+
+    q[m]
+
+    print("------- FEATURE TARGET DATA -------")
+
+    print (q[m])
+
+    print(f"Y: Full = {L_full}, Adj = {L_adj}")
+
+"""c"""
+
+
+test_idx = 97  # REF JIRA
+
+def full_analysis(df, test_idx):
+
+
+    r_m_processed, group_idx = analyze_target(df, test_idx)
+
+    idx_target_candidate = getTargetInterval9(r_m_processed)
+
+    if idx_target_candidate >= 0:
+
+        m = (df.IDX == test_idx)
+        pt = df[m]
+
+        cut_target_interval(idx_target_candidate, r_m_processed, group_idx, pt)
+
+"""c"""
+
+
+full_analysis(df, 3)
+    
+# Continue here...
+
+for x in range(100):
+    full_analysis(df, x)
+
+
 
 
 ##################################################################################################
