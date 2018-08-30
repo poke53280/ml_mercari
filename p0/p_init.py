@@ -223,6 +223,7 @@ df = df[m]
 
 # Save point
 
+DATA_DIR = "C:\\p_data\\"
 
 df = pd.read_pickle(DATA_DIR + "tmp2.pkl")
 
@@ -297,23 +298,18 @@ df = df.drop(['FID_S', 'MD'], axis = 1)
 
 from TimeLineTool import TimeLineText
 
+CONF_L_TARGET_MIN = 17
+CONF_NGROW = 9
+CONF_CUT_INTO_LEAVE = 7
 
-def analyze_target(df, idx):
 
-    CONF_NGROW = 9
-    CONF_CUT_INTO_LEAVE = 7
-    CONF_L_TARGET_MIN = 17
-
+def group_intervals(pt):
 
 #idx = 97   => Early large F1 to T0. In addition to other run.
 #Grad?
 
-
     lf1 = []
     lq = []
-
-    m = (df.IDX == idx)
-    pt = df[m]
 
     lf1 = pt.F1.values
     lq = pt.T0.values
@@ -333,7 +329,7 @@ def analyze_target(df, idx):
     r_m_excl = r_m.copy()
     r_m_excl[:, 1] += 1
 
-    r_m_processed = timelineText.CombineIntervals(r_m_excl, nGrow)
+    r_m_processed = timelineText.CombineIntervals(r_m_excl, CONF_NGROW)
 
     # Back to inclusive mode
     r_m_processed[:, 1] -= 1
@@ -373,9 +369,22 @@ def analyze_target(df, idx):
 """c"""
 
 
+# Returns all data in focus as indices into input array r_m_processed. Last element is a valid target interval.
+# May return empty index array when no valid target interval is found.
+
+def getValidDataIntervals(r_m_processed):
 
 
-def getTargetInterval9(r_m_processed):
+    # Assert sorted in ascending order
+    begin = r_m_processed[:, 0]
+    end = r_m_processed[:, 1]
+
+    begin_s = np.sort(begin)
+    end_s = np.sort(end)
+
+    assert (begin != begin_s).sum() == 0
+    assert (end != end_s).sum() == 0
+
 
     # Filter out too early and too late
 
@@ -392,9 +401,11 @@ def getTargetInterval9(r_m_processed):
         b = p[1]
 
         if nEarly > 0 and b < nEarly:
+            print(f"Early: {idx}")
             lEarly.append(idx)
 
         elif nLate > 0 and a > nLate:
+            print(f"Late: {idx}")
             lLate.append(idx)
 
         else:
@@ -403,101 +414,164 @@ def getTargetInterval9(r_m_processed):
 
     if len(lInterest) == 0:
         print("No data in interest zone")
-        return -1
     
     idx_target_candidate = -1
 
-    for idx, p in enumerate(r_m_processed):
+    for idx in lInterest:
+
+        p = r_m_processed[idx]
 
         target_begin, target_end, target_stitch = p[0], p[1], p[2]
 
         L_full = 1 + target_end - target_begin
         L_adj  = L_full - target_stitch
 
+        
+        print(f"Feature space {idx}. L_adj = {L_adj}. L_full = {L_full}")
 
-        if idx in lEarly:
-            print(f"Early: {idx}")
+        if L_adj >= CONF_L_TARGET_MIN:
+            print(f"{idx} is a target candidate")
+            idx_target_candidate = idx
 
-        elif idx in lLate:
-            print(f"Late: {idx}")
-    
-        else:
-            print(f"Feature space {idx}. L_adj = {L_adj}. L_full = {L_full}")
+    """c"""
 
-            if L_adj >= CONF_L_TARGET_MIN:
-                print(f"{idx} is a target candidate")
-                idx_target_candidate = idx
+    m = np.array(lInterest) <= idx_target_candidate  # None smaller for no target found => empty array output
 
-    return idx_target_candidate    
+    p_data_idx = np.array(lInterest)[m]
+
+    return p_data_idx
+
 """c"""
 
 
-def cut_target_interval(idx_target_candidate, r_m_processed, group_idx, pt):
-    assert idx_target_candidate >= 0
+def full_analysis(q):
 
-    print(f"Candidate interval found for L_target_min={L_target_min}. Idx = {idx_target_candidate}")
+    assert len (q) > 0
+    assert np.unique(q.IDX).shape[0] == 1, "Multiple IDs input"
 
-    targetData = r_m_processed[idx_target_candidate]
+    r_m_processed, group_idx = group_intervals(q)
+
+    ids_valid_intervals = getValidDataIntervals(r_m_processed)
+
+    s = set (range(len(r_m_processed)))
+    s -= set(ids_valid_intervals)
+
+    ids_discarded_intervals = np.array(list(s))  # Out of range or in future to target interval
+
+    assert ids_valid_intervals.shape[0] + ids_discarded_intervals.shape[0] == r_m_processed.shape[0], "ids_valid_intervals.shape[0] + ids_discarded_intervals.shape[0] == r_m_processed.shape[0]"
+
+    isNoData = ids_valid_intervals.shape[0] == 0
+
+    if isNoData:
+        print(f"No target found for {q.IDX.values[0]}")
+        return (-1, -1, None, None)
+
+    
+    ids_feature = ids_valid_intervals[:-1]      # Can be empty: Valid, common condition.
+
+    idx_target = ids_valid_intervals[-1]
+
+    m_discarded = np.isin(group_idx, ids_discarded_intervals)
+
+
+    # Method end product:
+    m_feature = np.isin(group_idx, ids_feature)
+
+    targetData = r_m_processed[idx_target]
 
     target_begin, target_end, target_stitch = targetData
 
     L_full = 1 + target_end - target_begin
     L_adj  = L_full - target_stitch
 
-    assert L_adj >= L_target_min, "Interval length < configured min target length"
-
-    m = group_idx == idx_target_candidate
+    assert L_adj >= CONF_L_TARGET_MIN, "Interval length < configured min target length"
 
     target_cut_day = target_begin + CONF_CUT_INTO_LEAVE
 
+    m_valid_train_range = np.array(q.F1 <= target_cut_day)
 
-    # All data for target leave interval.
-    q = pt[m]
+    m_target = np.isin(group_idx, idx_target)
 
-    print("------- ALL TARGET DATA -------")
-    print (q)
+    # All elements: Discarded, in feature or in target
+
+    anCount = np.zeros(q.shape[0])
+
+    anCount[m_target] += 1
+    anCount[m_feature] += 1
+    anCount[m_discarded] += 1
+
+    assert np.min(anCount) == 1 and np.max(anCount) == 1
+
+    m_valid_train_target = m_target & m_valid_train_range
 
     # Data for target leave interval available CONF_CUT_INTO_LEAVE days(s) into leave.
-    m = q.F1 <= target_cut_day
 
-    q[m]
-
-    print("------- FEATURE TARGET DATA -------")
-
-    print (q[m])
-
-    print(f"Y: Full = {L_full}, Adj = {L_adj}")
+    return (target_begin, L_adj, m_feature, m_valid_train_target)
 
 """c"""
 
+test_idx = 97
 
-test_idx = 97  # REF JIRA
-
-def full_analysis(df, test_idx):
-
-
-    r_m_processed, group_idx = analyze_target(df, test_idx)
-
-    idx_target_candidate = getTargetInterval9(r_m_processed)
-
-    if idx_target_candidate >= 0:
-
-        m = (df.IDX == test_idx)
-        pt = df[m]
-
-        cut_target_interval(idx_target_candidate, r_m_processed, group_idx, pt)
-
-"""c"""
+m = (df.IDX == test_idx)
+q = df[m]
 
 
-full_analysis(df, 3)
-    
-# Continue here...
+begin, L, m_f, m_t = full_analysis(q)
+
+print(f"Begin = {begin}. L = {L}")
+
+df = df.assign(S = 'E')
+
+
+l_Begin = []
+l_L     = []
+
+l_IDX = list (range(100))
 
 for x in range(100):
-    full_analysis(df, x)
+    m = (df.IDX == x)
+    q = df[m]
+
+    print(f"Analyzing {x}...")
+
+    begin, L, m_f, m_t = full_analysis(q)
+
+    if L < 0:
+        print("No target found")
+        l_Begin.append(np.nan)
+        l_L.append(np.nan)
+
+    else:
+        print(f"IDX = {x}. Begin = {begin}. L = {L}")
+
+        l_Begin.append(begin)
+        l_L.append(L)
+
+        q.loc[m_f] = q.loc[m_f].assign(S = 'F')
+        q.loc[m_t] = q.loc[m_t].assign(S = 'T')
+
+        df.loc[m] = q
 
 
+ 
+# Target df
+
+df_target = pd.DataFrame({'ID': l_IDX, 'Begin': l_Begin,'Y': l_L })
+
+
+m = df.S != 'E'
+
+
+df = df[m]   # Remove invalid and target data
+
+
+#
+# Return all data on which to train. Separated in background data and early target data.
+#
+# Start of leave
+#
+# Adjusted length of leave (Y).
+#
 
 
 ##################################################################################################
