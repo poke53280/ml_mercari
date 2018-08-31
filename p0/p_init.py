@@ -234,7 +234,7 @@ df = df.reset_index(drop = True)
 # Diagnose FE
 q = df.D.apply(len)
 
-df = df.assign(D_L = q)
+df = df.assign(D_L = downcast_unsigned(q))
 
 q = df.D.apply(lambda x: x[0])
 
@@ -295,18 +295,12 @@ df = df.drop(['FID_S', 'MD'], axis = 1)
 #     get_target_df
 #
 
-
 from TimeLineTool import TimeLineText
 
-CONF_L_TARGET_MIN = 17
-CONF_NGROW = 9
-CONF_CUT_INTO_LEAVE = 7
 
 
-def group_intervals(pt):
+def group_intervals(pt, nGrow):
 
-#idx = 97   => Early large F1 to T0. In addition to other run.
-#Grad?
 
     lf1 = []
     lq = []
@@ -316,26 +310,23 @@ def group_intervals(pt):
 
     r_m = np.array((lf1,lq)).T
 
-    nEdgeAir = 2 * CONF_NGROW + 5
+    nEdgeAir = 2 * nGrow + 5
 
     # To ensure all intervals are within accepted range
     t_start = lf1.min() - nEdgeAir
     t_end = lq.max() + nEdgeAir
 
-
     timelineText = TimeLineText(t_start, t_end, True, False, False, True)
-
 
     r_m_excl = r_m.copy()
     r_m_excl[:, 1] += 1
 
-    r_m_processed = timelineText.CombineIntervals(r_m_excl, CONF_NGROW)
+    r_m_processed = timelineText.CombineIntervals(r_m_excl, nGrow)
 
     # Back to inclusive mode
     r_m_processed[:, 1] -= 1
 
     assert len(r_m_processed) > 0, "No resulting groups"
-
 
     group_idx = np.zeros(r_m.shape[0])
 
@@ -363,7 +354,6 @@ def group_intervals(pt):
     assert (group_idx < 0).sum() == 0, "Input interval(s) not assigned to any group"
     assert len(np.unique(group_idx)) == len(r_m_processed), "Found empty groups"
 
-
     return r_m_processed, group_idx
 
 """c"""
@@ -372,8 +362,7 @@ def group_intervals(pt):
 # Returns all data in focus as indices into input array r_m_processed. Last element is a valid target interval.
 # May return empty index array when no valid target interval is found.
 
-def getValidDataIntervals(r_m_processed):
-
+def getValidDataIntervals(r_m_processed, L_min):
 
     # Assert sorted in ascending order
     begin = r_m_processed[:, 0]
@@ -384,7 +373,6 @@ def getValidDataIntervals(r_m_processed):
 
     assert (begin != begin_s).sum() == 0
     assert (end != end_s).sum() == 0
-
 
     # Filter out too early and too late
 
@@ -426,10 +414,9 @@ def getValidDataIntervals(r_m_processed):
         L_full = 1 + target_end - target_begin
         L_adj  = L_full - target_stitch
 
-        
         print(f"Feature space {idx}. L_adj = {L_adj}. L_full = {L_full}")
 
-        if L_adj >= CONF_L_TARGET_MIN:
+        if L_adj >= L_min:
             print(f"{idx} is a target candidate")
             idx_target_candidate = idx
 
@@ -444,14 +431,16 @@ def getValidDataIntervals(r_m_processed):
 """c"""
 
 
-def full_analysis(q):
+def full_analysis(q, nGrow, l_target_min):
 
     assert len (q) > 0
     assert np.unique(q.IDX).shape[0] == 1, "Multiple IDs input"
 
-    r_m_processed, group_idx = group_intervals(q)
+    n_cut_into_leave = l_target_min - 1 # All data until yesterday with respect to prediction time l_target_min
 
-    ids_valid_intervals = getValidDataIntervals(r_m_processed)
+    r_m_processed, group_idx = group_intervals(q, nGrow)
+
+    ids_valid_intervals = getValidDataIntervals(r_m_processed, l_target_min)
 
     s = set (range(len(r_m_processed)))
     s -= set(ids_valid_intervals)
@@ -464,7 +453,7 @@ def full_analysis(q):
 
     if isNoData:
         print(f"No target found for {q.IDX.values[0]}")
-        return (-1, -1, None, None)
+        return (-1, -1, -1, None, None)
 
     
     ids_feature = ids_valid_intervals[:-1]      # Can be empty: Valid, common condition.
@@ -484,9 +473,9 @@ def full_analysis(q):
     L_full = 1 + target_end - target_begin
     L_adj  = L_full - target_stitch
 
-    assert L_adj >= CONF_L_TARGET_MIN, "Interval length < configured min target length"
+    assert L_adj >= l_target_min, "Interval length < configured min target length"
 
-    target_cut_day = target_begin + CONF_CUT_INTO_LEAVE
+    target_cut_day = target_begin + n_cut_into_leave
 
     m_valid_train_range = np.array(q.F1 <= target_cut_day)
 
@@ -506,25 +495,28 @@ def full_analysis(q):
 
     # Data for target leave interval available CONF_CUT_INTO_LEAVE days(s) into leave.
 
-    return (target_begin, L_adj, m_feature, m_valid_train_target)
+    return (target_begin, L_full, L_adj, m_feature, m_valid_train_target)
 
 """c"""
 
-test_idx = 97
+test_idx = 79
 
 m = (df.IDX == test_idx)
 q = df[m]
 
 
-begin, L, m_f, m_t = full_analysis(q)
+begin, L_full, L_adj, m_f, m_t = full_analysis(q, 3, 31)
 
-print(f"Begin = {begin}. L = {L}")
+print(f"Begin = {begin}. L = {L_full}")
 
-df = df.assign(S = 'E')
+
+df = df.assign(S = 2)
+df = df.assign(S = downcast_unsigned(df.S))
 
 
 l_Begin = []
-l_L     = []
+l_LFull    = []
+l_LAdj    = []
 
 l_IDX = list (range(100))
 
@@ -534,47 +526,86 @@ for x in range(100):
 
     print(f"Analyzing {x}...")
 
-    begin, L, m_f, m_t = full_analysis(q)
+    begin, L_full, L_adj, m_f, m_t = full_analysis(q, 3, 7*7)
 
-    if L < 0:
+    if L_full < 0 or L_adj < 0:
         print("No target found")
         l_Begin.append(np.nan)
-        l_L.append(np.nan)
+        l_LFull.append(np.nan)
+        l_LAdj.append(np.nan)
 
     else:
-        print(f"IDX = {x}. Begin = {begin}. L = {L}")
+        print(f"IDX = {x}. Begin = {begin}. L_full = {L_full}, L_adj = {L_adj}")
 
         l_Begin.append(begin)
-        l_L.append(L)
+        l_LFull.append(L_full)
+        l_LAdj.append(L_adj)
 
-        q.loc[m_f] = q.loc[m_f].assign(S = 'F')
-        q.loc[m_t] = q.loc[m_t].assign(S = 'T')
+        q.loc[m_f, 'S'] = 0
+        q.loc[m_t, 'S'] = 1
 
         df.loc[m] = q
 
+ # Target df
 
- 
-# Target df
-
-df_target = pd.DataFrame({'ID': l_IDX, 'Begin': l_Begin,'Y': l_L })
+df_target = pd.DataFrame({'ID': l_IDX, 'Begin': l_Begin,'Y_F': l_LFull, 'Y_Adj': l_LAdj })
 
 
-m = df.S != 'E'
+m = df_target.Begin.isna()
+nTrainIDs = df_target[~m].shape[0]
+nAllIDs = df_target.shape[0]
+rPCTTrain = 100.0 * nTrainIDs/ nAllIDs
+
+print(f"{rPCTTrain:.1f}% of users provide training data")
 
 
-df = df[m]   # Remove invalid and target data
+m = df.S != 2
+
+df = df[m]   # Remove invalid and future data
 
 
-#
-# Return all data on which to train. Separated in background data and early target data.
-#
-# Start of leave
-#
-# Adjusted length of leave (Y).
-#
+df = df.assign(S = downcast_unsigned(df.S))
 
 
-##################################################################################################
+m = df_target.Begin.isna()
+
+df_target = df_target[~m]
+
+s = df_target.ID
+
+s = s.reset_index(drop = True)
+
+d = s.to_dict()
+
+inv_map = {v: k for k, v in d.items()}
+
+def newID(x, map):
+    return map[x]
+
+s = df.IDX.apply(newID, args = (inv_map,))
+
+df = df.assign(IDX = s)
+
+s = df_target.ID.apply(newID, args = (inv_map,))
+
+df_target = df_target.assign(ID = s)
+
+
+df_target = df_target.assign(Begin = downcast_unsigned(df_target.Begin))
+
+s = df_target.Y_F - df_target.Y_Adj
+
+df_target = df_target.assign(Y_S = downcast_unsigned(s))
+
+df_target = df_target.drop(['Y_Adj'], axis = 1)
+
+df_target = df_target.assign(Y_F = downcast_unsigned(df_target.Y_F))
+
+
+df_target = df_target.assign(ID = downcast_unsigned(df_target.ID))
+
+
+#########################################################################
 #
 #       get_prefixed_dict
 #
