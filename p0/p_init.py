@@ -214,6 +214,9 @@ df = df.assign(FID_S = downcast_unsigned(df.FID_S))
 
 
 
+
+# Save point begin
+
 df = df.drop(["MD", "FK", "DID", "G", "B"], axis = 1)
 df = df.drop(["FID_S"], axis = 1)
 df = df.drop(["FID"], axis = 1)
@@ -221,11 +224,11 @@ df = df.drop(["FID"], axis = 1)
 m = df.IDX < 100
 df = df[m]
 
-# Save point
-
-DATA_DIR = "C:\\p_data\\"
+DATA_DIR = "CXXX"
 
 df = pd.read_pickle(DATA_DIR + "tmp2.pkl")
+
+# Save point end
 
 df = df.sort_values(by = 'IDX')
 
@@ -245,7 +248,6 @@ df = df.assign(D_H = q)
 q = df.D.apply(lambda x: x[1:])
 
 df = df.assign(D_C = q)
-
 
 df = df.assign(D_H = df.D_H.astype('category'))
 df = df.assign(D_C = df.D_C.astype('category'))
@@ -278,22 +280,14 @@ df = df.sort_values(by = ['IDX', 'F0', 'F1', 'T0'])
 df = df.reset_index(drop=True)
 
 
-df = df.drop(['FK', 'DID', 'FID','B', 'G'], axis = 1)
 
-df = df.drop(['D', 'FK', 'DID', 'FID'], axis = 1)
-df = df.drop(['FID_S', 'MD'], axis = 1)
+df = df.drop(['FK', 'DID', 'FID'], axis = 1)
 
-# Todo
 
 #
 # Logical save point
 #
 # Main continutes below functions
-
-##################################################################################
-#
-#     get_target_df
-#
 
 from TimeLineTool import TimeLineText
 
@@ -414,10 +408,7 @@ def getValidDataIntervals(r_m_processed, L_min):
         L_full = 1 + target_end - target_begin
         L_adj  = L_full - target_stitch
 
-        print(f"Feature space {idx}. L_adj = {L_adj}. L_full = {L_full}")
-
         if L_adj >= L_min:
-            print(f"{idx} is a target candidate")
             idx_target_candidate = idx
 
     """c"""
@@ -452,7 +443,7 @@ def full_analysis(q, nGrow, l_target_min):
     isNoData = ids_valid_intervals.shape[0] == 0
 
     if isNoData:
-        print(f"No target found for {q.IDX.values[0]}")
+        # print(f"No target found for {q.IDX.values[0]}")
         return (-1, -1, -1, None, None)
 
     
@@ -518,24 +509,27 @@ l_Begin = []
 l_LFull    = []
 l_LAdj    = []
 
-l_IDX = list (range(100))
+full_range = range(df.IDX.max() + 1)
 
-for x in range(100):
+l_IDX = list (full_range)
+
+for x in l_IDX:
     m = (df.IDX == x)
     q = df[m]
 
-    print(f"Analyzing {x}...")
+    if x > 0 and x% 500 == 0:
+        print(f"Analyzing {x}...")
 
     begin, L_full, L_adj, m_f, m_t = full_analysis(q, 3, 7*7)
 
     if L_full < 0 or L_adj < 0:
-        print("No target found")
+        #print("No target found")
         l_Begin.append(np.nan)
         l_LFull.append(np.nan)
         l_LAdj.append(np.nan)
 
     else:
-        print(f"IDX = {x}. Begin = {begin}. L_full = {L_full}, L_adj = {L_adj}")
+        #print(f"IDX = {x}. Begin = {begin}. L_full = {L_full}, L_adj = {L_adj}")
 
         l_Begin.append(begin)
         l_LFull.append(L_full)
