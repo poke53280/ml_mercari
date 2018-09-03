@@ -1,4 +1,4 @@
-
+w
 #
 # This is an original fork from:
 #  https://www.kaggle.com/lopuhin/mercari-golf-0-3875-cv-in-75-loc-1900-s
@@ -64,40 +64,37 @@ def fit_predict(xs, y_train) -> np.ndarray:
             model.fit(x=X_train, y=y_train, batch_size=2**(11 + i), epochs=1, verbose=0)
         return model.predict(X_test)[:, 0]
 
-
-
-vectorizer = make_union(on_field('name', Tfidf(max_features=100000, token_pattern='\w+')),
-                        on_field('text', Tfidf(max_features=100000, token_pattern='\w+', ngram_range=(1, 2))),
-                        on_field(['shipping', 'item_condition_id'], FunctionTransformer(to_records, validate=False), DictVectorizer())
-
-y_scaler = StandardScaler()
+def main():
     
+    vectorizer = make_union(on_field('name', Tfidf(max_features=100000, token_pattern='\w+')), on_field('text', Tfidf(max_features=100000, token_pattern='\w+', ngram_range=(1, 2))), on_field(['shipping', 'item_condition_id'], FunctionTransformer(to_records, validate=False), DictVectorizer()))
+
+    y_scaler = StandardScaler()
     
-train = pd.read_table(TRAIN_FILE_MERCARI)
-train = train[train['price'] > 0].reset_index(drop=True)
-cv = KFold(n_splits=20, shuffle=True, random_state=42)
-train_ids, valid_ids = next(cv.split(train))
-train, valid = train.iloc[train_ids], train.iloc[valid_ids]
+    train = pd.read_table(TRAIN_FILE_MERCARI)
 
-y_train = y_scaler.fit_transform(np.log1p(train['price'].values.reshape(-1, 1)))
+    train = train[train['price'] > 0].reset_index(drop=True)
+    cv = KFold(n_splits=20, shuffle=True, random_state=42)
+    train_ids, valid_ids = next(cv.split(train))
+    train, valid = train.iloc[train_ids], train.iloc[valid_ids]
 
-X_train = vectorizer.fit_transform(preprocess(train)).astype(np.float32)
+    y_train = y_scaler.fit_transform(np.log1p(train['price'].values.reshape(-1, 1)))
 
+    X_train = vectorizer.fit_transform(preprocess(train)).astype(np.float32)
 
-print(f'X_train: {X_train.shape} of {X_train.dtype}')
-del train
+    print(f'X_train: {X_train.shape} of {X_train.dtype}')
+    del train
     
-X_valid = vectorizer.transform(preprocess(valid)).astype(np.float32)
+    X_valid = vectorizer.transform(preprocess(valid)).astype(np.float32)
     
-with ThreadPool(processes=1) as pool:
-    Xb_train, Xb_valid = [x.astype(np.bool).astype(np.float32) for x in [X_train, X_valid]]
-    xs = [[Xb_train, Xb_valid], [X_train, X_valid]] * 2
-    y_pred = np.mean(pool.map(partial(fit_predict, y_train=y_train), xs), axis=0)
+    with ThreadPool(processes=8) as pool:
+        Xb_train, Xb_valid = [x.astype(np.bool).astype(np.float32) for x in [X_train, X_valid]]
+        xs = [[Xb_train, Xb_valid], [X_train, X_valid]] * 2
+        y_pred = np.mean(pool.map(partial(fit_predict, y_train=y_train), xs), axis=0)
 
 
-y_pred = np.expm1(y_scaler.inverse_transform(y_pred.reshape(-1, 1))[:, 0])
+    y_pred = np.expm1(y_scaler.inverse_transform(y_pred.reshape(-1, 1))[:, 0])
 
-print('Valid RMSLE: {:.4f}'.format(np.sqrt(mean_squared_log_error(valid['price'], y_pred))))
+    print('Valid RMSLE: {:.4f}'.format(np.sqrt(mean_squared_log_error(valid['price'], y_pred))))
 
 if __name__ == '__main__':
     main()

@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>cc77cf4b-e52a-4996-852b-eba94c92124b</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>general\TimeSlotAllocator_example.py</StartupFile>
+    <StartupFile>typing\typing.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -113,6 +113,9 @@
     <Compile Include="imageai\main.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="mp\sort_ml.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="p0\p3.py">
       <SubType>Code</SubType>
     </Compile>
@@ -141,9 +144,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="santander_3\catboost.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="santander_3\init_v2.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="santander_3\main.py">
@@ -245,6 +245,9 @@
     <Compile Include="Train_Stemmer.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="typing\typing.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="general\" />
@@ -256,6 +259,8 @@
     <Folder Include="dae\" />
     <Folder Include="ga\" />
     <Folder Include="imageai\" />
+    <Folder Include="mp\" />
+    <Folder Include="typing\" />
     <Folder Include="tf-tpu\" />
     <Folder Include="tgs\" />
     <Folder Include="p0\" />

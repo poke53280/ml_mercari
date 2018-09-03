@@ -98,7 +98,6 @@ d_FK_TO_S = dict (zip (l_fk, l_s))
 ########################################################################################################
 
 
-
 df_syk = d['syk'].copy()
 
 df_syk.columns = ["FK", "DID", "F0", "F1", "T0", "D"]
@@ -115,7 +114,6 @@ nLinesCut = df_syk[m].shape[0]
 print(f"Discarding data before {CONFIG_DATA_START}. Line count {nLinesAll} => {nLinesCut}")
 
 df_syk = df_syk[m]
-
 
 syk_data_future = toDaysSinceEpoch(CONFIG_DATA_INVALID_FUTURE)
 

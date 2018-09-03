@@ -90,7 +90,7 @@ time_start = time.time()
 tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
 tsne_results = tsne.fit_transform(df.values)
 
-print 't-SNE done! Time elapsed: {} seconds'.format(time.time()-time_start)
+print ('t-SNE done! Time elapsed: {} seconds'.format(time.time()-time_start))
 
 
 plt.scatter(tsne_results[:,0],tsne_results[:,1],color='red')

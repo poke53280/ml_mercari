@@ -143,43 +143,34 @@ def eval_input_fn(params):
 
 
 def main(argv):
-  del argv  # Unused.
-  tf.logging.set_verbosity(tf.logging.INFO)
+    del argv  # Unused.
+    tf.logging.set_verbosity(tf.logging.INFO)
 
-  #tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(FLAGS.tpu, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
+    #tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(FLAGS.tpu, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
 
-  run_config = tf.contrib.tpu.RunConfig(
-      #cluster=tpu_cluster_resolver,
-      model_dir=FLAGS.model_dir, session_config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True),
-      tpu_config=tf.contrib.tpu.TPUConfig(FLAGS.iterations, FLAGS.num_shards),
-  )
+    run_config = tf.contrib.tpu.RunConfig(
+        #cluster=tpu_cluster_resolver,
+        model_dir=FLAGS.model_dir, session_config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True),
+        tpu_config=tf.contrib.tpu.TPUConfig(FLAGS.iterations, FLAGS.num_shards),
+    )
 
+    from tensorflow.contrib.tpu import cross_replica_sum
 
-  from tf.contrib.tpu import cross_replica_sum
-
-
-  tf.contrib.tpu.bfloat16_scope
-
-  tf.contrib.tpu.cross_replica_sum
+    tf.contrib.tpu.bfloat16_scope
+    tf.contrib.tpu.cross_replica_sum
+    tf.contrib.tpu.ops.gen_tpu_ops
 
 
+    estimator = tf.contrib.tpu.TPUEstimator(model_fn=model_fn, use_tpu=False, train_batch_size=FLAGS.batch_size, eval_batch_size=FLAGS.batch_size,params={"data_dir": FLAGS.data_dir}, config=run_config)
 
-tf.contrib.tpu.ops.gen_tpu_ops
-
-
-
-  tf
-
-  estimator = tf.contrib.tpu.TPUEstimator(model_fn=model_fn, use_tpu=False, train_batch_size=FLAGS.batch_size, eval_batch_size=FLAGS.batch_size,params={"data_dir": FLAGS.data_dir}, config=run_config)
-
-  # TPUEstimator.train *requires* a max_steps argument.
-  estimator.train(input_fn=train_input_fn, max_steps=FLAGS.train_steps)
-  # TPUEstimator.evaluate *requires* a steps argument.
-  # Note that the number of examples used during evaluation is
-  # --eval_steps * --batch_size.
-  # So if you change --batch_size then change --eval_steps too.
-  if FLAGS.eval_steps:
-    estimator.evaluate(input_fn=eval_input_fn, steps=FLAGS.eval_steps)
+    # TPUEstimator.train *requires* a max_steps argument.
+    estimator.train(input_fn=train_input_fn, max_steps=FLAGS.train_steps)
+    # TPUEstimator.evaluate *requires* a steps argument.
+    # Note that the number of examples used during evaluation is
+    # --eval_steps * --batch_size.
+    # So if you change --batch_size then change --eval_steps too.
+    if FLAGS.eval_steps:
+        estimator.evaluate(input_fn=eval_input_fn, steps=FLAGS.eval_steps)
 
 
 

@@ -80,12 +80,14 @@ def main():
         del train
     with timer('process valid'):
         X_valid = vectorizer.transform(preprocess(valid)).astype(np.float32)
-    with ThreadPool(processes=4) as pool:
+    with ThreadPool(processes=8) as pool:
         Xb_train, Xb_valid = [x.astype(np.bool).astype(np.float32) for x in [X_train, X_valid]]
         xs = [[Xb_train, Xb_valid], [X_train, X_valid]] * 2
         y_pred = np.mean(pool.map(partial(fit_predict, y_train=y_train), xs), axis=0)
     y_pred = np.expm1(y_scaler.inverse_transform(y_pred.reshape(-1, 1))[:, 0])
     print('Valid RMSLE: {:.4f}'.format(np.sqrt(mean_squared_log_error(valid['price'], y_pred))))
+
+
 
 if __name__ == '__main__':
     main()
