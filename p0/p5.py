@@ -106,7 +106,7 @@ for a in l:
     d_info[d_id] = d
 
 
-def d_frame(x):
+def d_frame2(x):
     d = {}
 
     if x in d_info:

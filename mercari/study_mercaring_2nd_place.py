@@ -335,7 +335,7 @@ gc.collect()
 
 ####################################################################################################
 #SPARSE NN MODEL
-def tokenize(text):
+def tokenize2(text):
     return [ w for w in text.split()]
 
 start_time = time.time()

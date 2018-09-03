@@ -43,7 +43,6 @@
     <Compile Include="batch\ftrl_basic.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="cython_test.py" />
     <Compile Include="dae\denoising.py">
       <SubType>Code</SubType>
     </Compile>
@@ -211,17 +210,12 @@
     <Compile Include="tgs\starter.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Train_FastText.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Train_TextBlob.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="toxic\fasttest_keras.py" />
-    <Compile Include="general\txt_quantity_finder.py" />
     <Compile Include="general\hashing.py" />
     <Compile Include="general\IDConverter.py" />
-    <Compile Include="general\ImportAndPrepare.py" />
     <Compile Include="general\text_processor.py" />
     <Compile Include="p0\TimeLineTool.py" />
     <Compile Include="general\WeightDeterminator.py" />

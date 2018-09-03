@@ -43,7 +43,7 @@ biases = {
 
 # Create model
 
-def multilayer_perceptron(x):
+def multilayer_perceptron0(x):
     
     # Hidden fully connected layer with 256 neuronsp
     layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])

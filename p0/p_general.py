@@ -5,7 +5,7 @@
 
 import numpy as np
 import pandas as pd
-import cx_Oracle
+# import cx_Oracle
 import json
 
 import concurrent
@@ -292,19 +292,6 @@ def create_json(df):
 
 """c"""
 
-def write_json(filename, json_struct):
-    with open(filename, 'w') as outfile:
-        json.dump(json_struct, outfile, sort_keys = True, indent = 4, ensure_ascii = False)
-
-"""c"""
-
-
-def serial_date_to_string(srl_no):
-    new_date = datetime.datetime(1970,1,1,0,0) + datetime.timedelta(srl_no - 1)
-    return new_date.strftime("%Y-%m-%d")
-
-
-"""c"""
 
 
 def serial_date_to_string(srl_no):

@@ -6,14 +6,14 @@
 #
 #
 
-http://forums.fast.ai/t/5th-place-solution-of-favorita-grocery-sales-forecasting/10009
+#http://forums.fast.ai/t/5th-place-solution-of-favorita-grocery-sales-forecasting/10009
 
 
-https://www.kaggle.com/c/favorita-grocery-sales-forecasting/discussion/47556
+#https://www.kaggle.com/c/favorita-grocery-sales-forecasting/discussion/47556
 
 #
 # Code
-https://github.com/LenzDu/Kaggle-Competition-Favorita
+#https://github.com/LenzDu/Kaggle-Competition-Favorita
 
 import time
 import pandas as pd

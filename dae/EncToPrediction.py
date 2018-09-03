@@ -113,7 +113,7 @@ y_p_test = model.predict(X_valid)
 
 print(y_p_test[0], y_p_test[9], y_p_test[200])
 
-==> [6.5986834] [8.930857] [7.621281]
+# ==> [6.5986834] [8.930857] [7.621281]
 
 model.save_weights(DATA_DIR + "weight_test")
 
