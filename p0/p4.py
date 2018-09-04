@@ -27,14 +27,10 @@ os.chdir('C:\\Users\\T149900\\ml_mercari')
 
 
 
-
-
-
-
-
 t_start = 20000
 t_end = 37000
 nGrow = 15
+
 
 nAllIDS = len (np.unique(df.ID))
 

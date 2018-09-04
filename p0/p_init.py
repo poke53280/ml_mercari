@@ -117,7 +117,7 @@ df_syk = df_syk[m]
 
 syk_data_future = toDaysSinceEpoch(CONFIG_DATA_INVALID_FUTURE)
 
-m = (df_syk.F0 < syk_data_future) & (df_syk.F1 < syk_data_future) & (df_syk.T0 < syk_data_future)
+m = (df_syk.F0 < syk_data_future) & (df_syk.F1 < syk_data_future)
 
 nLinesAll = df_syk.shape[0]
 nLinesCut = df_syk[m].shape[0]
@@ -211,9 +211,7 @@ df = df.assign(FID_S = q)
 df = df.assign(FID_S = downcast_unsigned(df.FID_S))
 
 
-
-
-# Save point begin
+# Save point begin - DO NOT RUN
 
 df = df.drop(["MD", "FK", "DID", "G", "B"], axis = 1)
 df = df.drop(["FID_S"], axis = 1)
@@ -286,6 +284,7 @@ df = df.drop(['FK', 'DID', 'FID'], axis = 1)
 # Logical save point
 #
 # Main continutes below functions
+#
 
 from TimeLineTool import TimeLineText
 
@@ -369,7 +368,7 @@ def getValidDataIntervals(r_m_processed, L_min):
     # Filter out too early and too late
 
     nEarly = 32000  # -1 to disable early filter.
-    nLate = 33600   # -1 to disable late filter.
+    nLate = -1   # -1 to disable late filter.
 
     lEarly = []
     lLate = []
@@ -381,11 +380,11 @@ def getValidDataIntervals(r_m_processed, L_min):
         b = p[1]
 
         if nEarly > 0 and b < nEarly:
-            print(f"Early: {idx}")
+            # print(f"Early: {idx}")
             lEarly.append(idx)
 
         elif nLate > 0 and a > nLate:
-            print(f"Late: {idx}")
+            #print(f"Late: {idx}")
             lLate.append(idx)
 
         else:
@@ -393,7 +392,8 @@ def getValidDataIntervals(r_m_processed, L_min):
 
 
     if len(lInterest) == 0:
-        print("No data in interest zone")
+        pass
+        #print("No data in interest zone")
     
     idx_target_candidate = -1
 
@@ -420,16 +420,27 @@ def getValidDataIntervals(r_m_processed, L_min):
 """c"""
 
 
-def full_analysis(q, nGrow, l_target_min):
+def full_analysis(q, nGrow, l_target_min, t_c):
 
     assert len (q) > 0
     assert np.unique(q.IDX).shape[0] == 1, "Multiple IDs input"
 
     n_cut_into_leave = l_target_min - 1 # All data until yesterday with respect to prediction time l_target_min
 
+    TIME_0 = time.time()
+
     r_m_processed, group_idx = group_intervals(q, nGrow)
 
+    TIME_1 = time.time()
+
+    t_c['d1'] += (TIME_1 - TIME_0)
+
+
     ids_valid_intervals = getValidDataIntervals(r_m_processed, l_target_min)
+
+    TIME_2 = time.time()
+    t_c['d2'] += (TIME_2 - TIME_1)
+
 
     s = set (range(len(r_m_processed)))
     s -= set(ids_valid_intervals)
@@ -442,7 +453,7 @@ def full_analysis(q, nGrow, l_target_min):
 
     if isNoData:
         # print(f"No target found for {q.IDX.values[0]}")
-        return (-1, -1, -1, None, None)
+        return (-1, -1, -1, None, None, t_c)
 
     
     ids_feature = ids_valid_intervals[:-1]      # Can be empty: Valid, common condition.
@@ -451,6 +462,9 @@ def full_analysis(q, nGrow, l_target_min):
 
     m_discarded = np.isin(group_idx, ids_discarded_intervals)
 
+
+    TIME_3 = time.time()
+    t_c['d3'] += (TIME_3 - TIME_2)
 
     # Method end product:
     m_feature = np.isin(group_idx, ids_feature)
@@ -470,6 +484,9 @@ def full_analysis(q, nGrow, l_target_min):
 
     m_target = np.isin(group_idx, idx_target)
 
+    TIME_4 = time.time()
+    t_c['d4'] += (TIME_4 - TIME_3)
+
     # All elements: Discarded, in feature or in target
 
     anCount = np.zeros(q.shape[0])
@@ -484,7 +501,11 @@ def full_analysis(q, nGrow, l_target_min):
 
     # Data for target leave interval available CONF_CUT_INTO_LEAVE days(s) into leave.
 
-    return (target_begin, L_full, L_adj, m_feature, m_valid_train_target)
+    TIME_5 = time.time()
+    t_c['d5'] += (TIME_5 - TIME_4)
+   
+
+    return (target_begin, L_full, L_adj, m_feature, m_valid_train_target, t_c)
 
 """c"""
 
@@ -492,11 +513,69 @@ test_idx = 79
 
 m = (df.IDX == test_idx)
 q = df[m]
+t_c = {'d1': 0, 'd2':0, 'd3':0, 'd4': 0, 'd5':0}
 
-
-begin, L_full, L_adj, m_f, m_t = full_analysis(q, 3, 31)
+begin, L_full, L_adj, m_f, m_t, t_c = full_analysis(q, 3, 31, t_c)
 
 print(f"Begin = {begin}. L = {L_full}")
+
+
+# Test and time 100 ids
+
+
+N = 250
+
+t_c = {'d_outer0': 0, 'd_outer1': 0, 'd1': 0, 'd2':0, 'd3':0, 'd4': 0, 'd5':0}
+
+n = np.array(df.IDX.values)
+
+assert len (np.unique(n)) >= N
+
+x = 0
+start_idx = 0
+start_time = time.time()
+
+while x < N:
+
+    if x > 0 and x % 100 == 0:
+        print(f"Analyzing idx = {x}/{N}...")
+
+    T0 = time.time()
+
+    end_idx = np.searchsorted(n, x+1)
+
+    T1 = time.time()
+
+    # print(f"idx = {x}. start = {start_idx} end = {end_idx}")
+
+    q = df[start_idx:end_idx]
+
+
+    T2 = time.time()
+
+    t_c['d_outer0'] += (T1 - T0)
+    t_c['d_outer1'] += (T2 - T1)
+
+    begin, L_full, L_adj, m_f, m_t, t_c = full_analysis(q, 3, 7*7, t_c)
+
+    #print(f"begin={begin}, L_full={L_full}")
+    x = x + 1
+    start_idx = end_idx
+
+
+
+end_time = time.time()
+
+d_time = end_time - start_time
+
+print(f"t = {d_time}s. {N/d_time:.1f} items/s.")
+
+
+
+
+
+
+
 
 
 df = df.assign(S = 2)
@@ -518,7 +597,7 @@ for x in l_IDX:
     if x > 0 and x% 500 == 0:
         print(f"Analyzing {x}...")
 
-    begin, L_full, L_adj, m_f, m_t = full_analysis(q, 3, 7*7)
+    begin, L_full, L_adj, m_f, m_t = full_analysis(q, 3, 7*7, t_c)
 
     if L_full < 0 or L_adj < 0:
         #print("No target found")

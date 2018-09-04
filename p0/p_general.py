@@ -5,7 +5,7 @@
 
 import numpy as np
 import pandas as pd
-# import cx_Oracle
+import cx_Oracle
 import json
 
 import concurrent
