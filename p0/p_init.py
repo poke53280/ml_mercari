@@ -211,20 +211,8 @@ df = df.assign(FID_S = q)
 df = df.assign(FID_S = downcast_unsigned(df.FID_S))
 
 
-# Save point begin - DO NOT RUN
 
-df = df.drop(["MD", "FK", "DID", "G", "B"], axis = 1)
-df = df.drop(["FID_S"], axis = 1)
-df = df.drop(["FID"], axis = 1)
 
-m = df.IDX < 100
-df = df[m]
-
-DATA_DIR = "CXXX"
-
-df = pd.read_pickle(DATA_DIR + "tmp2.pkl")
-
-# Save point end
 
 df = df.sort_values(by = 'IDX')
 
@@ -276,19 +264,12 @@ df = df.sort_values(by = ['IDX', 'F0', 'F1', 'T0'])
 df = df.reset_index(drop=True)
 
 
-
 df = df.drop(['FK', 'DID', 'FID'], axis = 1)
 
 
-#
-# Logical save point
-#
 # Main continutes below functions
-#
 
 from TimeLineTool import TimeLineText
-
-
 
 def group_intervals(pt, nGrow):
 
@@ -509,35 +490,40 @@ def full_analysis(q, nGrow, l_target_min, t_c):
 
 """c"""
 
-test_idx = 79
-
-m = (df.IDX == test_idx)
-q = df[m]
-t_c = {'d1': 0, 'd2':0, 'd3':0, 'd4': 0, 'd5':0}
-
-begin, L_full, L_adj, m_f, m_t, t_c = full_analysis(q, 3, 31, t_c)
-
-print(f"Begin = {begin}. L = {L_full}")
-
-
-# Test and time 100 ids
-
-
-N = 250
+N = 0  #0 for all
 
 t_c = {'d_outer0': 0, 'd_outer1': 0, 'd1': 0, 'd2':0, 'd3':0, 'd4': 0, 'd5':0}
 
-n = np.array(df.IDX.values)
+n = np.array(df.IDX.values).astype('int32')
+
+nUnique = len (np.unique(n))
+
+if N == 0:
+    N = nUnique
+
 
 assert len (np.unique(n)) >= N
 
-x = 0
+print(f"Generating {N}/ {nUnique} data lines...")
+
+
+l_IDX = list (range(N))
+
 start_idx = 0
 start_time = time.time()
 
-while x < N:
+l_Begin = []
+l_LFull    = []
+l_LAdj    = []
 
-    if x > 0 and x % 100 == 0:
+
+s = np.zeros(df.shape[0], dtype = int)
+
+s[:] = 3
+
+for x in l_IDX:
+
+    if x > 0 and x % 10000 == 0:
         print(f"Analyzing idx = {x}/{N}...")
 
     T0 = time.time()
@@ -546,22 +532,35 @@ while x < N:
 
     T1 = time.time()
 
-    # print(f"idx = {x}. start = {start_idx} end = {end_idx}")
-
     q = df[start_idx:end_idx]
-
 
     T2 = time.time()
 
     t_c['d_outer0'] += (T1 - T0)
     t_c['d_outer1'] += (T2 - T1)
 
+    # print(f"start_idx = {start_idx}, end_idx = {end_idx}")
+
     begin, L_full, L_adj, m_f, m_t, t_c = full_analysis(q, 3, 7*7, t_c)
 
-    #print(f"begin={begin}, L_full={L_full}")
-    x = x + 1
-    start_idx = end_idx
+    if L_full < 0 or L_adj < 0:
+        l_Begin.append(np.nan)
+        l_LFull.append(np.nan)
+        l_LAdj.append(np.nan)
 
+    else:
+        l_Begin.append(begin)
+        l_LFull.append(L_full)
+        l_LAdj.append(L_adj)
+
+        v = s[start_idx:end_idx]
+
+        v[:] = 2
+
+        v[m_f] = 0
+        v[m_t] = 1
+
+    start_idx = end_idx
 
 
 end_time = time.time()
@@ -571,6 +570,17 @@ d_time = end_time - start_time
 print(f"t = {d_time}s. {N/d_time:.1f} items/s.")
 
 
+# Todo check start-stop on all date ranges. (Above).
+
+first_day
+
+nMinBorn = df.B.min()
+nMaxBorn = df.B.max()
+
+def from_offset_to_date(nOffset, first_day):
+    nEpochDay = nOffset + first_day
+    s = toDateTimeFromEpoch(int(nEpochDay))
+    return s
 
 
 
@@ -578,46 +588,10 @@ print(f"t = {d_time}s. {N/d_time:.1f} items/s.")
 
 
 
-df = df.assign(S = 2)
-df = df.assign(S = downcast_unsigned(df.S))
 
 
-l_Begin = []
-l_LFull    = []
-l_LAdj    = []
 
-full_range = range(df.IDX.max() + 1)
-
-l_IDX = list (full_range)
-
-for x in l_IDX:
-    m = (df.IDX == x)
-    q = df[m]
-
-    if x > 0 and x% 500 == 0:
-        print(f"Analyzing {x}...")
-
-    begin, L_full, L_adj, m_f, m_t = full_analysis(q, 3, 7*7, t_c)
-
-    if L_full < 0 or L_adj < 0:
-        #print("No target found")
-        l_Begin.append(np.nan)
-        l_LFull.append(np.nan)
-        l_LAdj.append(np.nan)
-
-    else:
-        #print(f"IDX = {x}. Begin = {begin}. L_full = {L_full}, L_adj = {L_adj}")
-
-        l_Begin.append(begin)
-        l_LFull.append(L_full)
-        l_LAdj.append(L_adj)
-
-        q.loc[m_f, 'S'] = 0
-        q.loc[m_t, 'S'] = 1
-
-        df.loc[m] = q
-
- # Target df
+df = df.assign(S = s)
 
 df_target = pd.DataFrame({'ID': l_IDX, 'Begin': l_Begin,'Y_F': l_LFull, 'Y_Adj': l_LAdj })
 
@@ -630,9 +604,27 @@ rPCTTrain = 100.0 * nTrainIDs/ nAllIDs
 print(f"{rPCTTrain:.1f}% of users provide training data")
 
 
-m = df.S != 2
+#
+# S info
+# 0 : Part of feature
+# 1 : Part of target
+# 2 : Analyzed and discarded as too old or future data. Must be discarded from training set.
+# 3 : Not analyzed
 
-df = df[m]   # Remove invalid and future data
+
+# Todo: Serialize 'df_raw'?
+
+
+# Todo: 
+
+
+
+Q_BACK = df.copy()
+Q_BACK_TARGET = df_target.copy()
+
+m = df.S < 2
+
+df = df[m]   # Remove invalid and future data, and unanalyzed data.
 
 
 df = df.assign(S = downcast_unsigned(df.S))
@@ -672,282 +664,77 @@ df_target = df_target.drop(['Y_Adj'], axis = 1)
 
 df_target = df_target.assign(Y_F = downcast_unsigned(df_target.Y_F))
 
-
 df_target = df_target.assign(ID = downcast_unsigned(df_target.ID))
 
 
-#########################################################################
+
+# Move FID_S, BIRTH and G from df to df_target
+
+idx_to_fid_s = {}
+idx_to_g = {}
+idx_to_b = {}
+
+
+def get_dicts(x):
+    idx = x['IDX']
+    fid_s = x['FID_S']
+    b = x['B']
+    g = x['G']
+
+    idx_to_fid_s[idx] = fid_s
+    idx_to_g[idx] = g
+    idx_to_b[idx] = b
+
+
+# Slow - 10 minutes?
+df.apply(get_dicts, axis = 1)
+
+assert len (idx_to_fid_s) == len (idx_to_g)
+assert len (idx_to_fid_s) == len (idx_to_b)
+
+def set_value(x, d):
+    return d[x]
+
+b = df_target.ID.apply(set_value, args = (idx_to_b, ))
+g = df_target.ID.apply(set_value, args = (idx_to_g, ))
+fid_s = df_target.ID.apply(set_value, args = (idx_to_fid_s, ))
+
+df_target = df_target.assign(B = b)
+df_target = df_target.assign(G = g)
+df_target = df_target.assign(FS = fid_s)
+
+df = df.drop(['B', 'G', 'FID_S'], axis = 1)
+
+df.dtypes
+df_target.dtypes
+
+# Compacting types again
+
+df_target = df_target.assign(B = downcast_unsigned(df_target.B))
+df_target = df_target.assign(G = downcast_unsigned(df_target.G))
+df_target = df_target.assign(FS = downcast_unsigned(df_target.FS))
+
+df = df.assign(IDX = downcast_unsigned(df.IDX))
+
+# Save point
+now = datetime.datetime.now()
+
+# Todo: Create sub folder and cd..  import os os.mkdir('Hello') 
+
+df_target.to_pickle(DATA_DIR + now.strftime("df_t_%Y-%m-%d_%H-%M") + ".pkl")
+df.to_pickle(DATA_DIR + now.strftime("df_%Y-%m-%d_%H-%M") + ".pkl")
+
 #
-#       get_prefixed_dict
+# Todo: Emit description from template.
+# Todo: Config and run clarified.
 #
-
-def get_prefixed_dict(d, prefix):
-    d_prefixed = {}
-
-    for key, value in d.items():
-        d_prefixed[prefix + key] = value
-
-    return d_prefixed
-
-"""c"""
-
-def get_stats_on_array(v):
-
-    if len(v) == 0:
-        return {'count': 0, 'mean': 0, 'std': 0, 'max': 0, 'min':0, 'sum': 0, 'skewness': 0, 'kurtosis': 0, 'median': 0, 'q1': 0, 'q3': 0}
-
-
-    d = {'count': len(v), 'mean': v.mean(), 'std': v.std(), 'max': v.max(), 'min':v.min(), 'sum': v.sum(), 'skewness': skew(v), 'kurtosis': kurtosis(v), 'median': np.median(v),
-         'q1': np.percentile(v, q=25), 'q3': np.percentile(v, q=75)}
-
-    return d
-
-
-
-
-##################################################################################
+# 49 days
+#  3 days grow. Policy explained.
+# First day of dataset
+# Discard day for feature set.
+# Offset explained.
 #
-#     get_historic_stats
-#
-
-def get_historic_stats(start_target_time, l_intervals):
-
-    l_begin = []
-    l_l     = []
-
-    for a,b in l_intervals:
-        assert a < start_target_time
-        assert b < start_target_time
-       
-        l_l.append(b - a)
-
-        a = start_target_time - a
-        
-        l_begin.append(a)
-       
-
-    """c"""
-
-    anBegin = np.array(l_begin)    
-    anLength = np.array(l_l)
-
-    d = {}
-
-    sBegin = get_prefixed_dict(get_stats_on_array(anBegin), 'S_')
-    sLength = get_prefixed_dict(get_stats_on_array(anLength), 'L_')
-
-    d.update(sBegin)
-    d.update(sLength)
-
-    return d
-
-"""c"""
-
-
-
-##################################################################################
-#
-#     generate_target_data
+# Based on what code amd data. sql_version_string
 #
 
-def get_unsigned_series(l):
-    return pd.Series(pd.to_numeric(l, errors='raise', downcast = 'unsigned'))
 
-def generate_target_data(df, t_start, t_end, nGrow, nCut):
-
-    aID = np.unique(df.IDX)
-
-    if nCut > 0:
-        aID = aID[:nCut]
-
-    l_ID = []
-    l_start = []
-    l_N = []
-    l_L = []
-    l_Fill = []
-    l_MD = []
-    l_D = []
-
-
-    l_S_mean = []
-    l_S_std = []
-    l_S_max = []
-    l_S_min = []
-    l_S_sum = []
-    l_S_skewness = []
-    l_S_kurtosis = []
-    l_S_median = []
-    l_S_q1 = []
-    l_S_q3 = [] 
-    l_S_count = []
-    l_L_mean = []
-    l_L_std = []
-    l_L_max = []
-    l_L_min = []
-    l_L_sum = []
-    l_L_skewness = []
-    l_L_kurtosis = []
-    l_L_median = []
-    l_L_q1 = []
-    l_L_q3 = []
-    l_L_count = []
-
-
-    for x in aID:
-
-        if x % 100 == 0 and x > 0:
-            print(f"Processing {x}/ {aID.shape[0]}...")
-
-        r = get_target_df(df, t_start, t_end, nGrow, x)
-
-        assert x == r['ID']
-
-        l_ID.append(x)
-        l_N.append(r['nperiods'])
-
-        d_stats = {}
-
-        if r['nperiods'] == 0:
-            l_start.append(0)
-            l_L.append(0)
-            l_Fill.append(0)
-            l_MD.append(0)
-            l_D.append(0)
-
-            d_stats = get_historic_stats(start_target_time, [])
-
-        else:   
-            L_full = 1+ r['end'] - r['begin']
-            L_adjusted = L_full - r['stitch']
-
-            start_target_time = r['begin']
-        
-            l_start.append(start_target_time)
-            l_L.append(L_adjusted)
-            l_Fill.append(r['stitch'])
-            l_MD.append(r['MD'])
-            l_D.append(r['D'])
-
-            d_stats = get_historic_stats(start_target_time, r['historic_intervals'])
-
-
-        l_S_mean.append(d_stats['S_mean'])
-        l_S_std.append(d_stats['S_std'])
-        l_S_max.append(d_stats['S_max'])
-        l_S_min.append(d_stats['S_min'])
-        l_S_sum.append(d_stats['S_sum'])
-        l_S_skewness.append(d_stats['S_skewness'])
-        l_S_kurtosis.append(d_stats['S_kurtosis'])
-        l_S_median.append(d_stats['S_median'])
-        l_S_q1.append(d_stats['S_q1'])
-        l_S_q3.append(d_stats['S_q3']) 
-        l_S_count.append(d_stats['S_count'])
-
-        l_L_mean.append(d_stats['L_mean'])
-        l_L_std.append(d_stats['L_std'])
-        l_L_max.append(d_stats['L_max'])
-        l_L_min.append(d_stats['L_min'])
-        l_L_sum.append(d_stats['L_sum'])
-        l_L_skewness.append(d_stats['L_skewness'])
-        l_L_kurtosis.append(d_stats['L_kurtosis'])
-        l_L_median.append(d_stats['L_median'])
-        l_L_q1.append(d_stats['L_q1'])
-        l_L_q3.append(d_stats['L_q3']) 
-        l_L_count.append(d_stats['L_count'])
-
-    df_stat = pd.DataFrame( {'S_mean' : pd.Series(l_S_mean),
-                             'S_std' :  pd.Series(l_S_std),
-                             'S_max' :  pd.Series(l_S_max),
-                             'S_min' :  pd.Series(l_S_min),
-                             'S_sum' :  pd.Series(l_S_sum),
-                             'S_skewness' : pd.Series(l_S_skewness),
-                             'S_kurtosis' : pd.Series(l_S_kurtosis),
-                             'S_median' : pd.Series(l_S_median),
-                             'S_q1' : pd.Series(l_S_q1),
-                             'S_q3' : pd.Series(l_S_q3),
-                             'S_count' : pd.Series(l_S_count),
-                             'L_mean' : pd.Series(l_L_mean),
-                             'L_std' :  pd.Series(l_L_std),
-                             'L_max' :  pd.Series(l_L_max),
-                             'L_min' :  pd.Series(l_L_min),
-                             'L_sum' :  pd.Series(l_L_sum),
-                             'L_skewness' : pd.Series(l_L_skewness),
-                             'L_kurtosis' : pd.Series(l_L_kurtosis),
-                             'L_median' : pd.Series(l_L_median),
-                             'L_q1' : pd.Series(l_L_q1),
-                             'L_q3' : pd.Series(l_L_q3),
-                             'L_count' : pd.Series(l_L_count)})
-
-
-    sID = get_unsigned_series(l_ID)
-    sStart = get_unsigned_series(l_start)
-    sN = get_unsigned_series(l_N)
-    sL = get_unsigned_series(l_L)
-    sFill = get_unsigned_series(l_Fill)
-    sMD = get_unsigned_series(l_MD)
-    sD = get_unsigned_series(l_D)
-
-    df_t = pd.DataFrame( {'ID': sID, 'S': sStart, 'N' : sN, 'MD':sMD, 'D':sD, 'F':sFill, 'Y':sL})
-
-    df_t = pd.concat([df_t, df_stat], axis = 1)
-
-    return df_t
-
-"""c"""
-
-n0 = df.shape[0]
-
-df = df.drop_duplicates()
-
-n1 = df.shape[0]
-
-print(f"Dropped duplicates: n: {n0} => {n1}")
-
-
-t_start = 20000
-t_end = 37000
-nGrow = 15
-
-nAllIDS = len (np.unique(df.IDX))
-
-nCut = nAllIDS  #  = nAllIDS for no cut
-
-# First cut num unique users 
-m = (df.IDX < nCut)
-
-df = df[m]
-
-
-df_t = generate_target_data(df, t_start, t_end, nGrow, nCut)
-
-# Move individual info from historic dataframe to id dataframe.
-
-q = df.drop_duplicates(['ID'])
-q = q.reset_index()
-
-assert len(q) == nCut
-
-df_t['B'] = q.B
-df_t['K'] = q.S
-
-df = df.drop(['B', 'S'], axis = 1)
-
-s = df_t.S
-
-df = df.assign(TCUT = df.IDX.apply(lambda x: s[x]) )
-
-m_cut = (df.F0 >= df.TCUT) | (df.F1 >= df.TCUT)
-
-df = df[~m_cut]
-
-df = df.reset_index(drop = True)
-
-df = df.drop(['TCUT'], axis = 1)
-
-nGotAdditionalData = len (np.unique(df.IDX))
-rAdditionalDataFactor = 100.0 * nGotAdditionalData/ nCut
-
-print(f"Additional data elements: {rAdditionalDataFactor:.0f}%")
-
-df_t.to_pickle(DATA_DIR + "df_t_14AUG2018.pkl")
-df.to_pickle(DATA_DIR + "df_14AUG2018.pkl")
