@@ -1,45 +1,79 @@
 
+
 import numpy as np
-import time
-
 import pandas as pd
+from concurrent.futures import ProcessPoolExecutor
+import os
 
-nRuns = 10
+def feature_calculation(df):
 
-def sort_seq(d):
-
-    N = d.shape[0]
-    d = np.sort(d)
-
-    return d
-
-N = 900000000
-
-d0 = np.empty(N, dtype = np.int32)
-d1 = np.empty(N, dtype = np.int32)
-d2 = np.empty(N, dtype = np.int32)
-
-d_res = np.empty(N, dtype = np.int32)
-
-r = range(10)
-
-for x in r:
-
-    start = time.time()
-
-    d_res = d0 + d1 - d2
-
-    end = time.time()
-
-    dtime = end - start
-
-    print(f"Processing time: {dtime:.1f} s.")
-
-df = pd.DataFrame([d0, d1, d2, d_res])
+    print(f"feature_calculation starting on pid={os.getpid()}")
 
 
-with ThreadPool(processes=8) as pool:
-        Xb_train, Xb_valid = [x.astype(np.bool).astype(np.float32) for x in [X_train, X_valid]]
-        xs = [[Xb_train, Xb_valid], [X_train, X_valid]] * 2
-        y_pred = np.mean(pool.map(partial(fit_predict, y_train=y_train), xs), axis=0)
+    # create DataFrame and populate with stdDev
+    result = pd.DataFrame(df.std(axis=0))
+    result.columns = ["stdDev"]
+    
+    # mean
+    result["mean"] = df.mean(axis=0)
+
+    # percentiles
+    for i in [0.1, 0.25, 0.5, 0.75, 0.9]:
+        result[str(int(i*100)) + "perc"] = df.quantile(q=i)
+
+    # percentile differences / amplitudes
+    result["diff_90perc10perc"] = (result["10perc"] - result["90perc"])
+    result["diff_75perc25perc"] = (result["75perc"] - result["25perc"])
+
+    # percentiles of lagged time-series
+    for lag in [10, 20, 30, 40, 50]:
+        for i in [0.1, 0.25, 0.5, 0.75, 0.9]:
+            result["lag" + str(lag) + "_" + str(int(i*100)) + "perc"] = (df - df.shift(lag)).quantile(q=i)
+
+    # fft
+    df_fft = np.fft.fft(df, axis=0)  # fourier transform only along time axis
+    result["fft_angle_mean"] = np.mean(np.angle(df_fft, deg=True), axis=0)
+    result["fft_angle_min"] = np.min(np.angle(df_fft, deg=True), axis=0)
+    result["fft_angle_max"] = np.max(np.angle(df_fft, deg=True), axis=0)
+    
+    return result
+
+
+def parallel_feature_calculation_ppe(df, partitions=10, processes=4):
+    # calculate features in paralell by splitting the dataframe into partitions and using paralell processes
+    
+    df_split = np.array_split(df, partitions, axis=1)  # split dataframe into partitions column wise
+    
+    with ProcessPoolExecutor(processes) as pool:        
+        df = pd.concat(pool.map(feature_calculation, df_split))
+    
+    return df
+
+def main():
+    ts_df = pd.DataFrame(np.random.random(size=(3065, 30000)))
+    df_res = parallel_feature_calculation_ppe(ts_df, partitions=100, processes=7)
+    print (df_res.head())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if __name__ == '__main__':
+    main()
+
 

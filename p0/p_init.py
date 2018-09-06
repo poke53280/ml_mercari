@@ -570,26 +570,6 @@ d_time = end_time - start_time
 print(f"t = {d_time}s. {N/d_time:.1f} items/s.")
 
 
-# Todo check start-stop on all date ranges. (Above).
-
-first_day
-
-nMinBorn = df.B.min()
-nMaxBorn = df.B.max()
-
-def from_offset_to_date(nOffset, first_day):
-    nEpochDay = nOffset + first_day
-    s = toDateTimeFromEpoch(int(nEpochDay))
-    return s
-
-
-
-
-
-
-
-
-
 
 df = df.assign(S = s)
 
