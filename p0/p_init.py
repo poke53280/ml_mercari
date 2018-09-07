@@ -28,14 +28,14 @@ import bisect
 import datetime
 import time
 
+import ai_lab_datapipe.DataProvider
 
-import DataProvider
 
-from p_general import toDaysSinceEpoch
-from p_general import apply_FID_COL
-from p_general import classifyFID
-from p_general import toDaysSinceEpochFromFID
-from p_general import get_gender_from_fid
+from ml_mercari.p0.p_general import toDaysSinceEpoch
+from ml_mercari.p0.p_general import apply_FID_COL
+from ml_mercari.p0.p_general import classifyFID
+from ml_mercari.p0.p_general import toDaysSinceEpochFromFID
+from ml_mercari.p0.p_general import get_gender_from_fid
 
 os.environ['NLS_NCHAR_CHARACTERSET']='AL16UTF16'
 os.environ['NLS_CHARACTERSET']='WE8ISO8859P15'
@@ -46,7 +46,7 @@ f = open(config_file,"r")
 config = f.read()
 f.close()
 
-dp = DataProvider.DataProvider(config)
+dp = ai_lab_datapipe.DataProvider.DataProvider(config)
 
 
 l_queries = []
@@ -70,6 +70,47 @@ d['unit'].columns = ['id', 'code']
 d['syk'].columns = ['id', 'gender', 'age_id', 'income_id', 'md_id', 'work_id', 'unit_id', 'diag_id', 'F0', 'F1', 'T1']
 
 
+
+df = d['syk'].copy()
+
+def count_invalid(df, s):
+    m = df[s] < 0
+    return m.sum()
+
+count_invalid(df, 'diag_id')
+
+
+df = df.merge(d['age'], how = 'left', left_on = 'age_id' , right_on = 'id')
+df = df.drop(['id_y', 'age_id'], axis = 1)
+
+
+df = df.merge(d['income'], how = 'left', left_on = 'income_id' , right_on = 'id')
+df = df.drop(['id', 'income_id'], axis = 1)
+
+df = df.merge(d['diag'], how = 'left', left_on = 'diag_id' , right_on = 'id')
+
+df = df.drop(['id', 'diag_id'], axis = 1)
+
+df.columns = (['id_x', 'gender', 'md_id', 'work_id', 'unit_id', 'F0', 'F1', 'T0', 'age', 'p_cat', 'income_cat', 'd_cat', 'd_code'])
+
+d['work'].columns = ['id', 'w_code']
+df = df.merge(d['work'], how = 'left', left_on = 'work_id' , right_on = 'id')
+df = df.drop(['work_id', 'id'], axis = 1)
+
+d['unit'].columns = ['id', 'u_code']
+df = df.merge(d['unit'], how = 'left', left_on = 'unit_id' , right_on = 'id')
+df = df.drop(['id', 'unit_id'], axis = 1)
+
+d['md'].columns = ['id', 'md_subcat', 'md_depcat', 'md_topiccat', 'md_county', 'md_subcounty', 'md_birthyear', 'md_gender']
+df = df.merge(d['md'], how = 'left', left_on = 'md_id' , right_on = 'id')
+df = df.drop(['id', 'md_id'], axis = 1)
+
+df.dtypes
+
+df
+
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 1000)
 
 
 def old_db_out(df):
