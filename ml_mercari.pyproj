@@ -115,6 +115,9 @@
     <Compile Include="mp\sort_ml.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="p0\DataProvider.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="p0\p3.py">
       <SubType>Code</SubType>
     </Compile>

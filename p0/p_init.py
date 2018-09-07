@@ -29,7 +29,8 @@ import datetime
 import time
 
 
-from p_general import DataProvider
+import DataProvider
+
 from p_general import toDaysSinceEpoch
 from p_general import apply_FID_COL
 from p_general import classifyFID
@@ -45,54 +46,83 @@ f = open(config_file,"r")
 config = f.read()
 f.close()
 
-dp = DataProvider(config)
+dp = DataProvider.DataProvider(config)
+
 
 l_queries = []
 
-l_queries.append( ("A", "sql_syk3",      "syk") )
-#l_queries.append( ("A", "sql_fravar",    "fravar") )
-l_queries.append( ("A", "sql_pmap",      "pmap") )
-#l_queries.append( ("B", "sql_vedtak",    "vedtak") )
-#l_queries.append( ("B", "sql_meldekort", "meldekort") )
-#l_queries.append( ("C", "select_large",  "aa") )
+l_queries.append( ("A", "SF4_Diagnose",      "diag") )
+l_queries.append( ("A", "SF4_Naeringskode",  "work") )
+l_queries.append( ("A", "SF4_Sykmelder",     "md") )
+l_queries.append( ("A", "SF4_Alder",         "age") )
+l_queries.append( ("A", "SF4_Inntektskilde", "income") )
+l_queries.append( ("A", "SF_4_NavEnhet",     "unit") )
+l_queries.append( ("A", "SF4_SF",            "syk") )
 
 d = dp.async_load(l_queries)
 
-p = d['pmap'].copy()
+d['diag'].columns = ['id','cat', 'code']
+d['work'].columns = ['id', 'code']
+d['md'].columns = ['id', 'subcat', 'depcat', 'topiccat', 'county','subcounty', 'birthyear', 'gender']
+d['age'].columns = ['id', 'age']
+d['income'].columns = ['id', 'p_cat', 'income_cat']
+d['unit'].columns = ['id', 'code']
+d['syk'].columns = ['id', 'gender', 'age_id', 'income_id', 'md_id', 'work_id', 'unit_id', 'diag_id', 'F0', 'F1', 'T1']
 
-p.columns = ['FID', 'FK', 'A']
 
-m = p.FK == -1
 
-p = p[~m]
 
-# Clean up FID to FK mapping.
+def old_db_out(df):
 
-p_state = p["FID"].apply(classifyFID)
+    l_queries = []
 
-m = p_state == 'E'
+    l_queries.append( ("A", "sql_syk3",      "syk") )
+    #l_queries.append( ("A", "sql_fravar",    "fravar") )
+    l_queries.append( ("A", "sql_pmap",      "pmap") )
+    #l_queries.append( ("B", "sql_vedtak",    "vedtak") )
+    #l_queries.append( ("B", "sql_meldekort", "meldekort") )
+    #l_queries.append( ("C", "select_large",  "aa") )
 
-print(f"Removing {len(p[m])} rows with bad fid")
+    d = dp.async_load(l_queries)
 
-p = p[~m]
+    p = d['pmap'].copy()
 
-p_state = p["FID"].apply(classifyFID)
-p_epoch = p["FID"].apply(toDaysSinceEpochFromFID)
 
-p = p.assign(S = p_state)
-p = p.assign(E = p_epoch)
+    p = d['pmap'].copy()
 
-# Prepare conversion dictionaries
+    p.columns = ['FID', 'FK', 'A']
 
-l_fid = p.FID.tolist()
-l_fk  = p.FK.tolist()
-l_a   = p.A.tolist()
-l_s   = p.S.tolist()
-l_e   = p.E.tolist()
+    m = p.FK == -1
 
-d_FK_TO_FID = dict (zip (l_fk, l_fid))
-d_FK_TO_E = dict (zip (l_fk, l_e))
-d_FK_TO_S = dict (zip (l_fk, l_s))
+    p = p[~m]
+
+    # Clean up FID to FK mapping.
+
+    p_state = p["FID"].apply(classifyFID)
+
+    m = p_state == 'E'
+
+    print(f"Removing {len(p[m])} rows with bad fid")
+
+    p = p[~m]
+
+    p_state = p["FID"].apply(classifyFID)
+    p_epoch = p["FID"].apply(toDaysSinceEpochFromFID)
+
+    p = p.assign(S = p_state)
+    p = p.assign(E = p_epoch)
+
+    # Prepare conversion dictionaries
+
+    l_fid = p.FID.tolist()
+    l_fk  = p.FK.tolist()
+    l_a   = p.A.tolist()
+    l_s   = p.S.tolist()
+    l_e   = p.E.tolist()
+
+    d_FK_TO_FID = dict (zip (l_fk, l_fid))
+    d_FK_TO_E = dict (zip (l_fk, l_e))
+    d_FK_TO_S = dict (zip (l_fk, l_s))
 
 
 ########################################################################################################
