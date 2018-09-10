@@ -51,22 +51,22 @@ dp = ai_lab_datapipe.DataProvider.DataProvider(config)
 
 l_queries = []
 
-l_queries.append( ("A", "SF4_Diagnose",      "diag") )
-l_queries.append( ("A", "SF4_Naeringskode",  "work") )
-l_queries.append( ("A", "SF4_Sykmelder",     "md") )
-l_queries.append( ("A", "SF4_Alder",         "age") )
-l_queries.append( ("A", "SF4_Inntektskilde", "income") )
-l_queries.append( ("A", "SF_4_NavEnhet",     "unit") )
-l_queries.append( ("A", "SF4_SF",            "syk") )
+l_queries.append( ("A", "SM4_Diagnose",      "diag") )
+l_queries.append( ("A", "SM4_Naeringskode",  "work") )
+l_queries.append( ("A", "SM4_Sykmelder",     "md") )
+l_queries.append( ("A", "SM4_Alder",         "age") )
+l_queries.append( ("A", "SM4_Inntektskilde", "income") )
+l_queries.append( ("A", "SM_4_NavEnhet",     "unit") )
+l_queries.append( ("A", "SM4_SF",            "syk") )
 
 d = dp.async_load(l_queries)
 
-d['diag'].columns = ['id','cat', 'code']
-d['work'].columns = ['id', 'code']
-d['md'].columns = ['id', 'subcat', 'depcat', 'topiccat', 'county','subcounty', 'birthyear', 'gender']
-d['age'].columns = ['id', 'age']
-d['income'].columns = ['id', 'p_cat', 'income_cat']
-d['unit'].columns = ['id', 'code']
+d['diag'].columns = ['diag_id','diag_cat', 'diag_code']
+d['work'].columns = ['work_id', 'work_code']
+d['md'].columns = ['md_id', 'md_year', 'md_gender', 'md_state', 'md_type', 'md_type_main', 'md_main_flag', 'md_subgroup', 'md_subflag', 'md_dep_code', 'md_field_code', 'md_type_code']
+d['age'].columns = ['age_id', 'age']
+d['income'].columns = ['income_id', 'income_p_cat', 'income_cat']
+d['unit'].columns = ['unit_id', 'unit_code']
 d['syk'].columns = ['id', 'gender', 'age_id', 'income_id', 'md_id', 'work_id', 'unit_id', 'diag_id', 'F0', 'F1', 'T1']
 
 
@@ -79,38 +79,37 @@ def count_invalid(df, s):
 
 count_invalid(df, 'diag_id')
 
+df = df.merge(d['age'], how = 'left', left_on = 'age_id' , right_on = 'age_id')
+df = df.merge(d['income'], how = 'left', left_on = 'income_id' , right_on = 'income_id')
+df = df.merge(d['diag'], how = 'left', left_on = 'diag_id' , right_on = 'diag_id')
+df = df.merge(d['work'], how = 'left', on = 'work_id')
+df = df.merge(d['unit'], how = 'left', on = 'unit_id')
+df = df.merge(d['md'], how = 'left', on = 'md_id')
 
-df = df.merge(d['age'], how = 'left', left_on = 'age_id' , right_on = 'id')
-df = df.drop(['id_y', 'age_id'], axis = 1)
+df = df.drop(['age_id', 'income_id', 'md_id', 'work_id', 'unit_id', 'diag_id'], axis = 1)
 
-
-df = df.merge(d['income'], how = 'left', left_on = 'income_id' , right_on = 'id')
-df = df.drop(['id', 'income_id'], axis = 1)
-
-df = df.merge(d['diag'], how = 'left', left_on = 'diag_id' , right_on = 'id')
-
-df = df.drop(['id', 'diag_id'], axis = 1)
-
-df.columns = (['id_x', 'gender', 'md_id', 'work_id', 'unit_id', 'F0', 'F1', 'T0', 'age', 'p_cat', 'income_cat', 'd_cat', 'd_code'])
-
-d['work'].columns = ['id', 'w_code']
-df = df.merge(d['work'], how = 'left', left_on = 'work_id' , right_on = 'id')
-df = df.drop(['work_id', 'id'], axis = 1)
-
-d['unit'].columns = ['id', 'u_code']
-df = df.merge(d['unit'], how = 'left', left_on = 'unit_id' , right_on = 'id')
-df = df.drop(['id', 'unit_id'], axis = 1)
-
-d['md'].columns = ['id', 'md_subcat', 'md_depcat', 'md_topiccat', 'md_county', 'md_subcounty', 'md_birthyear', 'md_gender']
-df = df.merge(d['md'], how = 'left', left_on = 'md_id' , right_on = 'id')
-df = df.drop(['id', 'md_id'], axis = 1)
-
-df.dtypes
-
-df
+df = df.drop(['income_p_cat'], axis = 1)  # No variance
 
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
+
+df = df.sort_values(by = ['id', 'F0', 'F1'])
+
+# SM approach completed.
+
+
+# SF approach
+l_queries = []
+l_queries.append(("A", "SF_Fravar",            "ssb_sf") )
+
+e = dp.async_load(l_queries)
+
+# min max dato
+de = e['ssb_sf']
+
+#
+#...XXX Continue here
+#
 
 
 def old_db_out(df):
