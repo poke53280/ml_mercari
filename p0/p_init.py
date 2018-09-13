@@ -27,6 +27,7 @@ import numpy as np
 import bisect
 import datetime
 import time
+import gc
 
 import ai_lab_datapipe.DataProvider
 
@@ -48,26 +49,145 @@ f.close()
 
 dp = ai_lab_datapipe.DataProvider.DataProvider(config)
 
-
 l_queries = []
 
-l_queries.append( ("A", "SM4_Diagnose",      "diag") )
-l_queries.append( ("A", "SM4_Naeringskode",  "work") )
-l_queries.append( ("A", "SM4_Sykmelder",     "md") )
-l_queries.append( ("A", "SM4_Alder",         "age") )
-l_queries.append( ("A", "SM4_Inntektskilde", "income") )
-l_queries.append( ("A", "SM_4_NavEnhet",     "unit") )
-l_queries.append( ("A", "SM4_SF",            "syk") )
+l_queries.append( ("A", "DIM_INNTEKT",     "dim_inntekt") )
+l_queries.append( ("A", "DIM_SYKMELDER",   "dim_sykmelder") )
+l_queries.append( ("A", "DIM_NAERING",   "dim_naering") )
+l_queries.append( ("A", "DIM_DIAGNOSE",   "dim_diagnose") )
+l_queries.append( ("A", "DIM_GEOGRAFI",   "dim_geografi") )
+l_queries.append( ("A", "DIM_LAND",   "dim_land") )
+l_queries.append( ("A", "DIM_TID",   "dim_tid") )
+l_queries.append( ("A", "DIM_VARIGHET",   "dim_varighet") )
+l_queries.append( ("A", "DIM_VIRKSOMHET",   "dim_virksomhet") )
+l_queries.append( ("A", "DIM_YRKE",   "dim_yrke") )
+l_queries.append( ("A", "NAV_UNIT",   "navunit") )
 
 d = dp.async_load(l_queries)
 
-d['diag'].columns = ['diag_id','diag_cat', 'diag_code']
-d['work'].columns = ['work_id', 'work_code']
-d['md'].columns = ['md_id', 'md_year', 'md_gender', 'md_state', 'md_type', 'md_type_main', 'md_main_flag', 'md_subgroup', 'md_subflag', 'md_dep_code', 'md_field_code', 'md_type_code']
-d['age'].columns = ['age_id', 'age']
-d['income'].columns = ['income_id', 'income_p_cat', 'income_cat']
-d['unit'].columns = ['unit_id', 'unit_code']
-d['syk'].columns = ['id', 'gender', 'age_id', 'income_id', 'md_id', 'work_id', 'unit_id', 'diag_id', 'F0', 'F1', 'T1']
+d_s =  dp.async_load([("A", "SYKMELDING", "melding")])
+d_p =  dp.async_load([("A", "DIM_PERSON", "dim_person")])
+d_f =  dp.async_load([("A", "SSB_FRAVAR", "fravar") ])
+
+d['melding']  = d_s['melding']
+d['dim_person'] = d_p['dim_person']
+d['fravar'] = d_f['fravar']
+
+del d_s
+del d_p
+del d_f
+
+gc.collect()
+
+
+print(f"Number of dataframes: {len(d)}")
+
+
+
+# Start
+d['melding'].columns = ['id', 'income_id', 'md_id', 'naering_id', 'unit_id', 'diag_id', 'F0', 'F1', 'T1']
+
+# On income_id:
+d['dim_inntekt'].columns = ['income_id', 'income_p_cat', 'income_cat']
+
+# On diag_id:
+d['dim_diagnose'].columns = ['diag_id', 'diag_code', 'diag_sub1_code', 'diag_sub2_code', 'diag_icpc2_kode', 'diag_group_code', 'diag_icd_g1_code', 'diag_icd_g2_code', 'diag_smp_main_code', 'diag_smp_sub_code', 'diag_group_cat']
+
+# On naeringid:
+d['dim_naering'].columns = ['business_type_id', 'business_type_code']
+
+# On unit_id:
+d['navunit'].columns =  ['unit_id', 'unit_code', 'unit_l3_code', 'unit_l2_code', 'unit_l1_code', 'unit_field_code', 'unit_info_source']
+
+# On md_id:
+d['dim_sykmelder'].columns = ['md_id', 'md_year', 'md_gender', 'md_code', 'md_type_code', 'md_g1_code', 'md_main_flag', 'md_sub_code', 'md_sub_flag', 'md_dept_code', 'md_field_code', 'md_cmpr_type_code']
+
+
+# On id, 1..* :
+d['dim_person'].columns = ['dim_id', 'id', 'valid_from_date', 'valid_to_date', 'valid_flag', 'gender', 'country_born', 'country_citizenship', 'country_living', 'country_address', 'dim_geo_living', 'dim_geo_living_last', 'dim_geo_address', 'born_year', 'state_code', 'state_date']
+
+# On dim_geo_living, dim_geo_living_last, dim_geo_address:
+
+d['dim_geografi'].columns = ['geo_id', 'geo_country_code', 'geo_county', 'geo_commune', 'geo_town_nr', 'geo_postal_code']
+d['dim_land'].columns = ['country_id', 'country_code', 'country_nordic', 'country_eu', 'country_oecd', 'country_eos', 'country_western', 'country_continent']
+
+
+# SSB
+# On dim_id:
+d['fravar'].columns = ['dim_id', 'dim_time', 'dim_duration', 'dim_virksomhet', 'dim_naering', 'dim_yrke', 'dim_geo_workplace', 'lost_days', 'leave_mean_rate_pct']
+
+
+# On dim_time:
+d['dim_tid'].columns = ['time_id', 'date', 'week_day']
+
+# On dim_duration:
+d['dim_varighet'].columns = ['duration_id', 'duration_days']
+
+# On dim_virksomhet:
+d['dim_virksomhet'].columns = ['company_id', 'num_employees', 'business_area_code', 'company_type', 'company_postal_code', 'dim_geografi_county', 'enterprise_num_employees', 'enterprise_stock_value', 'enterprise_type', 'enterprise_postal_code', 'enterprise_sector_code', 'ia_start_date', 'org_num_employees', 'valid_from_date', 'valid_to_date', 'active_flag']
+
+# On naeringid:
+# See above
+
+# On dim_yrke:
+d['dim_yrke'].columns = ['prof_id', 'nav_code', 'styrk_code']
+
+# On dim_geo_workplace
+# See above
+
+
+# Merge time for fravar
+
+q = d['fravar'].merge(d['dim_tid'], how = 'left', left_on='dim_time', right_on = 'time_id')
+
+q = q.drop(['time_id', 'dim_time'], axis = 1)
+
+d['fravar'] = q
+
+# Merge duration for fravar
+
+q = d['fravar'].merge(d['dim_varighet'], how = 'left', left_on='dim_duration', right_on = 'duration_id')
+
+d['fravar'] = q
+
+
+##################### tests
+
+
+# one id:
+
+l_id = [730412047, 2520904400, 2520976142, 730375555, 730359310]
+
+id = l_id[4]
+
+
+print(f"Retrieve information on id = {id}")
+
+
+m = d['melding'].id == id
+
+q_melding = d['melding'][m].copy()
+
+print(f"Found {len(q_melding)} leave record(s)")
+
+m = d['dim_person'].id == id
+
+q_person = d['dim_person'][m]
+
+print(f"Found {len(q_person)} person record(s) on id")
+
+l_dim_id = list (q_person.dim_id)
+
+m = d['fravar'].dim_id.isin(l_dim_id)
+
+q_fravar = d['fravar'][m]
+
+print(f"Found {len(q_fravar)} ssb leave record(s)")
+
+
+q_melding
+q_fravar
+
 
 
 
