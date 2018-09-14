@@ -127,9 +127,6 @@
     <Compile Include="p0\p5.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="p0\p_general.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="p0\p_init.py">
       <SubType>Code</SubType>
     </Compile>

@@ -1,154 +1,261 @@
 
-
-# Configuration parameters
-
-CONFIG_DATA_START = "2006-01-01"
-CONFIG_DATA_INVALID_FUTURE = "2019-01-01"
-
-# Resolving environment
-
 import os
+import gc
+import pandas as pd
+import hashlib
+
 
 local_dir = os.getenv('LOCAL_PY_DIR')
 assert local_dir is not None, "Set environment variable LOCAL_DIR to location of this python file."
 print(f"Local python directoy is set to {local_dir}")
 os.chdir(local_dir)
 
-config_file = os.getenv('DB_DATA')
-assert config_file is not None, "No config file found in environment variable DB_DATA"
-print(f"Using database connection file '{config_file}'")
-
-
-import sys
-import pandas as pd
-import json
-import random
-import numpy as np
-import bisect
-import datetime
-import time
-import gc
 
 import ai_lab_datapipe.DataProvider
+from ai_lab_datapipe.DataGeneral import toDaysSinceEpoch
 
 
-from ml_mercari.p0.p_general import toDaysSinceEpoch
-from ml_mercari.p0.p_general import apply_FID_COL
-from ml_mercari.p0.p_general import classifyFID
-from ml_mercari.p0.p_general import toDaysSinceEpochFromFID
-from ml_mercari.p0.p_general import get_gender_from_fid
-
-os.environ['NLS_NCHAR_CHARACTERSET']='AL16UTF16'
-os.environ['NLS_CHARACTERSET']='WE8ISO8859P15'
-os.environ['NLS_LANG']='AMERICAN_AMERICA.WE8ISO8859P15'
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 1000)
 
 
-f = open(config_file,"r")
-config = f.read()
-f.close()
-
-dp = ai_lab_datapipe.DataProvider.DataProvider(config)
-
-l_queries = []
-
-l_queries.append( ("A", "DIM_INNTEKT",     "dim_inntekt") )
-l_queries.append( ("A", "DIM_SYKMELDER",   "dim_sykmelder") )
-l_queries.append( ("A", "DIM_NAERING",   "dim_naering") )
-l_queries.append( ("A", "DIM_DIAGNOSE",   "dim_diagnose") )
-l_queries.append( ("A", "DIM_GEOGRAFI",   "dim_geografi") )
-l_queries.append( ("A", "DIM_LAND",   "dim_land") )
-l_queries.append( ("A", "DIM_TID",   "dim_tid") )
-l_queries.append( ("A", "DIM_VARIGHET",   "dim_varighet") )
-l_queries.append( ("A", "DIM_VIRKSOMHET",   "dim_virksomhet") )
-l_queries.append( ("A", "DIM_YRKE",   "dim_yrke") )
-l_queries.append( ("A", "NAV_UNIT",   "navunit") )
-
-d = dp.async_load(l_queries)
-
-d_s =  dp.async_load([("A", "SYKMELDING", "melding")])
-d_p =  dp.async_load([("A", "DIM_PERSON", "dim_person")])
-d_f =  dp.async_load([("A", "SSB_FRAVAR", "fravar") ])
-
-d['melding']  = d_s['melding']
-d['dim_person'] = d_p['dim_person']
-d['fravar'] = d_f['fravar']
-
-del d_s
-del d_p
-del d_f
-
-gc.collect()
+def apply_hash(x):
+    hash_object = hashlib.md5(x.encode())
+    return hash_object.hexdigest()
 
 
-print(f"Number of dataframes: {len(d)}")
+def get_SF():
+
+    CONFIG_DATA_START = "2006-01-01"
+
+    config_file = os.getenv('DB_DATA')
+    assert config_file is not None, "No config file found in environment variable DB_DATA"
+    print(f"Using database connection file '{config_file}'")
 
 
-
-# Start
-d['melding'].columns = ['id', 'income_id', 'md_id', 'naering_id', 'unit_id', 'diag_id', 'F0', 'F1', 'T1']
-
-# On income_id:
-d['dim_inntekt'].columns = ['income_id', 'income_p_cat', 'income_cat']
-
-# On diag_id:
-d['dim_diagnose'].columns = ['diag_id', 'diag_code', 'diag_sub1_code', 'diag_sub2_code', 'diag_icpc2_kode', 'diag_group_code', 'diag_icd_g1_code', 'diag_icd_g2_code', 'diag_smp_main_code', 'diag_smp_sub_code', 'diag_group_cat']
-
-# On naeringid:
-d['dim_naering'].columns = ['business_type_id', 'business_type_code']
-
-# On unit_id:
-d['navunit'].columns =  ['unit_id', 'unit_code', 'unit_l3_code', 'unit_l2_code', 'unit_l1_code', 'unit_field_code', 'unit_info_source']
-
-# On md_id:
-d['dim_sykmelder'].columns = ['md_id', 'md_year', 'md_gender', 'md_code', 'md_type_code', 'md_g1_code', 'md_main_flag', 'md_sub_code', 'md_sub_flag', 'md_dept_code', 'md_field_code', 'md_cmpr_type_code']
+    os.environ['NLS_NCHAR_CHARACTERSET']='AL16UTF16'
+    os.environ['NLS_CHARACTERSET']='WE8ISO8859P15'
+    os.environ['NLS_LANG']='AMERICAN_AMERICA.WE8ISO8859P15'
 
 
-# On id, 1..* :
-d['dim_person'].columns = ['dim_id', 'id', 'valid_from_date', 'valid_to_date', 'valid_flag', 'gender', 'country_born', 'country_citizenship', 'country_living', 'country_address', 'dim_geo_living', 'dim_geo_living_last', 'dim_geo_address', 'born_year', 'state_code', 'state_date']
+    f = open(config_file,"r")
+    config = f.read()
+    f.close()
 
-# On dim_geo_living, dim_geo_living_last, dim_geo_address:
+    dp = ai_lab_datapipe.DataProvider.DataProvider(config)
 
-d['dim_geografi'].columns = ['geo_id', 'geo_country_code', 'geo_county', 'geo_commune', 'geo_town_nr', 'geo_postal_code']
-d['dim_land'].columns = ['country_id', 'country_code', 'country_nordic', 'country_eu', 'country_oecd', 'country_eos', 'country_western', 'country_continent']
+    l_queries = []
+
+    l_queries.append( ("A", "DIM_INNTEKT",     "dim_inntekt") )
+    l_queries.append( ("A", "DIM_SYKMELDER",   "dim_sykmelder") )
+    l_queries.append( ("A", "DIM_NAERING",   "dim_naering") )
+    l_queries.append( ("A", "DIM_DIAGNOSE",   "dim_diagnose") )
+    l_queries.append( ("A", "DIM_GEOGRAFI",   "dim_geografi") )
+    l_queries.append( ("A", "DIM_LAND",   "dim_land") )
+    l_queries.append( ("A", "DIM_TID",   "dim_tid") )
+    l_queries.append( ("A", "DIM_VARIGHET",   "dim_varighet") )
+    l_queries.append( ("A", "DIM_VIRKSOMHET",   "dim_virksomhet") )
+    l_queries.append( ("A", "DIM_YRKE",   "dim_yrke") )
+    l_queries.append( ("A", "NAV_UNIT",   "navunit") )
+
+    d = dp.async_load(l_queries)
+
+    d_s = dp.async_load([("A", "SYKMELDING", "melding")])
+    d_p = dp.async_load([("A", "DIM_PERSON", "dim_person")])
+    d_f = dp.async_load([("A", "SSB_FRAVAR", "fravar") ])
+
+    d['melding']  = d_s['melding']
+    d['dim_person'] = d_p['dim_person']
+    d['fravar'] = d_f['fravar']
+
+    del d_s
+    del d_p
+    del d_f
+
+    gc.collect()
+
+    print(f"Number of dataframes: {len(d)}")
+
+    d['melding'].columns = ['id', 'income_id', 'md_id', 'naering_id', 'unit_id', 'diag_id', 'F0', 'F1', 'T1']
+    d['dim_inntekt'].columns = ['income_id', 'income_p_cat', 'income_cat']
+    d['dim_diagnose'].columns = ['diag_id', 'diag_code', 'diag_sub1_code', 'diag_sub2_code', 'diag_icpc2_kode', 'diag_group_code', 'diag_icd_g1_code', 'diag_icd_g2_code', 'diag_smp_main_code', 'diag_smp_sub_code', 'diag_group_cat']
+    d['dim_naering'].columns = ['business_type_id', 'business_type_code']
+    d['navunit'].columns =  ['unit_id', 'unit_code', 'unit_l3_code', 'unit_l2_code', 'unit_l1_code', 'unit_field_code', 'unit_info_source']
+    d['dim_sykmelder'].columns = ['md_id', 'md_year', 'md_birthFORHASHONLT', 'md_nameFORHASHONLY', 'md_gender', 'md_code', 'md_type_code', 'md_g1_code', 'md_main_flag', 'md_sub_code', 'md_sub_flag', 'md_dept_code', 'md_field_code', 'md_cmpr_type_code', 'md_from', 'md_to']
+    d['dim_person'].columns = ['dim_id', 'id', 'valid_from_date', 'valid_to_date', 'valid_flag', 'gender', 'country_born', 'country_citizenship', 'country_living', 'country_address', 'dim_geo_living', 'dim_geo_living_last', 'dim_geo_address', 'born_year', 'state_code', 'state_date']
+    d['dim_geografi'].columns = ['geo_id', 'geo_country_code', 'geo_county', 'geo_commune', 'geo_town_nr', 'geo_postal_code']
+    d['dim_land'].columns = ['country_id', 'country_code', 'country_nordic', 'country_eu', 'country_oecd', 'country_eos', 'country_western', 'country_continent']
+    d['fravar'].columns = ['dim_id', 'ssb_dim_time', 'ssb_dim_duration', 'ssb_dim_virksomhet', 'ssb_dim_naering', 'ssb_dim_yrke', 'ssb_dim_geo_workplace', 'ssb_lost_days', 'ssb_leave_mean_rate_pct']
+    d['dim_tid'].columns = ['time_id', 'date', 'week_day']
+    d['dim_varighet'].columns = ['duration_id', 'duration_days']
+    d['dim_virksomhet'].columns = ['company_id', 'company_num_employees', 'companY_business_area_code', 'company_type', 'company_postal_code', 'company_dim_geografi_county', 'enterprise_num_employees', 'enterprise_stock_value', 'enterprise_type', 'enterprise_postal_code', 'enterprise_sector_code', 'enterprise_ia_start_date', 'org_num_employees', 'company_valid_from_date', 'company_valid_to_date', 'company_active_flag']
+    d['dim_yrke'].columns = ['prof_id', 'prof_nav_code', 'prof_styrk_code']
+
+    q = d['dim_sykmelder']
+
+    s1 = q['md_birthFORHASHONLT'].astype('str')
+    s = q['md_nameFORHASHONLY'] + s1
+
+    s_hash = s.apply(apply_hash)
+    
+    d['dim_sykmelder'] = d['dim_sykmelder'].assign(PID_HASH = s_hash)
 
 
-# SSB
-# On dim_id:
-d['fravar'].columns = ['dim_id', 'dim_time', 'dim_duration', 'dim_virksomhet', 'dim_naering', 'dim_yrke', 'dim_geo_workplace', 'lost_days', 'leave_mean_rate_pct']
+    q = d['dim_sykmelder']['PID_HASH'].astype('category').cat.codes
+
+    q.nunique()
+
+    len (q)
+
+    print(f"Num sykmelders= {len(q)}, unique name/birth = {q.nunique()}")
+
+    d['dim_sykmelder'] = d['dim_sykmelder'].assign(PID_CAT = q)
+
+    d['dim_sykmelder'].PID_CAT.value_counts()
 
 
-# On dim_time:
-d['dim_tid'].columns = ['time_id', 'date', 'week_day']
+    m = d['dim_sykmelder'].PID_CAT == 62105
 
-# On dim_duration:
-d['dim_varighet'].columns = ['duration_id', 'duration_days']
+    q = d['dim_sykmelder'][m]
 
-# On dim_virksomhet:
-d['dim_virksomhet'].columns = ['company_id', 'num_employees', 'business_area_code', 'company_type', 'company_postal_code', 'dim_geografi_county', 'enterprise_num_employees', 'enterprise_stock_value', 'enterprise_type', 'enterprise_postal_code', 'enterprise_sector_code', 'ia_start_date', 'org_num_employees', 'valid_from_date', 'valid_to_date', 'active_flag']
+    q = q.sort_values(by = 'md_from')
 
-# On naeringid:
-# See above
-
-# On dim_yrke:
-d['dim_yrke'].columns = ['prof_id', 'nav_code', 'styrk_code']
-
-# On dim_geo_workplace
-# See above
+    d['dim_sykmelder'] = d['dim_sykmelder'].drop(['md_birthFORHASHONLT', 'md_nameFORHASHONLY'], axis = 1)
+    
+    d['dim_sykmelder'] = d['dim_sykmelder'].drop(['PID_HASH'], axis = 1)
 
 
-# Merge time for fravar
+    # Todo virksomhet _ keep v_id 
+    # Person keep id.
 
-q = d['fravar'].merge(d['dim_tid'], how = 'left', left_on='dim_time', right_on = 'time_id')
+    # Merge in date on fravar to be able to cut early data (< 01.01.2006).
 
-q = q.drop(['time_id', 'dim_time'], axis = 1)
+    d['fravar'] = left_merge(d['fravar'], d['dim_tid'], 'ssb_im_time', 'time_id')
 
-d['fravar'] = q
+    from_time = toDaysSinceEpoch(CONFIG_DATA_START)
+
+    m = d['fravar'].date < 1.0 * from_time
+
+    d['fravar'] = d['fravar'][~m]
+
+    len (d['fravar'])
+
+
+    # Cut away dim_person not in fravar or melding.
+
+    s = set(d['melding'].id)
+
+    m = d['dim_person'].id.isin(s)
+
+    m.value_counts()
+
+    d['dim_person'] = d['dim_person'][m]
+
+    # Check id coverage in dim_person
+
+    s = set(d['dim_person'].id)
+
+    m = d['melding'].id.isin(s)
+
+    m.value_counts()   #=> All
+
+    return d
+
+
+d = get_SF()
+
+# Check point. All db access done. All out of project range data cut away.
 
 # Merge duration for fravar
 
-q = d['fravar'].merge(d['dim_varighet'], how = 'left', left_on='dim_duration', right_on = 'duration_id')
 
-d['fravar'] = q
+
+def left_merge(df, add_df, left_id, right_id, right_prefix):
+
+    col_left = df.columns
+    col_right = add_df.columns
+
+    assert left_id in col_left, f"'{left_id}' not a column in left data frame"
+    assert right_id in col_right, f"'{right_id}' not a column in right data frame"
+
+    assert len(set(col_left).intersection(set(col_right))) == 0, "Identrical column names in left and right => Rename"
+    
+    q = df.merge(add_df, how = 'left', left_on=left_id, right_on = right_id)
+
+    # Check NA
+    nNAs = q[right_id].isnull().sum()
+
+    df = q
+
+    # DROP IDs 
+    df = df.drop([left_id, right_id], axis = 1)
+
+    if nNAs == 0:
+        print("Merge: Found match for all rows")
+    else:
+        print(f"NAs for {nNAs} row(s)")
+
+    return df        
+"""c"""
+
+
+d['fravar'] = left_merge(d['fravar'], d['dim_varighet'], 'dim_duration', 'duration_id')
+
+d['fravar'] = left_merge(d['fravar'], d['dim_yrke'], 'dim_yrke', 'prof_id')
+
+d['fravar'] = left_merge(d['fravar'], d['dim_virksomhet'], 'dim_virksomhet', 'company_id')
+
+d['fravar'] = left_merge(d['fravar'], d['dim_naering'], 'dim_naering', 'business_type_id')
+
+# Rename a bit to stay in control:
+
+d['fravar'].columns = ['dim_id', 'dim_geo_workplace', 'ssb_lost_days', 'ssb_leave_mean_rate_pct', 'ssb_date', 'ssb_week_day', 'ssb_duration_days', 'nav_code', 'styrk_code', 'num_employees',
+                       'business_area_code', 'company_type', 'company_postal_code', 'company_dim_geografi_county', 'enterprise_num_employees', 'enterprise_stock_value', 'enterprise_type', 'enterprise_postal_code', 'enterprise_sector_code', 
+                       'ia_start_date', 'org_num_employees', 'business_valid_from_date', 'business_valid_to_date', 'business_active_flag', 'business_type_code']
+
+
+d['fravar'].dtypes
+
+
+d['fravar'] = left_merge(d['fravar'], d['dim_geografi'],'dim_geo_workplace', 'geo_id')
+
+
+cols = d['fravar'].columns
+
+new_cols = []
+
+for c in cols:
+    if 'geo' in c:
+        new_cols.append('workplace_' + c)
+    else:
+        new_cols.append(c)
+
+
+d['fravar'].columns = new_cols
+
+
+d['dim_person']
+
+
+new_cols[0] = 'XX_dim_id'
+d['fravar'].columns = new_cols
+
+
+d['fravar'] = left_merge(d['fravar'], d['dim_person'], 'XX_dim_id', 'dim_id')
+
+# TODO: FIGURE OUT:
+NAs for
+ 2784626 row(s)
+len (d['fravar'])
+33520618
+
+=>
+'Many dim_id rows on fravar don't exist in dim_person
+
+
+
+
+
 
 
 ##################### tests
@@ -210,8 +317,7 @@ df = df.drop(['age_id', 'income_id', 'md_id', 'work_id', 'unit_id', 'diag_id'], 
 
 df = df.drop(['income_p_cat'], axis = 1)  # No variance
 
-pd.set_option('display.max_columns', 500)
-pd.set_option('display.width', 1000)
+
 
 df = df.sort_values(by = ['id', 'F0', 'F1'])
 
