@@ -19,12 +19,40 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
 
+def left_merge(df, add_df, left_id, right_id):
+
+    col_left = df.columns
+    col_right = add_df.columns
+
+    assert left_id in col_left, f"'{left_id}' not a column in left data frame"
+    assert right_id in col_right, f"'{right_id}' not a column in right data frame"
+
+    assert len(set(col_left).intersection(set(col_right))) == 0, "Identrical column names in left and right => Rename"
+    
+    q = df.merge(add_df, how = 'left', left_on=left_id, right_on = right_id)
+
+    # Check NA
+    nNAs = q[right_id].isnull().sum()
+
+    df = q
+
+    # DROP IDs 
+    df = df.drop([left_id, right_id], axis = 1)
+
+    if nNAs == 0:
+        print("Merge: Found match for all rows")
+    else:
+        print(f"NAs for {nNAs} row(s)")
+
+    return df        
+"""c"""
+
 def apply_hash(x):
     hash_object = hashlib.md5(x.encode())
     return hash_object.hexdigest()
 
 
-def get_SF():
+def get_SF(d):
 
     CONFIG_DATA_START = "2006-01-01"
 
@@ -58,7 +86,7 @@ def get_SF():
     l_queries.append( ("A", "DIM_YRKE",   "dim_yrke") )
     l_queries.append( ("A", "NAV_UNIT",   "navunit") )
 
-    d = dp.async_load(l_queries)
+    d.update( dp.async_load(l_queries))
 
     d_s = dp.async_load([("A", "SYKMELDING", "melding")])
     d_p = dp.async_load([("A", "DIM_PERSON", "dim_person")])
@@ -91,6 +119,11 @@ def get_SF():
     d['dim_virksomhet'].columns = ['company_id', 'company_num_employees', 'companY_business_area_code', 'company_type', 'company_postal_code', 'company_dim_geografi_county', 'enterprise_num_employees', 'enterprise_stock_value', 'enterprise_type', 'enterprise_postal_code', 'enterprise_sector_code', 'enterprise_ia_start_date', 'org_num_employees', 'company_valid_from_date', 'company_valid_to_date', 'company_active_flag']
     d['dim_yrke'].columns = ['prof_id', 'prof_nav_code', 'prof_styrk_code']
 
+
+    # -----------------------------------------------------------------------------------------------
+    # PROCESS BEGIN dim_sykmelder
+    #
+    # Create unique ID for sykmelder, then hash and categorize.
     q = d['dim_sykmelder']
 
     s1 = q['md_birthFORHASHONLT'].astype('str')
@@ -100,37 +133,28 @@ def get_SF():
     
     d['dim_sykmelder'] = d['dim_sykmelder'].assign(PID_HASH = s_hash)
 
-
     q = d['dim_sykmelder']['PID_HASH'].astype('category').cat.codes
-
-    q.nunique()
-
-    len (q)
 
     print(f"Num sykmelders= {len(q)}, unique name/birth = {q.nunique()}")
 
     d['dim_sykmelder'] = d['dim_sykmelder'].assign(PID_CAT = q)
 
-    d['dim_sykmelder'].PID_CAT.value_counts()
+    d['dim_sykmelder'] = d['dim_sykmelder'].drop(['md_birthFORHASHONLT', 'md_nameFORHASHONLY', 'PID_HASH'], axis = 1)
+
+    # PROCESS END DIM_SYKMELDER
 
 
-    m = d['dim_sykmelder'].PID_CAT == 62105
+    # Virksomhet keep hash ID. Store a copy in column, since left_merge deletes the IDs.
 
-    q = d['dim_sykmelder'][m]
+    d['dim_virksomhet']['C_ID'] = d['dim_virksomhet']['company_id'].astype('category').cat.codes
 
-    q = q.sort_values(by = 'md_from')
+    # Person keep hash id.
+    d['dim_person']['FK_ID'] = d['dim_person']['id'].astype('category').cat.codes
 
-    d['dim_sykmelder'] = d['dim_sykmelder'].drop(['md_birthFORHASHONLT', 'md_nameFORHASHONLY'], axis = 1)
-    
-    d['dim_sykmelder'] = d['dim_sykmelder'].drop(['PID_HASH'], axis = 1)
-
-
-    # Todo virksomhet _ keep v_id 
-    # Person keep id.
 
     # Merge in date on fravar to be able to cut early data (< 01.01.2006).
 
-    d['fravar'] = left_merge(d['fravar'], d['dim_tid'], 'ssb_im_time', 'time_id')
+    d['fravar'] = left_merge(d['fravar'], d['dim_tid'], 'ssb_dim_time', 'time_id')
 
     from_time = toDaysSinceEpoch(CONFIG_DATA_START)
 
@@ -140,84 +164,71 @@ def get_SF():
 
     len (d['fravar'])
 
+    
+    s_p_id_dim = set(d['dim_person'].dim_id)
 
-    # Cut away dim_person not in fravar or melding.
+    m_fravar_dim_id_in_person = d['fravar'].dim_id.isin(s_p_id_dim)
 
-    s = set(d['melding'].id)
+    assert len(d['fravar']) == m_fravar_dim_id_in_person.sum(), "Persons in fravar not found in dim_person"
 
-    m = d['dim_person'].id.isin(s)
+    # Find all FK_PERSON1 for fravar
+    q = d['dim_person'][ ['dim_id', 'id']]
 
-    m.value_counts()
+    q.columns = ['dim_idxxx', 'idxxx']
+
+
+    d['fravar']['dim_id_backup'] = d['fravar']['dim_id']
+
+    qf = left_merge(d['fravar'], q, 'dim_id', 'dim_idxxx')
+
+    # FK_PERSON in fravar:
+    s_fk_person_fravar = set(qf.idxxx)
+
+    # FK_PERSON in melding:
+    s_fk_person_melding = set(d['melding'].id)
+
+    s_fk_person_all = s_fk_person_fravar.union(s_fk_person_melding)
+
+    m = d['dim_person'].id.isin(s_fk_person_all)
 
     d['dim_person'] = d['dim_person'][m]
 
-    # Check id coverage in dim_person
-
-    s = set(d['dim_person'].id)
-
-    m = d['melding'].id.isin(s)
-
-    m.value_counts()   #=> All
-
-    return d
+    # Now only relevant persons (as per DPIA) in memory.
 
 
-d = get_SF()
+
+
+
+d = {}
+
+get_SF(d)
+
+
+
 
 # Check point. All db access done. All out of project range data cut away.
 
 # Merge duration for fravar
 
+d['fravar'] = left_merge(d['fravar'], d['dim_varighet'], 'ssb_dim_duration', 'duration_id')
+d['fravar'] = left_merge(d['fravar'], d['dim_yrke'], 'ssb_dim_yrke', 'prof_id')
+d['fravar'] = left_merge(d['fravar'], d['dim_virksomhet'], 'ssb_dim_virksomhet', 'company_id')
+d['fravar'] = left_merge(d['fravar'], d['dim_naering'], 'ssb_dim_naering', 'business_type_id')
 
 
-def left_merge(df, add_df, left_id, right_id, right_prefix):
+# Delete tables done with
 
-    col_left = df.columns
-    col_right = add_df.columns
+d['fravar']
 
-    assert left_id in col_left, f"'{left_id}' not a column in left data frame"
-    assert right_id in col_right, f"'{right_id}' not a column in right data frame"
-
-    assert len(set(col_left).intersection(set(col_right))) == 0, "Identrical column names in left and right => Rename"
-    
-    q = df.merge(add_df, how = 'left', left_on=left_id, right_on = right_id)
-
-    # Check NA
-    nNAs = q[right_id].isnull().sum()
-
-    df = q
-
-    # DROP IDs 
-    df = df.drop([left_id, right_id], axis = 1)
-
-    if nNAs == 0:
-        print("Merge: Found match for all rows")
-    else:
-        print(f"NAs for {nNAs} row(s)")
-
-    return df        
-"""c"""
+del d['dim_tid']
+del d['dim_virksomhet']
+del d['dim_varighet']
+del d['dim_yrke']
 
 
-d['fravar'] = left_merge(d['fravar'], d['dim_varighet'], 'dim_duration', 'duration_id')
-
-d['fravar'] = left_merge(d['fravar'], d['dim_yrke'], 'dim_yrke', 'prof_id')
-
-d['fravar'] = left_merge(d['fravar'], d['dim_virksomhet'], 'dim_virksomhet', 'company_id')
-
-d['fravar'] = left_merge(d['fravar'], d['dim_naering'], 'dim_naering', 'business_type_id')
-
-# Rename a bit to stay in control:
-
-d['fravar'].columns = ['dim_id', 'dim_geo_workplace', 'ssb_lost_days', 'ssb_leave_mean_rate_pct', 'ssb_date', 'ssb_week_day', 'ssb_duration_days', 'nav_code', 'styrk_code', 'num_employees',
-                       'business_area_code', 'company_type', 'company_postal_code', 'company_dim_geografi_county', 'enterprise_num_employees', 'enterprise_stock_value', 'enterprise_type', 'enterprise_postal_code', 'enterprise_sector_code', 
-                       'ia_start_date', 'org_num_employees', 'business_valid_from_date', 'business_valid_to_date', 'business_active_flag', 'business_type_code']
 
 
-d['fravar'].dtypes
-
-
-d['fravar'] = left_merge(d['fravar'], d['dim_geografi'],'dim_geo_workplace', 'geo_id')
+d['fravar'] = left_merge(d['fravar'], d['dim_geografi'],'ssb_dim_geo_workplace', 'geo_id')
 
 
 cols = d['fravar'].columns
@@ -234,26 +245,34 @@ for c in cols:
 d['fravar'].columns = new_cols
 
 
-d['dim_person']
-
-
 new_cols[0] = 'XX_dim_id'
 d['fravar'].columns = new_cols
 
 
 d['fravar'] = left_merge(d['fravar'], d['dim_person'], 'XX_dim_id', 'dim_id')
 
-# TODO: FIGURE OUT:
-NAs for
- 2784626 row(s)
-len (d['fravar'])
-33520618
-
-=>
-'Many dim_id rows on fravar don't exist in dim_person
+# Todo - return match factor (or similar)
 
 
+d['fravar'] = left_merge(d['fravar'], d['dim_geografi'],'dim_geo_living', 'geo_id')
 
+
+cols = d['fravar'].columns
+
+new_cols = []
+
+for c in cols:
+    if 'geo' in c:
+        new_cols.append('living_' + c)
+    else:
+        new_cols.append(c)
+
+
+d['fravar'].columns = new_cols
+
+# FIX _ Adds 'living' to 'workplace' as well. et.c.
+
+# CHECK - no postal codes?
 
 
 
