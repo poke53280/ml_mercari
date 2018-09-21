@@ -5,40 +5,55 @@
 # Copyright 2017 The TensorFlow Authors. All Rights Reserved.
 #
 # Apache licensed, see:  http://www.apache.org/licenses/LICENSE-2.0
-
+#
 # ----------------------------------------------------------------------------
-
-
-
+#
+#
+#
 # Requirement: Install SDK
-
+#
 # TPU instructions
 # ----------------
 #
-#
-#
-#gcloud compute instances create tpu_driver_zone_b --machine-type=n1-standard-2 --image-project=ml-images --image-family=tf-1-9 --scopes=cloud-platform
-#
-# Cloud:
-#python tpu_anders.py --tpu=$TPU_NAME --data_dir=${STORAGE_BUCKET}/data --model_dir=${STORAGE_BUCKET}/output --use_tpu=True --iterations=500 --train_steps=2000
-#
-# Download to local:
-#
-#gcloud compute scp tpu-driver-zone-b:./models/official/mnist/tpu_anders.py .
-#
-#
-# Edit...
-#
-# Transfer back:
-#
-#gcloud compute scp tpu_anders.py tpu-driver-zone-b:./models/official/mnist/
-#
-# Rerun:
-#
-#python models/official/mnist/tpu_anders.py --tpu=$TPU_NAME --data_dir=${STORAGE_BUCKET}/data --model_dir=${STORAGE_BUCKET}/output --use_tpu=True --iterations=500 --train_steps=3002
-#
-#
-#
+# Follow: 
+
+# * Create compute VM instance
+# gcloud compute instances create tpu_driver_zone_b --machine-type=n1-standard-2 --image-project=ml-images --image-family=tf-1-9 --scopes=cloud-platform
+
+
+# * Create TPU tpu-driver-zone-b
+
+# * Log in to instance: gcloud compute ssh USERNAME@tpu-demo-vm
+
+
+# * On the VM: gcloud config set compute/zone us-central1-b
+
+# * On the VM: export TPU_NAME='demo-tpu'
+
+# Get Data:
+
+# First upload code to VM:
+
+# * On local desktop: gcloud compute scp .\mnist.py tpu-driver-zone-b:.
+
+# * (Confusion on remote user name)
+
+
+
+# * On the VM: python convert_to_records.py --directory=./data
+
+
+# * On the VM: export STORAGE_BUCKET=gs://anders_tpu_mnist
+# * On the VM: gsutil cp -r ./data ${STORAGE_BUCKET}
+# * On the VM: rm -rf ./data/
+
+# Run on the VM:
+# python ./mnist.py --tpu=$TPU_NAME --data_dir=${STORAGE_BUCKET}/data --model_dir=${STORAGE_BUCKET}/output --use_tpu=True --iterations=500 --train_steps=2000
+
+# File (code) transfer desktop <-> cloud VM:
+# gcloud compute scp source dest
+# Note: Verify copy goes to expected remote user.
+
 
 
 
@@ -48,19 +63,9 @@ from __future__ import print_function
 
 import os
 import sys
-
-import gzip
-import shutil
-import tempfile
-
 import numpy as np
-from six.moves import urllib
 
 import tensorflow as tf  # pylint: disable=g-bad-import-order
-
-
-# For open source environment, add grandparent directory for import
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(sys.path[0]))))
 
 
 def read32(bytestream):
@@ -95,30 +100,15 @@ def check_labels_file_header(filename):
                                                                      f.name))
 
 
-def download(directory, filename):
-  """Download (and unzip) a file from the MNIST dataset if not already done."""
-  filepath = os.path.join(directory, filename)
-  if tf.gfile.Exists(filepath):
-    return filepath
-  if not tf.gfile.Exists(directory):
-    tf.gfile.MakeDirs(directory)
-  # CVDF mirror of http://yann.lecun.com/exdb/mnist/
-  url = 'https://storage.googleapis.com/cvdf-datasets/mnist/' + filename + '.gz'
-  _, zipped_filepath = tempfile.mkstemp(suffix='.gz')
-  print('Downloading %s to %s' % (url, zipped_filepath))
-  urllib.request.urlretrieve(url, zipped_filepath)
-  with gzip.open(zipped_filepath, 'rb') as f_in, \
-      tf.gfile.Open(filepath, 'wb') as f_out:
-    shutil.copyfileobj(f_in, f_out)
-  os.remove(zipped_filepath)
-  return filepath
+# -> tf.data.Dataset
+def get_dataset(directory, images_file, labels_file):
+  """Parse MNIST dataset."""
 
+  images_file = os.path.join(directory, images_file)
+  assert tf.gfile.Exists(images_file), "image data not downloaded"
 
-def dataset(directory, images_file, labels_file):
-  """Download and parse MNIST dataset."""
-
-  images_file = download(directory, images_file)
-  labels_file = download(directory, labels_file)
+  labels_file = os.path.join(directory, labels_file)
+  assert tf.gfile.Exists(labels_file), "image data not downloaded"
 
   check_image_file_header(images_file)
   check_labels_file_header(labels_file)
@@ -135,22 +125,20 @@ def dataset(directory, images_file, labels_file):
     label = tf.reshape(label, [])  # label is a scalar
     return tf.to_int32(label)
 
-  images = tf.data.FixedLengthRecordDataset(
-      images_file, 28 * 28, header_bytes=16).map(decode_image)
-  labels = tf.data.FixedLengthRecordDataset(
-      labels_file, 1, header_bytes=8).map(decode_label)
+  images = tf.data.FixedLengthRecordDataset(images_file, 28 * 28, header_bytes=16).map(decode_image)
+  labels = tf.data.FixedLengthRecordDataset(labels_file, 1, header_bytes=8).map(decode_label)
+
   return tf.data.Dataset.zip((images, labels))
 
 
-def train(directory):
+def get_train_dataset(directory):
   """tf.data.Dataset object for MNIST training data."""
-  return dataset(directory, 'train-images-idx3-ubyte',
-                 'train-labels-idx1-ubyte')
+  return get_dataset(directory, 'train-images-idx3-ubyte', 'train-labels-idx1-ubyte')
 
 
-def test(directory):
+def get_test_dataset(directory):
   """tf.data.Dataset object for MNIST test data."""
-  return dataset(directory, 't10k-images-idx3-ubyte', 't10k-labels-idx1-ubyte')
+  return get_dataset(directory, 't10k-images-idx3-ubyte', 't10k-labels-idx1-ubyte')
 
 
 
@@ -172,21 +160,15 @@ tf.flags.DEFINE_string(
     "metadata.")
 
 # Model specific parameters
-tf.flags.DEFINE_string("data_dir", "",
-                       "Path to directory containing the MNIST dataset")
+tf.flags.DEFINE_string("data_dir", "", "Path to directory containing the MNIST dataset")
 tf.flags.DEFINE_string("model_dir", None, "Estimator model_dir")
-tf.flags.DEFINE_integer("batch_size", 1024,
-                        "Mini-batch size for the training. Note that this "
-                        "is the global batch size and not the per-shard batch.")
+tf.flags.DEFINE_integer("batch_size", 1024, "Mini-batch size for the training. Note that this is the global batch size and not the per-shard batch.")
 tf.flags.DEFINE_integer("train_steps", 1000, "Total number of training steps.")
-tf.flags.DEFINE_integer("eval_steps", 0,
-                        "Total number of evaluation steps. If `0`, evaluation "
-                        "after training is skipped.")
+tf.flags.DEFINE_integer("eval_steps", 0, "Total number of evaluation steps. If `0`, evaluation after training is skipped.")
 tf.flags.DEFINE_float("learning_rate", 0.05, "Learning rate.")
 
 tf.flags.DEFINE_bool("use_tpu", True, "Use TPUs rather than plain CPUs")
-tf.flags.DEFINE_integer("iterations", 50,
-                        "Number of iterations per TPU training loop.")
+tf.flags.DEFINE_integer("iterations", 50, "Number of iterations per TPU training loop.")
 tf.flags.DEFINE_integer("num_shards", 8, "Number of shards (TPU chips).")
 
 FLAGS = tf.flags.FLAGS
@@ -294,7 +276,7 @@ def train_input_fn(params):
   # Retrieves the batch size for the current shard. The # of shards is
   # computed according to the input pipeline deployment. See
   # `tf.contrib.tpu.RunConfig` for details.
-  ds = train(data_dir).cache().repeat().shuffle(
+  ds = get_train_dataset(data_dir).cache().repeat().shuffle(
       buffer_size=50000).apply(
           tf.contrib.data.batch_and_drop_remainder(batch_size))
   images, labels = ds.make_one_shot_iterator().get_next()
@@ -304,7 +286,7 @@ def train_input_fn(params):
 def eval_input_fn(params):
   batch_size = params["batch_size"]
   data_dir = params["data_dir"]
-  ds = dataset.test(data_dir).apply(
+  ds = get_test_dataset(data_dir).apply(
       tf.contrib.data.batch_and_drop_remainder(batch_size))
   images, labels = ds.make_one_shot_iterator().get_next()
   return images, labels

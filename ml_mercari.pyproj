@@ -201,6 +201,9 @@
     <Compile Include="mercari\study_mercaring_2nd_place.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="tf-tpu\convert_to_records.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="tf-tpu\iris_tf.py">
       <SubType>Code</SubType>
     </Compile>
