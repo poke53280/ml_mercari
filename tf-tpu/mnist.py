@@ -8,51 +8,154 @@
 #
 # ----------------------------------------------------------------------------
 #
-#
-#
+
+
+
 # Requirement: Install SDK
+#
+# Requirement: Create bucket in zone eu-west-4
 #
 # TPU instructions
 # ----------------
 #
-# Follow: 
+# Local: Launch terminal 
+#
 
-# * Create compute VM instance
-# gcloud compute instances create tpu_driver_zone_b --machine-type=n1-standard-2 --image-project=ml-images --image-family=tf-1-9 --scopes=cloud-platform
+# SET REGION AND ZONE
+#
+# gcloud config set compute/region europe-west4
+# gcloud config set compute/zone europe-west4-a
+#
+#
+# COMPUTE INSTANCE VM: CREATE
+#
+# gcloud compute instances create tpu-driver-eur --machine-type=n1-standard-2 --image-project=ml-images --image-family=tf-1-9 --scopes=cloud-platform
+
+# COMPUTE INSTANCE VM: CONFIGURATION
+#
+# (VM) gcloud config set compute/region europe-west4
+# (VM) gcloud config set compute/zone europe-west4-a
+#
+# (VM) export STORAGE_BUCKET=gs://anders_eu
+# (VM) export TPU_NAME='tpu-anders-eur'
+#
+
+# COMPUTE INSTANCE VM: LOGIN
+
+# (VM) cloud compute ssh USERNAME@tpu-driver-eur
+#
+
+# CHECK ENVIRONMENT VARIABLE
+#
+# (VM) echo "$TPU_NAME"
+# => tpu-anders-eur
+#
 
 
-# * Create TPU tpu-driver-zone-b
+#
+# CREATE TPU
+#
+#
+# gcloud compute tpus create tpu-anders-eur --network=default --range=10.240.1.0/29 --version=1.9
+#
+#
+# CHECK TPU STATUS
+#
+#(VM OR LOCAL) gcloud compute tpus list
+#
 
-# * Log in to instance: gcloud compute ssh USERNAME@tpu-demo-vm
+#
+# UPLOAD CODE (*this* very file, mnist.py, and convert_to_records.py)
+#
+#
+#(DESKTOP) gcloud compute scp .\mnist.py USERNAME@tpu-driver-eur:.
+#(DESKTOP) gcloud compute scp .\convert_to_records.py USERNAME@tpu-driver-eur:.
+#
+#
+# DOWNLOAD DATASET TO INSTANCE
+#
+# (VM) python convert_to_records.py --directory=./data
+# (VM) gunzip -d on all .gz files.
+#
+#
+# MOVE DATASET FROM INSTANCE TO GS
+#
+# (VM) gsutil cp -r ./data ${STORAGE_BUCKET}
+# (VM) rm -rf ./data/
+#
+#
+# EXECUTE:
+#
+# (VM) python ./mnist.py --tpu=$TPU_NAME --data_dir=${STORAGE_BUCKET}/data --model_dir=${STORAGE_BUCKET}/output --use_tpu=True --iterations=500 --train_steps=2000
+#
+#
+#
+#
+# CODE RE-TRANSFER DESKTOP -> VM:
+#
+# gcloud compute scp .\mnist.py USERNAME@tpu-driver-eur:.
+#
+# ... and run again
+#
+# 
+# MOVE OUTPUT FROM GS TO VM
+#
+# mkdir output 
+# gsutil cp -r ${STORAGE_BUCKET}/output .
+#
+#
+# MOVE OUTPUT FROM VM TO LOCAL:
+#
+# (LOCAL):
 
 
-# * On the VM: gcloud config set compute/zone us-central1-b
+# Create folder output
+# gcloud compute scp --recurse anders_topper@tpu-driver-eur:./output/* ".\output\"
+#
+#
+# STOP SYSTEM
+#
+# Log out from VM
+#
+# (LOCAL OR VM) gcloud compute tpus list
+# (LOCAL OR VM) gcloud compute tpus stop tpu-anders-eur 
+# 
+#
+#
+# (LOCAL) gcloud compute instances list
+# (LOCAL) gcloud compute instances stop tpu-driver-eur
+#
+#
+#
 
-# * On the VM: export TPU_NAME='demo-tpu'
-
-# Get Data:
-
-# First upload code to VM:
-
-# * On local desktop: gcloud compute scp .\mnist.py tpu-driver-zone-b:.
-
-# * (Confusion on remote user name)
-
-
-
-# * On the VM: python convert_to_records.py --directory=./data
+#
+# RUN LOCAL
+#
+# Get data - note direct access local to GS possible:
+#
+# (LOCAL)gsutil cp -r gs://anders_eu/data .
+#
+# (LOCAL) python ./mnist.py --data_dir=./data --model_dir=./output --use_tpu=False --iterations=500 --train_steps=2006
+#
+#
+#
 
 
-# * On the VM: export STORAGE_BUCKET=gs://anders_tpu_mnist
-# * On the VM: gsutil cp -r ./data ${STORAGE_BUCKET}
-# * On the VM: rm -rf ./data/
 
-# Run on the VM:
-# python ./mnist.py --tpu=$TPU_NAME --data_dir=${STORAGE_BUCKET}/data --model_dir=${STORAGE_BUCKET}/output --use_tpu=True --iterations=500 --train_steps=2000
 
-# File (code) transfer desktop <-> cloud VM:
-# gcloud compute scp source dest
-# Note: Verify copy goes to expected remote user.
+
+# TODO -----------------------------------------------------------------------------------------
+
+# + Tensorboard
+# + 1. deploy image model (because of multitude of examples/ease of setup).
+# + 2. replace with gan network and txt analysis.
+#
+#
+
+
+
+
+
 
 
 
@@ -296,11 +399,10 @@ def main(argv):
   del argv  # Unused.
   tf.logging.set_verbosity(tf.logging.INFO)
 
-  tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
-      FLAGS.tpu,
-      zone=FLAGS.tpu_zone,
-      project=FLAGS.gcp_project
-  )
+  if FLAGS.use_tpu:
+    tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(FLAGS.tpu, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
+  else:
+    tpu_cluster_resolver = None
 
   run_config = tf.contrib.tpu.RunConfig(
       cluster=tpu_cluster_resolver,
