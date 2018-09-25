@@ -8,9 +8,9 @@
 #
 # ----------------------------------------------------------------------------
 #
-
-
-
+#
+#
+#
 # Requirement: Install SDK
 #
 # Requirement: Create bucket in zone eu-west-4
@@ -20,7 +20,7 @@
 #
 # Local: Launch terminal 
 #
-
+#
 # SET REGION AND ZONE
 #
 # gcloud config set compute/region europe-west4
@@ -30,40 +30,44 @@
 # COMPUTE INSTANCE VM: CREATE
 #
 # gcloud compute instances create tpu-driver-eur --machine-type=n1-standard-2 --image-project=ml-images --image-family=tf-1-9 --scopes=cloud-platform
-
+#
 # COMPUTE INSTANCE VM: CONFIGURATION
 #
 # (VM) gcloud config set compute/region europe-west4
 # (VM) gcloud config set compute/zone europe-west4-a
 #
 # (VM) export STORAGE_BUCKET=gs://anders_eu
-# (VM) export TPU_NAME='tpu-anders-eur'
+# (VM) export TPU_NAME='preempt-1-9'
 #
-
+#
 # COMPUTE INSTANCE VM: LOGIN
-
+#
 # (VM) cloud compute ssh USERNAME@tpu-driver-eur
 #
-
+#
 # CHECK ENVIRONMENT VARIABLE
 #
 # (VM) echo "$TPU_NAME"
 # => tpu-anders-eur
 #
-
-
 #
 # CREATE TPU
 #
 #
 # gcloud compute tpus create tpu-anders-eur --network=default --range=10.240.1.0/29 --version=1.9
 #
+# gcloud compute tpus create preempt-1-9 --network=default --range=10.240.1.8/29 --version=1.9 --preemptible
+# note '8' to coexist with CIDR address above.
+# gcloud compute tpus describe preempt-1-9
+# Note: preemptible: true
+#
+#
+#
 #
 # CHECK TPU STATUS
 #
 #(VM OR LOCAL) gcloud compute tpus list
 #
-
 #
 # UPLOAD CODE (*this* very file, mnist.py, and convert_to_records.py)
 #
@@ -72,9 +76,7 @@
 #(DESKTOP) gcloud compute scp .\convert_to_records.py USERNAME@tpu-driver-eur:.
 #
 #
-# DOWNLOAD DATASET TO INSTANCE
-#
-# (VM) python convert_to_records.py --directory=./data
+# DOWNLOAD DATASET TO INSTANCEVM) python convert_to_records.py --directory=./data
 # (VM) gunzip -d on all .gz files.
 #
 #
@@ -86,7 +88,7 @@
 #
 # EXECUTE:
 #
-# (VM) python ./mnist.py --tpu=$TPU_NAME --data_dir=${STORAGE_BUCKET}/data --model_dir=${STORAGE_BUCKET}/output --use_tpu=True --iterations=500 --train_steps=2000
+# (VM) python ./mnist.py --tpu=$TPU_NAME --data_dir=${STORAGE_BUCKET}/data --model_dir=${STORAGE_BUCKET}/output --use_tpu=True --iterations=500 --train_steps=9000
 #
 #
 #
@@ -127,7 +129,6 @@
 #
 #
 #
-
 #
 # RUN LOCAL
 #
@@ -139,24 +140,38 @@
 #
 #
 #
-
-
-
-
-
-# TODO -----------------------------------------------------------------------------------------
-
-# + Tensorboard
-# + 1. deploy image model (because of multitude of examples/ease of setup).
-# + 2. replace with gan network and txt analysis.
+# COLD START WITH EXISTING RESOURCES
+#
+# (RE)LAUNCH CLOUD VM AND TPU
+# gcloud compute instances list
+# gcloud compute tpus list
+# gsutil ls
+# gsutil ls gs://anders_eu/data
+#
+# gcloud compute instances start tpu-driver-eur
+# gcloud compute tpus start tpu-anders-eur
+#
+# gcloud compute scp .\mnist.py USERNAME@tpu-driver-eur:.
+#
+# gcloud ssh...
+# Run exports and config zone/region.
+#
+# gsutil rm gs://anders_eu/output/*
+#
+# TENSORBOARD
+#
+# point to output folder, same local and tpu.
+#
+# -----------------------------------------------------------------------------------------
+# TODO 
+#
+# + 1. deploy image model.
+# + 2. deploy txt analysis model.
+# + 3. deploy GAN model.
+#
+# + Preemptible setup
 #
 #
-
-
-
-
-
-
 
 
 
@@ -171,39 +186,101 @@ import numpy as np
 import tensorflow as tf  # pylint: disable=g-bad-import-order
 
 
-def read32(bytestream):
-  """Read 4 bytes from bytestream as an unsigned 32-bit integer."""
+#################################################################################
+#
+#   readU32
+#
+# Read 4 bytes from bytestream as an unsigned 32-bit integer
+#
+
+def readU32(bytestream):
+  
   dt = np.dtype(np.uint32).newbyteorder('>')
   return np.frombuffer(bytestream.read(4), dtype=dt)[0]
 
+#################################################################################
+#
+#   is_image_file_header_valid
+#
+# Validate that filename corresponds to images for the MNIST dataset.
+#
 
-def check_image_file_header(filename):
-  """Validate that filename corresponds to images for the MNIST dataset."""
+def is_image_file_header_valid(filename):
+  
   with tf.gfile.Open(filename, 'rb') as f:
-    magic = read32(f)
-    read32(f)  # num_images, unused
-    rows = read32(f)
-    cols = read32(f)
+
+    magic = readU32(f)
+
+    num_images_unused = readU32(f)  
+
+    rows = readU32(f)
+    cols = readU32(f)
+
     if magic != 2051:
-      raise ValueError('Invalid magic number %d in MNIST file %s' % (magic,
-                                                                     f.name))
+      print('Invalid magic number')
+      return False
+
     if rows != 28 or cols != 28:
-      raise ValueError(
-          'Invalid MNIST file %s: Expected 28x28 images, found %dx%d' %
-          (f.name, rows, cols))
+      print('Invalid MNIST file : Expected 28x28 images, found x')
+      return False
+
+  return True
 
 
-def check_labels_file_header(filename):
-  """Validate that filename corresponds to labels for the MNIST dataset."""
+#################################################################################
+#
+#   is_labels_file_header_valid
+#
+# Validate that filename corresponds to labels for the MNIST dataset.
+#
+
+def is_labels_file_header_valid(filename):
+  
   with tf.gfile.Open(filename, 'rb') as f:
-    magic = read32(f)
-    read32(f)  # num_items, unused
+
+    magic = readU32(f)
+
+    num_items_unused = readU32(f) 
+
     if magic != 2049:
-      raise ValueError('Invalid magic number %d in MNIST file %s' % (magic,
-                                                                     f.name))
+      print('Invalid magic number {magic} in MNIST file {f.name}')
+      return False
+
+  return True    
 
 
-# -> tf.data.Dataset
+#################################################################################
+#
+#   decode_image
+#
+#   Normalize from [0, 255] to [0.0, 1.0]
+#
+
+def decode_image(image):
+   
+    image = tf.decode_raw(image, tf.uint8)
+    image = tf.cast(image, tf.float32)
+    image = tf.reshape(image, [784])
+    return image / 255.0
+
+#################################################################################
+#
+#   decode_label
+#
+#
+
+def decode_label(label):
+    label = tf.decode_raw(label, tf.uint8)  # tf.string -> [tf.uint8]
+    label = tf.reshape(label, [])  # label is a scalar
+    return tf.to_int32(label)
+
+
+#################################################################################
+#
+#   get_dataset
+#
+#
+
 def get_dataset(directory, images_file, labels_file):
   """Parse MNIST dataset."""
 
@@ -213,20 +290,8 @@ def get_dataset(directory, images_file, labels_file):
   labels_file = os.path.join(directory, labels_file)
   assert tf.gfile.Exists(labels_file), "image data not downloaded"
 
-  check_image_file_header(images_file)
-  check_labels_file_header(labels_file)
-
-  def decode_image(image):
-    # Normalize from [0, 255] to [0.0, 1.0]
-    image = tf.decode_raw(image, tf.uint8)
-    image = tf.cast(image, tf.float32)
-    image = tf.reshape(image, [784])
-    return image / 255.0
-
-  def decode_label(label):
-    label = tf.decode_raw(label, tf.uint8)  # tf.string -> [tf.uint8]
-    label = tf.reshape(label, [])  # label is a scalar
-    return tf.to_int32(label)
+  assert is_image_file_header_valid(images_file), "Invalid image file(s)"
+  assert is_labels_file_header_valid(labels_file), "Invalid labels file(s)"
 
   images = tf.data.FixedLengthRecordDataset(images_file, 28 * 28, header_bytes=16).map(decode_image)
   labels = tf.data.FixedLengthRecordDataset(labels_file, 1, header_bytes=8).map(decode_label)
@@ -234,20 +299,8 @@ def get_dataset(directory, images_file, labels_file):
   return tf.data.Dataset.zip((images, labels))
 
 
-def get_train_dataset(directory):
-  """tf.data.Dataset object for MNIST training data."""
-  return get_dataset(directory, 'train-images-idx3-ubyte', 'train-labels-idx1-ubyte')
-
-
-def get_test_dataset(directory):
-  """tf.data.Dataset object for MNIST test data."""
-  return get_dataset(directory, 't10k-images-idx3-ubyte', 't10k-labels-idx1-ubyte')
-
-
-
 # Cloud TPU Cluster Resolver flags
-tf.flags.DEFINE_string(
-    "tpu", default=None,
+tf.flags.DEFINE_string("tpu", default=None,
     help="The Cloud TPU to use for training. This should be either the name "
     "used when creating the Cloud TPU, or a grpc://ip.address.of.tpu:8470 "
     "url.")
@@ -262,29 +315,42 @@ tf.flags.DEFINE_string(
     "specified, we will attempt to automatically detect the GCE project from "
     "metadata.")
 
+DESKTOP_DIR = "C:\\Users\\T149900\\ml_mercari\\tf-tpu"
+
+
 # Model specific parameters
-tf.flags.DEFINE_string("data_dir", "", "Path to directory containing the MNIST dataset")
-tf.flags.DEFINE_string("model_dir", None, "Estimator model_dir")
+tf.flags.DEFINE_string("data_dir", DESKTOP_DIR + "\\data", "Path to directory containing the MNIST dataset")
+tf.flags.DEFINE_string("model_dir", DESKTOP_DIR + "\\output", "Estimator model_dir")
 tf.flags.DEFINE_integer("batch_size", 1024, "Mini-batch size for the training. Note that this is the global batch size and not the per-shard batch.")
 tf.flags.DEFINE_integer("train_steps", 1000, "Total number of training steps.")
 tf.flags.DEFINE_integer("eval_steps", 0, "Total number of evaluation steps. If `0`, evaluation after training is skipped.")
 tf.flags.DEFINE_float("learning_rate", 0.05, "Learning rate.")
 
-tf.flags.DEFINE_bool("use_tpu", True, "Use TPUs rather than plain CPUs")
+tf.flags.DEFINE_bool("use_tpu", False, "Use TPUs rather than plain CPUs")
 tf.flags.DEFINE_integer("iterations", 50, "Number of iterations per TPU training loop.")
 tf.flags.DEFINE_integer("num_shards", 8, "Number of shards (TPU chips).")
 
 FLAGS = tf.flags.FLAGS
 
+#################################################################################
+#
+#   metric_fn
+#
+#
 
 def metric_fn(labels, logits):
-  accuracy = tf.metrics.accuracy(
-      labels=labels, predictions=tf.argmax(logits, axis=1))
+  accuracy = tf.metrics.accuracy(labels=labels, predictions=tf.argmax(logits, axis=1))
   return {"accuracy": accuracy}
 
-def create_model(data_format):
-  """Model to recognize digits in the MNIST dataset.
 
+#################################################################################
+#
+#   create_model_keras
+#
+#
+
+def create_model_keras(data_format):
+  """
   Network structure is equivalent to:
   https://github.com/tensorflow/tensorflow/blob/r1.5/tensorflow/examples/tutorials/mnist/mnist_deep.py
   and
@@ -337,63 +403,98 @@ def create_model(data_format):
           l.Dense(10)
       ])
 
-
+#################################################################################
+#
+#   model_fn
+#
+#   model_fn constructs the ML model used to predict handwritten digits.
+#
+#
 
 def model_fn(features, labels, mode, params):
-  """model_fn constructs the ML model used to predict handwritten digits."""
+  
 
   del params
   if mode == tf.estimator.ModeKeys.PREDICT:
     raise RuntimeError("mode {} is not supported yet".format(mode))
+
   image = features
+
   if isinstance(image, dict):
     image = features["image"]
 
-  model = create_model("channels_last")
+  model = create_model_keras("channels_last")
   logits = model(image, training=(mode == tf.estimator.ModeKeys.TRAIN))
   loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
 
   if mode == tf.estimator.ModeKeys.TRAIN:
-    learning_rate = tf.train.exponential_decay(
-        FLAGS.learning_rate,
-        tf.train.get_global_step(),
-        decay_steps=100000,
-        decay_rate=0.96)
+    
+    learning_rate = tf.train.exponential_decay(FLAGS.learning_rate, tf.train.get_global_step(), decay_steps=100000, decay_rate=0.96)
+
     optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+
     if FLAGS.use_tpu:
       optimizer = tf.contrib.tpu.CrossShardOptimizer(optimizer)
-    return tf.contrib.tpu.TPUEstimatorSpec(
-        mode=mode,
-        loss=loss,
-        train_op=optimizer.minimize(loss, tf.train.get_global_step()))
+
+    return tf.contrib.tpu.TPUEstimatorSpec(mode=mode, loss=loss, train_op=optimizer.minimize(loss, tf.train.get_global_step()))
 
   if mode == tf.estimator.ModeKeys.EVAL:
-    return tf.contrib.tpu.TPUEstimatorSpec(
-        mode=mode, loss=loss, eval_metrics=(metric_fn, [labels, logits]))
+    
+    return tf.contrib.tpu.TPUEstimatorSpec(mode=mode, loss=loss, eval_metrics=(metric_fn, [labels, logits]))
+
+
+#################################################################################
+#
+#   train_input_fn
+#
+# train_input_fn defines the input pipeline used for training.
+#
+# Retrieves the batch size for the current shard. The # of shards is
+# computed according to the input pipeline deployment. See
+# `tf.contrib.tpu.RunConfig` for details.
 
 
 def train_input_fn(params):
-  """train_input_fn defines the input pipeline used for training."""
+  
   batch_size = params["batch_size"]
   data_dir = params["data_dir"]
-  # Retrieves the batch size for the current shard. The # of shards is
-  # computed according to the input pipeline deployment. See
-  # `tf.contrib.tpu.RunConfig` for details.
-  ds = get_train_dataset(data_dir).cache().repeat().shuffle(
-      buffer_size=50000).apply(
-          tf.contrib.data.batch_and_drop_remainder(batch_size))
+
+  ds = get_dataset(data_dir, 'train-images-idx3-ubyte', 'train-labels-idx1-ubyte')
+
+  ds = ds.cache()
+  ds = ds.repeat()
+  ds = ds.shuffle(buffer_size=50000)
+  ds = ds.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
+
   images, labels = ds.make_one_shot_iterator().get_next()
+
   return images, labels
 
+#################################################################################
+#
+#   eval_input_fn
+#
+#
 
 def eval_input_fn(params):
+  
   batch_size = params["batch_size"]
   data_dir = params["data_dir"]
-  ds = get_test_dataset(data_dir).apply(
-      tf.contrib.data.batch_and_drop_remainder(batch_size))
+  
+  ds = get_dataset(data_dir, 't10k-images-idx3-ubyte', 't10k-labels-idx1-ubyte')
+
+  ds = ds.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
+  
   images, labels = ds.make_one_shot_iterator().get_next()
+
   return images, labels
 
+
+#################################################################################
+#
+#   main()
+#
+#
 
 def main(argv):
   del argv  # Unused.
@@ -418,7 +519,10 @@ def main(argv):
       train_batch_size=FLAGS.batch_size,
       eval_batch_size=FLAGS.batch_size,
       params={"data_dir": FLAGS.data_dir},
-      config=run_config)
+      config=run_config
+  )
+
+
   # TPUEstimator.train *requires* a max_steps argument.
   estimator.train(input_fn=train_input_fn, max_steps=FLAGS.train_steps)
   # TPUEstimator.evaluate *requires* a steps argument.
