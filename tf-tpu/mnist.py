@@ -10,6 +10,11 @@
 #
 #
 #
+
+# TODO Bring:
+# https://github.com/AvoncourtPartners/poems into TPU form.
+
+
 #
 # Requirement: Install SDK
 #
@@ -30,6 +35,13 @@
 # COMPUTE INSTANCE VM: CREATE
 #
 # gcloud compute instances create tpu-driver-eur --machine-type=n1-standard-2 --image-project=ml-images --image-family=tf-1-9 --scopes=cloud-platform
+# gcloud compute instances create anders-tf1-10 --machine-type=n1-standard-2 --image-project=ml-images --image-family=tf-1-10 --scopes=cloud-platform
+#
+#
+# COMPUTE INSTANCE VM: LOGIN
+#
+# (LOCAL) gcloud compute ssh USERNAME@tpu-driver-eur
+#
 #
 # COMPUTE INSTANCE VM: CONFIGURATION
 #
@@ -40,9 +52,7 @@
 # (VM) export TPU_NAME='preempt-1-9'
 #
 #
-# COMPUTE INSTANCE VM: LOGIN
-#
-# (VM) cloud compute ssh USERNAME@tpu-driver-eur
+
 #
 #
 # CHECK ENVIRONMENT VARIABLE
@@ -54,9 +64,9 @@
 # CREATE TPU
 #
 #
-# gcloud compute tpus create tpu-anders-eur --network=default --range=10.240.1.0/29 --version=1.9
-#
+# gcloud compute tpus create preempt-1-10 --network=default --range=10.240.1.0/29 --version=1.10 --preemptible
 # gcloud compute tpus create preempt-1-9 --network=default --range=10.240.1.8/29 --version=1.9 --preemptible
+#
 # note '8' to coexist with CIDR address above.
 # gcloud compute tpus describe preempt-1-9
 # Note: preemptible: true
@@ -126,7 +136,6 @@
 #
 # (LOCAL) gcloud compute instances list
 # (LOCAL) gcloud compute instances stop tpu-driver-eur
-#
 #
 #
 #
@@ -277,11 +286,11 @@ def decode_label(label):
 
 #################################################################################
 #
-#   get_dataset
+#   get_input_pipeline
 #
 #
 
-def get_dataset(directory, images_file, labels_file):
+def get_input_pipeline(directory, images_file, labels_file):
   """Parse MNIST dataset."""
 
   images_file = os.path.join(directory, images_file)
@@ -315,12 +324,12 @@ tf.flags.DEFINE_string(
     "specified, we will attempt to automatically detect the GCE project from "
     "metadata.")
 
-DESKTOP_DIR = "C:\\Users\\T149900\\ml_mercari\\tf-tpu"
-
-
 # Model specific parameters
-tf.flags.DEFINE_string("data_dir", DESKTOP_DIR + "\\data", "Path to directory containing the MNIST dataset")
-tf.flags.DEFINE_string("model_dir", DESKTOP_DIR + "\\output", "Estimator model_dir")
+
+# Set defaults to local settings. Issue params on TPU.
+
+tf.flags.DEFINE_string("data_dir", "", "Path to directory containing the MNIST dataset")
+tf.flags.DEFINE_string("model_dir", "", "Estimator model_dir")
 tf.flags.DEFINE_integer("batch_size", 1024, "Mini-batch size for the training. Note that this is the global batch size and not the per-shard batch.")
 tf.flags.DEFINE_integer("train_steps", 1000, "Total number of training steps.")
 tf.flags.DEFINE_integer("eval_steps", 0, "Total number of evaluation steps. If `0`, evaluation after training is skipped.")
@@ -331,6 +340,7 @@ tf.flags.DEFINE_integer("iterations", 50, "Number of iterations per TPU training
 tf.flags.DEFINE_integer("num_shards", 8, "Number of shards (TPU chips).")
 
 FLAGS = tf.flags.FLAGS
+
 
 #################################################################################
 #
@@ -424,7 +434,9 @@ def model_fn(features, labels, mode, params):
     image = features["image"]
 
   model = create_model_keras("channels_last")
+
   logits = model(image, training=(mode == tf.estimator.ModeKeys.TRAIN))
+  
   loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
 
   if mode == tf.estimator.ModeKeys.TRAIN:
@@ -452,6 +464,7 @@ def model_fn(features, labels, mode, params):
 # Retrieves the batch size for the current shard. The # of shards is
 # computed according to the input pipeline deployment. See
 # `tf.contrib.tpu.RunConfig` for details.
+#
 
 
 def train_input_fn(params):
@@ -459,12 +472,15 @@ def train_input_fn(params):
   batch_size = params["batch_size"]
   data_dir = params["data_dir"]
 
-  ds = get_dataset(data_dir, 'train-images-idx3-ubyte', 'train-labels-idx1-ubyte')
+  ds = get_input_pipeline(data_dir, 'train-images-idx3-ubyte', 'train-labels-idx1-ubyte')
 
   ds = ds.cache()
   ds = ds.repeat()
   ds = ds.shuffle(buffer_size=50000)
+
+  # 1.10: ds = ds.batch(batch_size, drop_remainder=True)
   ds = ds.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
+
 
   images, labels = ds.make_one_shot_iterator().get_next()
 
@@ -481,9 +497,11 @@ def eval_input_fn(params):
   batch_size = params["batch_size"]
   data_dir = params["data_dir"]
   
-  ds = get_dataset(data_dir, 't10k-images-idx3-ubyte', 't10k-labels-idx1-ubyte')
+  ds = get_input_pipeline(data_dir, 't10k-images-idx3-ubyte', 't10k-labels-idx1-ubyte')
 
+  # 1.10: ds = ds.batch(batch_size, drop_remainder=True)
   ds = ds.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
+
   
   images, labels = ds.make_one_shot_iterator().get_next()
 
@@ -502,15 +520,17 @@ def main(argv):
 
   if FLAGS.use_tpu:
     tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(FLAGS.tpu, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
+    my_tpu_config = tf.contrib.tpu.TPUConfig(FLAGS.iterations, FLAGS.num_shards)
   else:
     tpu_cluster_resolver = None
+    my_tpu_config = None
 
   run_config = tf.contrib.tpu.RunConfig(
       cluster=tpu_cluster_resolver,
       model_dir=FLAGS.model_dir,
       session_config=tf.ConfigProto(
           allow_soft_placement=True, log_device_placement=True),
-      tpu_config=tf.contrib.tpu.TPUConfig(FLAGS.iterations, FLAGS.num_shards),
+      tpu_config=my_tpu_config
   )
 
   estimator = tf.contrib.tpu.TPUEstimator(
@@ -523,14 +543,19 @@ def main(argv):
   )
 
 
-  # TPUEstimator.train *requires* a max_steps argument.
   estimator.train(input_fn=train_input_fn, max_steps=FLAGS.train_steps)
+
   # TPUEstimator.evaluate *requires* a steps argument.
+  
   # Note that the number of examples used during evaluation is
   # --eval_steps * --batch_size.
   # So if you change --batch_size then change --eval_steps too.
-  if FLAGS.eval_steps:
-    estimator.evaluate(input_fn=eval_input_fn, steps=FLAGS.eval_steps)
+
+  if FLAGS.eval_steps > 0:
+      d = estimator.evaluate(input_fn=eval_input_fn, steps=FLAGS.eval_steps)
+      print('Number of examples used during evaluation:{0}*{1}={2}'.format(FLAGS.eval_steps, FLAGS.batch_size, FLAGS.eval_steps * FLAGS.batch_size))
+      print('accuracy: {0}, loss: {1}, global_step: {2}'.format(d['accuracy'], d['loss'], d['global_step']))
+
 
 
 if __name__ == "__main__":
