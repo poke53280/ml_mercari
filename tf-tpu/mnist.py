@@ -14,6 +14,14 @@
 # TODO Bring:
 # https://github.com/AvoncourtPartners/poems into TPU form.
 
+# Other refs:
+# https://medium.com/@DenisKrivitski/generation-of-poems-with-a-recurrent-neural-network-128a5f62b483
+# http://karpathy.github.io/2015/05/21/rnn-effectiveness/
+#
+#
+
+
+
 
 #
 # Requirement: Install SDK
