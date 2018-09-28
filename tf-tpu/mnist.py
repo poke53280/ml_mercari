@@ -34,11 +34,6 @@
 # Local: Launch terminal 
 #
 #
-# SET REGION AND ZONE
-#
-# gcloud config set compute/region europe-west4
-# gcloud config set compute/zone europe-west4-a
-#
 #
 # COMPUTE INSTANCE VM: CREATE
 #
@@ -46,21 +41,55 @@
 # gcloud compute instances create anders-tf1-10 --machine-type=n1-standard-2 --image-project=ml-images --image-family=tf-1-10 --scopes=cloud-platform
 #
 #
+# COMPUTE INSTANCE VM: SETUP
+#
+#
+# https://www.datacamp.com/community/tutorials/google-cloud-data-science
+#
+#
+#sudo apt-get update
+#sudo apt-get install bzip2 git libxml2-dev
+#
+#wget https://repo.continuum.io/archive/Anaconda3-5.0.1-Linux-x86_64.sh
+#
+#bash Anaconda3-5.2.0-Linux-x86_64.sh
+#rm Anaconda3-5.2.0-Linux-x86_64.sh
+#
+
+# pip install --upgrade pip
+# pip install tensorflow==1.9
+#
+# pip install --upgrade google-api-python-client
+# pip install --upgrade oauth2client
+#
+
+
+
+#
 # COMPUTE INSTANCE VM: LOGIN
 #
 # (LOCAL) gcloud compute ssh USERNAME@tpu-driver-eur
 #
 #
+# source .bashrc
+# source myscript.sh
+#
+#
 # COMPUTE INSTANCE VM: CONFIGURATION
 #
-# (VM) gcloud config set compute/region europe-west4
-# (VM) gcloud config set compute/zone europe-west4-a
-#
-# (VM) export STORAGE_BUCKET=gs://anders_eu
-# (VM) export TPU_NAME='preempt-1-9'
+# Create a script or run these commands on the command line.
 #
 #
-
+# (VM):
+#
+# #!/bin/bash
+# gcloud config set compute/region europe-west4
+# gcloud config set compute/zone europe-west4-a
+# export STORAGE_BUCKET=gs://anders_eu
+# export TPU_NAME='preempt-1-9'
+#
+#
+#
 #
 #
 # CHECK ENVIRONMENT VARIABLE
@@ -75,9 +104,7 @@
 # gcloud compute tpus create preempt-1-10 --network=default --range=10.240.1.0/29 --version=1.10 --preemptible
 # gcloud compute tpus create preempt-1-9 --network=default --range=10.240.1.8/29 --version=1.9 --preemptible
 #
-# note '8' to coexist with CIDR address above.
-# gcloud compute tpus describe preempt-1-9
-# Note: preemptible: true
+# note '8', ,'0' to coexist with neighbouring CIDR addresses.
 #
 #
 #

@@ -204,6 +204,9 @@
     <Compile Include="tf-tpu\convert_to_records.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="tf-tpu\gce_access.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="tf-tpu\iris_tf.py">
       <SubType>Code</SubType>
     </Compile>
