@@ -41,6 +41,30 @@
 # gcloud compute instances create anders-tf1-10 --machine-type=n1-standard-2 --image-project=ml-images --image-family=tf-1-10 --scopes=cloud-platform
 #
 #
+# CREATE VM DISK
+#
+# gcloud compute disks create tmpt2t --size 200 --type pd-ssd
+#
+# gcloud compute instances attach-disk tpu-driver-eur --disk tmpt2t 
+#
+# sudo lsblk
+#
+# sudo mkfs.ext4 -m 0 -F -E lazy_itable_init=0,lazy_journal_init=0,discard /dev/sdbXXX
+#
+# sudo mkdir -p /mnt/disks/tmp_mnt
+#
+# sudo mount -o discard,defaults /dev/sdb /mnt/disks/tmp_mnt
+#
+#
+#
+# DELETE VM DISK
+#
+# gcloud compute instances detach-disk tpu-driver-eur --disk=tmpt2t
+# gcloud compute disks delete tmpt2t
+#
+# sudo chmod 777 -R .
+#
+#
 # COMPUTE INSTANCE VM: SETUP
 #
 #
@@ -55,16 +79,14 @@
 #bash Anaconda3-5.2.0-Linux-x86_64.sh
 #rm Anaconda3-5.2.0-Linux-x86_64.sh
 #
-
+#
 # pip install --upgrade pip
 # pip install tensorflow==1.9
 #
 # pip install --upgrade google-api-python-client
 # pip install --upgrade oauth2client
 #
-
-
-
+#
 #
 # COMPUTE INSTANCE VM: LOGIN
 #
