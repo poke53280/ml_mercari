@@ -113,8 +113,35 @@ t2t-trainer --generate_data --data_dir = $DATA_DIR --output_dir = $OUT_DIR --pro
 t2t-trainer --model=transformer --hparams_set=transformer_tpu --problem=translate_ende_wmt32k_packed --train_steps=1000 --eval_steps=3 --data_dir=$DATA_DIR --output_dir=$OUT_DIR --use_tpu=True --cloud_tpu_name=$TPU_NAME
 
 
+#
+#---------------------------------------------------------------------------
+#
+# TODO: Find the bug in t2t (missing TPU setting) and post on github.
+#
+#
+#
+# Find state of debugging/running from scratch on windows.
+#    Or: Debugging on instance.
+#
+# Check out: Edit local => push instance => Run => Edit loop
+#
+# Tensor2Tensor - viability
+#
+# Tensorflow subset. 
+#
+#
 
-#-----------------------------------------
+
+
+
+
+
+
+
+
+
+
+
 
 
 
