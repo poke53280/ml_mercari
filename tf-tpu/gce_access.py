@@ -93,12 +93,13 @@ t2t-trainer
 
 # Try these 'tpu parameters'
 
-DATA_DIR=$STORAGE_BUCKET/train_data/
-OUT_DIR=$STORAGE_BUCKET/training/abc18
+DATA_DIR=$STORAGE_BUCKET/imdb/
+OUT_DIR=$STORAGE_BUCKET/imdb_out/
 
 
 
-t2t-trainer --generate_data --data_dir = $DATA_DIR --output_dir = $OUT_DIR --problem=image_mnist --model=shake_shake --hparams_set=shake_shake_quick --train_steps=1000 --eval_steps=100 --use_tpu=True --cloud_tpu_name=$TPU_NAME
+
+t2t-trainer --data_dir=$DATA_DIR --output_dir=$OUT_DIR --problem=sentiment_imdb --model=transformer_encoder --hparams_set=transformer_tiny_tpu --train_steps=10 --eval_steps=3 --use_tpu=True --cloud_tpu_name=$TPU_NAME
 
 
 # params:

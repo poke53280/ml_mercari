@@ -86,7 +86,7 @@
 # pip install --upgrade google-api-python-client
 # pip install --upgrade oauth2client
 #
-#
+#pip install --upgrade cloud-tpu-profiler 
 #
 # COMPUTE INSTANCE VM: LOGIN
 #
@@ -228,6 +228,28 @@
 #
 # point to output folder, same local and tpu.
 #
+
+#
+#
+# Note: You can either capture a profile or monitor your job; you cannot do both at the same time.
+#
+# CLOUD TPU TOOLS
+# https://cloud.google.com/tpu/docs/cloud-tpu-tools
+#
+#
+# MONITORING YOUR JOB
+
+
+# gcloud compute ssh anders_topper@tpu-driver-eur --ssh-flag="-L 6006:localhost:6006"
+
+
+
+
+
+
+
+
+
 # -----------------------------------------------------------------------------------------
 # TODO 
 #
