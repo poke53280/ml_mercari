@@ -55,14 +55,14 @@
 #
 # sudo mount -o discard,defaults /dev/sdb /mnt/disks/tmp_mnt
 #
-#
+# sudo chmod 777 -R /mnt/disks/tmp_mnt
 #
 # DELETE VM DISK
 #
 # gcloud compute instances detach-disk tpu-driver-eur --disk=tmpt2t
 # gcloud compute disks delete tmpt2t
 #
-# sudo chmod 777 -R .
+# 
 #
 #
 # COMPUTE INSTANCE VM: SETUP
@@ -92,6 +92,7 @@
 #
 # (LOCAL) gcloud compute ssh USERNAME@tpu-driver-eur
 #
+# TODO - check out integrated ssh on windows: https://www.thomasmaurer.ch/2017/11/install-ssh-on-windows-10-as-optional-feature/
 #
 # source .bashrc
 # source myscript.sh

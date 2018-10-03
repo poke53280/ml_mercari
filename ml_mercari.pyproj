@@ -211,6 +211,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="tf-tpu\mnist.py" />
+    <Compile Include="tf-tpu\t2t_imdb_tut.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="tf-tpu\t2t_transformer_ende_tut.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="tgs\starter.py">
       <SubType>Code</SubType>
     </Compile>
