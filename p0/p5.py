@@ -41,7 +41,7 @@ def get_stats_on_array(v):
 
     return d
 
-DATA_DIR_PORTABLE = "C:\\p_data\\"
+DATA_DIR_PORTABLE = "X:\\p_data\\"
 DATA_DIR_BASEMENT = DATA_DIR_PORTABLE
 DATA_DIR = DATA_DIR_PORTABLE
 

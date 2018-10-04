@@ -7,72 +7,153 @@
 # Merge duration for fravar
 
 d['fravar'] = left_merge(d['fravar'], d['dim_varighet'], 'ssb_dim_duration', 'duration_id')
-d['fravar'] = left_merge(d['fravar'], d['dim_yrke'], 'ssb_dim_yrke', 'prof_id')
-d['fravar'] = left_merge(d['fravar'], d['dim_virksomhet'], 'ssb_dim_virksomhet', 'company_id')
-d['fravar'] = left_merge(d['fravar'], d['dim_naering'], 'ssb_dim_naering', 'business_type_id')
 
-
-# Delete tables done with
-
-d['fravar']
-
-del d['dim_tid']
-del d['dim_virksomhet']
 del d['dim_varighet']
+
+
+d['fravar'] = left_merge(d['fravar'], d['dim_yrke'], 'ssb_dim_yrke', 'prof_id')
+
 del d['dim_yrke']
 
 
+d['fravar'] = left_merge(d['fravar'], d['dim_virksomhet'], 'ssb_dim_virksomhet', 'company_id')
+
+del d['dim_virksomhet']
+
+d['fravar'] = left_merge(d['fravar'], d['dim_naering'], 'ssb_dim_naering', 'business_type_id')
+
+# DONT DELETE NEARING, ALSO USED IN MELDING
+
+del d['dim_naering']
+
+
+d['dim_inntekt'].columns = ['income_idXXX', 'income_p_cat', 'income_cat']
+
+
+d['melding'] = left_merge(d['melding'], d['dim_inntekt'], 'income_id', 'income_idXXX')
+
+del d['dim_inntekt']
+
+
+# Rename column 
+
+c = list (d['melding'].columns)
+
+c2 = list (map (lambda x: 'diag_idXXX' if x == 'diag_id' else x, c))
+
+d['melding'].columns = c2
+
+d['melding'] = left_merge(d['melding'], d['dim_diagnose'], 'diag_idXXX', 'diag_id')
+
+del d['dim_diagnose']
+
+
+def rename_column(col_list, old_name, new_name):
+    assert old_name in col_list, f"{old_name} not a column in column list"
+
+    c2 = list (map (lambda x: new_name if x == old_name else x, col_list))
+
+    return list (c2)
+
+
+c2 = rename_column(d['melding'].columns, 'md_id', 'md_idXXX')
+
+d['melding'].columns = c2
+
+d['melding'] = left_merge(d['melding'], d['dim_sykmelder'], 'md_idXXX', 'md_id')
+
+
+del d['dim_sykmelder']
+
+d.keys()
+
+# Todo: Delete earlier:
+del d['dim_tid']
+
+
+c2 = rename_column_(d['melding'].columns, 'unit_id', 'unit_idXXX')
+
+d['melding'].columns = c2
+
+
+d['melding'] = left_merge(d['melding'], d['navunit'], 'unit_idXXX', 'unit_id')
+
+del d['navunit']
+
+
+d.keys()
+
+d['fravar'].dtypes
 
 
 d['fravar'] = left_merge(d['fravar'], d['dim_geografi'],'ssb_dim_geo_workplace', 'geo_id')
 
 
-cols = d['fravar'].columns
+cols = list (d['fravar'].columns)
 
-new_cols = []
+c2 = map (lambda x: 'workplace_' + x if x.startswith('geo') else x, cols)
 
-for c in cols:
-    if 'geo' in c:
-        new_cols.append('workplace_' + c)
-    else:
-        new_cols.append(c)
+d['fravar'].columns = list (c2)
 
 
-d['fravar'].columns = new_cols
+c2 = rename_column(d['fravar'].columns, 'dim_id', 'XX_dim_id')
 
-
-new_cols[0] = 'XX_dim_id'
-d['fravar'].columns = new_cols
+d['fravar'].columns = c2
 
 
 d['fravar'] = left_merge(d['fravar'], d['dim_person'], 'XX_dim_id', 'dim_id')
 
-# Todo - return match factor (or similar)
 
 
 d['fravar'] = left_merge(d['fravar'], d['dim_geografi'],'dim_geo_living', 'geo_id')
 
-
-cols = d['fravar'].columns
-
-new_cols = []
-
-for c in cols:
-    if 'geo' in c:
-        new_cols.append('living_' + c)
-    else:
-        new_cols.append(c)
+cols = list (d['fravar'].columns)
+c2 = map (lambda x: 'living_' + x if x.startswith('geo') else x, cols)
+d['fravar'].columns = list (c2)
 
 
-d['fravar'].columns = new_cols
+d['fravar'] = left_merge(d['fravar'], d['dim_geografi'],'dim_geo_living_last', 'geo_id')
 
-# FIX _ Adds 'living' to 'workplace' as well. et.c.
-
-# CHECK - no postal codes?
-
-# TODO - Combine with priv.p_init.py
+cols = list (d['fravar'].columns)
+c2 = map (lambda x: 'living_last_' + x if x.startswith('geo') else x, cols)
+d['fravar'].columns = list (c2)
 
 
+
+d['fravar'] = left_merge(d['fravar'], d['dim_geografi'],'dim_geo_address', 'geo_id')
+
+cols = list (d['fravar'].columns)
+c2 = map (lambda x: 'person_address_' + x if x.startswith('geo') else x, cols)
+d['fravar'].columns = list (c2)
+
+
+#
+#
+# Todo
+#  : prefix all dim_person columns.
+#  : rename PD_CAT
+#  : Clarify custom FK_ID
+#  : use fk_person where true (not id)
+#
+# Todo
+#
+#  : Resolve 'dim' on person, not fravar.
+#
+
+d.keys()
+
+# Todo: Do earlier:
+
+del d['dim_land']
+
+
+#-----------------------------------
+#
+# CHECKPOINT. 4 tables.
+# dim tables merged into fravar and melding.
+# Keeping full dim_person and dim_geografi for historic data.
+#
+#
 
 ##################### tests
 
@@ -81,36 +162,48 @@ d['fravar'].columns = new_cols
 
 l_id = [730412047, 2520904400, 2520976142, 730375555, 730359310]
 
-id = l_id[4]
+fk_person1 = l_id[3]
 
+def test_single(fk_person1):
 
-print(f"Retrieve information on id = {id}")
+    print(f"Retrieve information on fk_person1 = {fk_person1}")
 
+    m = d['melding'].id == fk_person1
 
-m = d['melding'].id == id
+    q_melding = d['melding'][m].copy()
 
-q_melding = d['melding'][m].copy()
+    print(f"Found {len(q_melding)} leave 'melding' record(s)")
 
-print(f"Found {len(q_melding)} leave record(s)")
+    m = d['dim_person'].id == fk_person1
 
-m = d['dim_person'].id == id
+    q_person = d['dim_person'][m].copy()
 
-q_person = d['dim_person'][m]
+    print(f"Found {len(q_person)} dim_person record(s) on fk_person {fk_person1}")
 
-print(f"Found {len(q_person)} person record(s) on id")
+    m = d['fravar'].id == fk_person1
 
-l_dim_id = list (q_person.dim_id)
+    q_fravar = d['fravar'][m].copy()
 
-m = d['fravar'].dim_id.isin(l_dim_id)
+    print(f"Found {len(q_fravar)} ssb leave record(s)")
+    
+    q_person = q_person.sort_values(by = 'valid_from_date')
+    q_melding = q_melding.sort_values(by = 'F0')
+    q_fravar = q_fravar.sort_values(by = 'date')
 
-q_fravar = d['fravar'][m]
+    q_person
+    q_melding[['F0', 'F1', 'T1']]
 
-print(f"Found {len(q_fravar)} ssb leave record(s)")
+    q_fravar[['date', 'duration_days']]
 
+    q_fravar
 
-q_melding
-q_fravar
-
+###########################################################################
+#
+# CONTINUE HERE:
+#
+# DO TODOS ABOVE
+# INVESTIGATE MELDING AND FRAVAR. CREATE MERGED HELPER TABLE.
+#
 
 
 
