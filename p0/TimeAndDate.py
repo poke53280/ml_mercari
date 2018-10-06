@@ -85,6 +85,9 @@ def TimeAndDate_GetDateTimeFromEpochDays(nEpochDays):
 
 """c"""
 
+def TimeAndDate_GetEpochDaysFromDateTime(d):
+    return (d - datetime.datetime(1970,1,1,0,0)).days
+"""c"""
 
 ##############################################################################
 #
@@ -135,4 +138,157 @@ def TimeAndDate_AddNoise(s, num_days):
     return sn
 
 """c"""
+
+def calc_easter(year):
+    "Returns Easter as a date object."
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = (19 * a + b - b // 4 - ((b - (b + 8) // 25 + 1) // 3) + 15) % 30
+    e = (32 + 2 * (b % 4) + 2 * (c // 4) - d - (c % 4)) % 7
+    f = d + e - 7 * ((a + 11 * d + 22 * e) // 451) + 114
+    month = f // 31
+    day = f % 31 + 1    
+
+    d = datetime.datetime(year, month, day)
+
+    return TimeAndDate_GetEpochDaysFromDateTime(d)
+
+
+# Count xmas and new year, as full, half, not at all as holiday.
+# Count wednesday before eastern as half or not at all as holiday.
+#
+# Include, seek to include vinterferie, høstferie.
+#
+
+
+
+# Returns epoch days off - week end and holidays. iYearEnd inclusive.
+def get_days_off(iYearBegin, iYearEnd):
+
+    l_holiday = []
+
+    lYears = list (range (iYearBegin, iYearEnd + 1))
+
+    for iYear in lYears:
+    
+        l_holiday.append(TimeAndDate_GetEpochDaysFromDateTime(datetime.datetime(iYear, 1, 1)))  # 1st Jan
+
+        nEasterSunday = calc_easter(iYear)
+
+        l_holiday.append(nEasterSunday - 3)  #Holy Thursday
+        l_holiday.append(nEasterSunday - 2)  #Good Friday
+        l_holiday.append(nEasterSunday + 1)  #2nd day easter
+
+        nAscension = nEasterSunday + 39
+
+        l_holiday.append(nAscension)
+
+        nPenteCostSunday = nEasterSunday + 7 * 7
+
+        l_holiday.append(nPenteCostSunday + 1)  #2nd day pentecost
+
+        l_holiday.append(TimeAndDate_GetEpochDaysFromDateTime(datetime.datetime(iYear, 5, 1))) #1st of May
+
+        l_holiday.append(TimeAndDate_GetEpochDaysFromDateTime(datetime.datetime(iYear, 5, 17))) #17th of May
+
+        nXmas0 = TimeAndDate_GetEpochDaysFromDateTime(datetime.datetime(iYear, 12, 24))
+
+        l_holiday.append(nXmas0)
+        l_holiday.append(nXmas0 + 1)
+        l_holiday.append(nXmas0 + 2)
+
+        l_holiday.append(TimeAndDate_GetEpochDaysFromDateTime(datetime.datetime(iYear, 12, 31))) #new year celeb
+
+    s_holiday = set(l_holiday)
+
+    # All days in period:
+    nFirst = TimeAndDate_GetEpochDaysFromDateTime(datetime.datetime(iYearBegin, 1, 1))   # Inclusive
+    nLast = TimeAndDate_GetEpochDaysFromDateTime(datetime.datetime(iYearEnd, 12, 31))  # Inclusive
+
+    anDays = np.array(range(nFirst,nLast + 1))
+
+    # Find all Saturdays and Sundays
+
+    nSaturdayBase = 2
+    nSundayBase = 3   # Found out beforehand
+    assert (TimeAndDate_GetDateTimeFromEpochDays(nSundayBase).weekday() == 6), "Sunday assertion"
+
+    m_sunday = (anDays - nSundayBase) % 7 == 0
+    m_saturday =  (anDays - nSaturdayBase) % 7 == 0
+
+    anWeekendDays = anDays[m_saturday | m_sunday]
+
+    s_weekend = set(anWeekendDays)
+
+    s_off_total = s_holiday.union(s_weekend)
+
+    an = np.array(list (s_off_total))
+
+    an = np.sort(an)
+
+    return an
+
+
+
+def get_off_ratio(nDayBegin, nDayEnd, anOff):
+
+    assert nDayEnd >= nDayBegin, "nDayEnd >= nDayBegin"
+
+    anDays = np.array(range(nDayBegin, nDayEnd + 1))
+
+    # Check that days off range is suffeciently large to cover input days:
+
+    assert np.max(anOff) > np.max(anDays), "np.max(anOff) > np.max(anDays)"
+    assert np.min(anOff) < np.min(anDays), "np.max(anOff) > np.max(anDays)"
+
+    m = np.isin(anDays, anOff)
+
+    nOff = (m == True).sum()
+    nOn = (m == False).sum()
+
+    rOffRatio = 1.0 * nOff / len (m)
+
+    return rOffRatio
+
+"""c"""
+
+def create_off_feature(df):
+
+    # Into numpy arrays for calculations:
+
+    anFrom = np.array (df.F0)
+    anTo = np.array (df.T0)
+
+    anTotalX = np.empty(shape = len(anFrom), dtype = np.float)
+
+    lRange = list (range (len(anFrom)))
+
+    for i in lRange:
+        r = get_off_ratio(anFrom[i], anTo[i], anOff)
+        anTotalX[i] = r
+
+    sOff = pd.Series(anTotalX)
+
+    return sOff
+
+"""c"""
+
+
+# Usage
+
+# FIX ASSERTION ON E.G 2007, 2008
+anOff = get_days_off(1970, 2050)
+
+
+an1 = np.array([8300, 8310, 8360, 8390])
+an2   = np.array([8303, 8314, 8366, 8397])
+
+df = pd.DataFrame({'F0': an1, 'T0': an2})
+
+s = create_off_feature(df)
+
+df = df.assign(rOff = s)
+
+df
 
