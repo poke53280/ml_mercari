@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>cc77cf4b-e52a-4996-852b-eba94c92124b</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>p0\TimeLineTool.py</StartupFile>
+    <StartupFile>p0\DataSQLParser.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -114,6 +114,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="mp\sort_ml.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="p0\DataSQLParser.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="p0\p3.py">
