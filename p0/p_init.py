@@ -130,7 +130,7 @@ d['fravar'].columns = list (c2)
 #
 #
 # Todo
-#  : prefix all dim_person columns.
+#  
 #  : rename PD_CAT
 #  : Clarify custom FK_ID
 #  : use fk_person where true (not id)
