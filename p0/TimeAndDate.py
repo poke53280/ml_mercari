@@ -1,145 +1,21 @@
 
 
-# See poke53280.DataHub.Main.EpochDate.cpp for detailed holiday handling.
-
-
 import pandas as pd
 import datetime
 import numpy as np
 
-###########################################################################
-#
-#   TimeAndDate_GetSecondsSinceEpochSeries
-#
 
-def TimeAndDate_GetSecondsSinceEpochSeries(s):
-    s0 = (pd.to_datetime(s) - datetime.datetime(1970, 1, 1))
-    s0 = s0/ np.timedelta64(1, 's')
-    s0 = s0.astype(np.int64)
-
-    return s0
-
-"""c"""
-
-###########################################################
-#
-#    TimeAndDate_GetDaysSinceEpoch
-#
-#
-
-def TimeAndDate_GetDaysSinceEpoch(s, epoch, na_date):
-    # From string to datetime, set NaT at error
-    s_out = pd.to_datetime(s, errors = 'coerce')
-
-    # Set NA to 2019, assume still active in job.
-    s_out = s_out.fillna(future)
-
-    # Offset from UNIX epoch
-    s_out = s_out - epoch
-
-    # Fast conversions to int.
-
-    s_out = s_out.astype('timedelta64[D]')
-    s_out = s_out.astype(int)
-
-    return s_out
-
-
-
-##########################################################################
-#
-# TimeAndDate_Get_random_epoch_birth_day
-#
-
-def TimeAndDate_Get_random_epoch_birth_day(fid):
-    assert (len(fid) == 11)
-
-    birth_year = int (fid[4:6])
-
-    if birth_year > 20:
-        birth_year = birth_year + 1900
-    else:
-        birth_year = birth_year + 2000
-
-    start_date = datetime.date(day=1, month=1, year=birth_year).toordinal()
-
-    end_date = datetime.date(day=31, month=12, year=birth_year).toordinal()
-
-    random_day = datetime.date.fromordinal(random.randint(start_date, end_date))
-
-    epoch_day = datetime.date(1970, 1, 1)
-
-    days_since_epocy = (random_day - epoch_day).days 
-
-    return days_since_epocy
-
-
-##############################################################################
-#
-#   TimeAndDate_GetDateTimeFromEpochDays()
-#
-#
-
-def TimeAndDate_GetDateTimeFromEpochDays(nEpochDays):
+def _GetDateTimeFromEpochDays(nEpochDays):
     return datetime.datetime(1970,1,1,0,0) + datetime.timedelta(nEpochDays)
 
 """c"""
 
-def TimeAndDate_GetEpochDaysFromDateTime(d):
+def _GetEpochDaysFromDateTime(d):
     return (d - datetime.datetime(1970,1,1,0,0)).days
 """c"""
 
-##############################################################################
-#
-#   TimeAndDate_GetDateTimeDescription()
-#
-#
 
-def TimeAndDate_GetDateTimeDescription(datetime):
-    return datetime.strftime("%d.%m.%Y")
-
-"""c"""
-
-
-########################################################################
-#
-#   TimeAndDate_Get_birth_year_from_fid
-#
-
-def TimeAndDate_Get_birth_year_from_fid(fid):
-    if len(fid) == 11:
-        try:
-            b = fid[4:6]
-            return int (b)
-        except ValueError:
-            print(f"Warning bad fid: {fid}")
-            return -1
-
-    else:
-        return -1
-
-
-###############################################################################
-#
-#   TimeAndDate_AddNoise
-#
-#   Returns numpy array with value randomly changed +/- input number of days
-#
-
-def TimeAndDate_AddNoise(s, num_days):
-
-    null_count = s.isnull().sum()
-    assert (null_count == 0)
-
-    sn = s.values
-    noise = np.random.randint(-num_days, num_days +1, size = len(s))
-
-    sn = sn + noise
-    return sn
-
-"""c"""
-
-def calc_easter(year):
+def _calc_easter(year):
     "Returns Easter as a date object."
     a = year % 19
     b = year // 100
@@ -152,7 +28,7 @@ def calc_easter(year):
 
     d = datetime.datetime(year, month, day)
 
-    return TimeAndDate_GetEpochDaysFromDateTime(d)
+    return _GetEpochDaysFromDateTime(d)
 
 
 # Count xmas and new year, as full, half, not at all as holiday.
@@ -164,7 +40,8 @@ def calc_easter(year):
 
 
 # Returns epoch days off - week end and holidays. iYearEnd inclusive.
-def get_days_off(iYearBegin, iYearEnd):
+
+def _get_days_off(iYearBegin, iYearEnd):
 
     l_holiday = []
 
@@ -172,9 +49,9 @@ def get_days_off(iYearBegin, iYearEnd):
 
     for iYear in lYears:
     
-        l_holiday.append(TimeAndDate_GetEpochDaysFromDateTime(datetime.datetime(iYear, 1, 1)))  # 1st Jan
+        l_holiday.append(_GetEpochDaysFromDateTime(datetime.datetime(iYear, 1, 1)))  # 1st Jan
 
-        nEasterSunday = calc_easter(iYear)
+        nEasterSunday = _calc_easter(iYear)
 
         l_holiday.append(nEasterSunday - 3)  #Holy Thursday
         l_holiday.append(nEasterSunday - 2)  #Good Friday
@@ -188,23 +65,23 @@ def get_days_off(iYearBegin, iYearEnd):
 
         l_holiday.append(nPenteCostSunday + 1)  #2nd day pentecost
 
-        l_holiday.append(TimeAndDate_GetEpochDaysFromDateTime(datetime.datetime(iYear, 5, 1))) #1st of May
+        l_holiday.append(_GetEpochDaysFromDateTime(datetime.datetime(iYear, 5, 1))) #1st of May
 
-        l_holiday.append(TimeAndDate_GetEpochDaysFromDateTime(datetime.datetime(iYear, 5, 17))) #17th of May
+        l_holiday.append(_GetEpochDaysFromDateTime(datetime.datetime(iYear, 5, 17))) #17th of May
 
-        nXmas0 = TimeAndDate_GetEpochDaysFromDateTime(datetime.datetime(iYear, 12, 24))
+        nXmas0 = _GetEpochDaysFromDateTime(datetime.datetime(iYear, 12, 24))
 
         l_holiday.append(nXmas0)
         l_holiday.append(nXmas0 + 1)
         l_holiday.append(nXmas0 + 2)
 
-        l_holiday.append(TimeAndDate_GetEpochDaysFromDateTime(datetime.datetime(iYear, 12, 31))) #new year celeb
+        l_holiday.append(_GetEpochDaysFromDateTime(datetime.datetime(iYear, 12, 31))) #new year celeb
 
     s_holiday = set(l_holiday)
 
     # All days in period:
-    nFirst = TimeAndDate_GetEpochDaysFromDateTime(datetime.datetime(iYearBegin, 1, 1))   # Inclusive
-    nLast = TimeAndDate_GetEpochDaysFromDateTime(datetime.datetime(iYearEnd, 12, 31))  # Inclusive
+    nFirst = _GetEpochDaysFromDateTime(datetime.datetime(iYearBegin, 1, 1))   # Inclusive
+    nLast = _GetEpochDaysFromDateTime(datetime.datetime(iYearEnd, 12, 31))  # Inclusive
 
     anDays = np.array(range(nFirst,nLast + 1))
 
@@ -212,7 +89,7 @@ def get_days_off(iYearBegin, iYearEnd):
 
     nSaturdayBase = 2
     nSundayBase = 3   # Found out beforehand
-    assert (TimeAndDate_GetDateTimeFromEpochDays(nSundayBase).weekday() == 6), "Sunday assertion"
+    assert (_GetDateTimeFromEpochDays(nSundayBase).weekday() == 6), "Sunday assertion"
 
     m_sunday = (anDays - nSundayBase) % 7 == 0
     m_saturday =  (anDays - nSaturdayBase) % 7 == 0
@@ -231,7 +108,7 @@ def get_days_off(iYearBegin, iYearEnd):
 
 
 
-def get_off_ratio(nDayBegin, nDayEnd, anOff):
+def _get_off_number(nDayBegin, nDayEnd, anOff):
 
     assert nDayEnd >= nDayBegin, "nDayEnd >= nDayBegin"
 
@@ -247,48 +124,83 @@ def get_off_ratio(nDayBegin, nDayEnd, anOff):
     nOff = (m == True).sum()
     nOn = (m == False).sum()
 
-    rOffRatio = 1.0 * nOff / len (m)
-
-    return rOffRatio
+    return nOff
 
 """c"""
 
-def create_off_feature(df):
+def GetHolidayFeatures(df, zFrom, zTo):
+
+    anOff = _get_days_off(1970, 2050)
 
     # Into numpy arrays for calculations:
 
-    anFrom = np.array (df.F0)
-    anTo = np.array (df.T0)
+    anFrom = np.array (df[zFrom])
+    anTo = np.array (df[zTo])
 
-    anTotalX = np.empty(shape = len(anFrom), dtype = np.float)
+    anTotalX = np.empty(shape = len(anFrom), dtype = np.int)
+
+
+    anOffConnectedStart = np.empty(shape = len(anFrom), dtype = np.bool)
+    anOffConnectedEnd = np.empty(shape = len(anFrom), dtype = np.bool)
 
     lRange = list (range (len(anFrom)))
 
     for i in lRange:
-        r = get_off_ratio(anFrom[i], anTo[i], anOff)
+        r = _get_off_number(anFrom[i], anTo[i], anOff)
         anTotalX[i] = r
 
-    sOff = pd.Series(anTotalX)
+        nDayBeforeFrom = anFrom[i] - 1
+        nDayAfterTo = anTo[i] + 1
 
-    return sOff
+        anOffConnectedStart[i] = _get_off_number(nDayBeforeFrom, nDayBeforeFrom, anOff) > 0
+        anOffConnectedEnd[i] = _get_off_number(nDayAfterTo, nDayAfterTo, anOff) > 0
+
+    return pd.Series(anTotalX), pd.Series(anOffConnectedStart), pd.Series(anOffConnectedEnd)
 
 """c"""
 
 
-# Usage
+def holiday_example():
 
-# FIX ASSERTION ON E.G 2007, 2008
-anOff = get_days_off(1970, 2050)
+    # Create a dataframe with to and from values given in days since epoch 1.jan 1970.
+
+    an1 = np.array([8300, 8310, 8360, 8390])
+    an2 = np.array([8303, 8314, 8366, 8397])
+
+    df = pd.DataFrame({'F0': an1, 'T0': an2})
 
 
-an1 = np.array([8300, 8310, 8360, 8390])
-an2   = np.array([8303, 8314, 8366, 8397])
+    # Bring in the named start and end column names as parameters
 
-df = pd.DataFrame({'F0': an1, 'T0': an2})
+    hL, hS, hE = GetHolidayFeatures(df, 'F0', 'T0')
 
-s = create_off_feature(df)
+    # Returned are
+    # hL: Number of 'off days': Number of week end days + Norwegian holiday days.
+    # Christmas (24th Dec), Last day of year (31th Dec) are currenty interpreted as holidays.
 
-df = df.assign(rOff = s)
+    # hS: True if the day before the from day is an off day, i.e. if the period is connected to an off day at the start.
+    # hE: True if the day after the to day is an off day, i.e. if the period is connected to an off day at the end side.
 
-df
+    # Verify results by calling _GetDateTimeFromEpochDays(8300) et.c. and check with a calendar.
+
+    df = df.assign(hL = hL, hS = hS, hE = hE)
+
+    print (df)
+
+    #        F0    T0  hL     hS     hE
+    #   0  8300  8303   0  False   True
+    #   1  8310  8314   2  False  False
+    #   2  8360  8366   2  False   True
+    #   3  8390  8397   4   True  False
+
+"""c"""
+
+
+
+
+
+
+
+
+
 
