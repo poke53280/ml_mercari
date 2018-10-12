@@ -138,6 +138,9 @@
     <Compile Include="p0\__init__.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="plasticc\plasticc.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="porto_seguro\porto_seguro.py">
       <SubType>Code</SubType>
     </Compile>
@@ -262,6 +265,7 @@
     <Folder Include="ga\" />
     <Folder Include="imageai\" />
     <Folder Include="mp\" />
+    <Folder Include="plasticc\" />
     <Folder Include="typing\" />
     <Folder Include="tf-tpu\" />
     <Folder Include="tgs\" />
