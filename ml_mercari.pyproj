@@ -4,7 +4,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>cc77cf4b-e52a-4996-852b-eba94c92124b</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>p0\DataSQLParser.py</StartupFile>
+    <StartupFile>
+    </StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -116,9 +117,6 @@
     <Compile Include="mp\sort_ml.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="p0\DataSQLParser.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="p0\p3.py">
       <SubType>Code</SubType>
     </Compile>
@@ -193,9 +191,6 @@
     <Compile Include="general\svd.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="p0\TimeAndDate.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="mercari\study_Lavrikov_Ridge.py">
       <SubType>Code</SubType>
     </Compile>
@@ -231,7 +226,6 @@
     <Compile Include="general\hashing.py" />
     <Compile Include="general\IDConverter.py" />
     <Compile Include="general\text_processor.py" />
-    <Compile Include="p0\TimeLineTool.py" />
     <Compile Include="general\WeightDeterminator.py" />
     <Compile Include="mercari\ml_mercari.py" />
     <Compile Include="mercari\run_analyzer.py" />
