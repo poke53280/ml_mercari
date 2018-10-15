@@ -1,14 +1,19 @@
 
 
+
+import os
+os.environ["MKL_NUM_THREADS"] = "1" 
+os.environ["NUMEXPR_NUM_THREADS"] = "1" 
+os.environ["OMP_NUM_THREADS"] = "1" 
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+
 import numpy as np
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
-import os
 
 def feature_calculation(df):
 
     print(f"feature_calculation starting on pid={os.getpid()}")
-
 
     # create DataFrame and populate with stdDev
     result = pd.DataFrame(df.std(axis=0))
@@ -39,8 +44,7 @@ def feature_calculation(df):
     return result
 
 
-def parallel_feature_calculation_ppe(df, partitions=10, processes=4):
-    # calculate features in paralell by splitting the dataframe into partitions and using paralell processes
+def parallel_feature_calculation_ppe(df, partitions, processes):
     
     df_split = np.array_split(df, partitions, axis=1)  # split dataframe into partitions column wise
     
@@ -49,31 +53,36 @@ def parallel_feature_calculation_ppe(df, partitions=10, processes=4):
     
     return df
 
+
+
+
+
+
+
+
 def main():
-    ts_df = pd.DataFrame(np.random.random(size=(3065, 30000)))
-    df_res = parallel_feature_calculation_ppe(ts_df, partitions=100, processes=7)
+    isMP = True
+
+    ts_df = pd.DataFrame(np.random.random(size=(305, 30000)))
+
+    if isMP:
+        df_res = parallel_feature_calculation_ppe(ts_df, partitions=100, processes=8)
+    else:
+        df_res = feature_calculation(ts_df)
+
+
+
     print (df_res.head())
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 if __name__ == '__main__':
+    np.show_config()
     main()
+
+    
+# import os; os.environ['OMP_NUM_THREADS'] = '1'
+
+
+
 
 
