@@ -5,6 +5,9 @@ import os
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
+from sklearn.preprocessing import MinMaxScaler
+
+
 local_dir = os.getenv('LOCAL_PY_DIR')
 
 assert local_dir is not None, "Set environment variable LOCAL_PY_DIR to parent folder of ai_lab_datapipe folder. Instructions in code."
@@ -21,6 +24,10 @@ os.chdir(local_dir)
 
 from ai_lab_datapipe.sf_pipeline.TimeLineTool import *
 
+from ml_mercari.dae.denoising import rank_gauss
+
+
+
 
 def get_flux_sample(x_mjd, y_flux, y_std):
     assert x_mjd.shape[0] == y_flux.shape[0] == y_std.shape[0], "inequal array lengths"
@@ -35,51 +42,6 @@ def get_flux_sample(x_mjd, y_flux, y_std):
     return y_out
 
 
-
-DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
-DATA_DIR_BASEMENT = "D:\\XXX\\"
-DATA_DIR = DATA_DIR_PORTABLE
-
-pd.set_option('display.max_columns', 500)
-pd.set_option('display.width', 500)
-
-
-
-training = pd.read_csv(DATA_DIR + 'training_set.csv')
-
-meta_training = pd.read_csv(DATA_DIR + 'training_set_metadata.csv')
-
-
-
-m = training.passband == 0
-
-
-training = training[m]
-
-
-m = training.object_id == 1920
-
-q = training[m]
-
-m = q.passband == 0
-
-q = q[m]
-
-
-
-
-df_res = pd.DataFrame({'object_id' :all_IDs})   
-
-
-
-w2 = df_res.apply(get_sequence, axis = 1, args = (training, 3, 1000))
-
-# Return generation data as well.
-
-# Likely bug: Check out '1000' setting above - bad numbers.
-
-
-
 def get_sequence(x, df, internal_width, num_samples):
 
     nStepSize = internal_width/num_samples
@@ -88,6 +50,8 @@ def get_sequence(x, df, internal_width, num_samples):
 
     q = df[m]
 
+    num_points = len (q)
+
     sorted = get_groups(q, internal_width)
     
     y = np.bincount(sorted)
@@ -95,7 +59,16 @@ def get_sequence(x, df, internal_width, num_samples):
     idx_max = np.argmax(y)
 
     m = sorted == idx_max
+    
+    num_max_points = m.sum()
 
+    num_groups = len(y)
+
+    used_group_idx = np.random.choice(range(num_groups))
+
+    m = sorted == used_group_idx
+
+    num_points_used_group = m.sum()
     
     x_mjd = np.array(q[m].mjd)
     y_flux = np.array(q[m].flux)
@@ -127,7 +100,7 @@ def get_sequence(x, df, internal_width, num_samples):
 
         max_sample = center + internal_width/2.0
 
-        for i in range(nSamples):
+        for i in range(num_samples):
             x_sample = min_sample + i * nStepSize
 
             value = f(x_sample)
@@ -143,7 +116,7 @@ def get_sequence(x, df, internal_width, num_samples):
        min_sample = center - internal_width/2.0
        max_sample = center + internal_width/2.0
 
-       for i in range(nSamples):
+       for i in range(num_samples):
             x_sample = min_sample + i * nStepSize
 
             x_sample = min(x_sample, x_mjd.max())
@@ -153,89 +126,45 @@ def get_sequence(x, df, internal_width, num_samples):
             output[i] = value
 
 
+    d = {}
+
+
     output_idx = range(output.shape[0])
 
-    d = dict(zip(output_idx, output))
+    
+
+    d['flux_min'] = np.min(output)
+    d['flux_max'] = np.max(output)
+    d['flux_mean'] = np.mean(output)
+    d['flux_var'] = np.var(output)
+
+    d['num_points_group_max'] = num_max_points
+
+    d['t_width'] = internal_width
+    d['t_min'] = min_sample
+
+    d['num_points'] = num_points
+
+    d['num_groups'] = num_groups
+
+    d['group_used_idx'] = used_group_idx
+
+    d['num_points_used_group'] = num_points_used_group
+
+
+    # output_gauss = rank_gauss(output)
+
+    s = MinMaxScaler()
+
+    output_scaled = s.fit_transform(output.reshape(-1, 1)).squeeze()
+
+    d.update(dict(zip(output_idx, output_scaled)))
+
 
     return pd.Series(d)
 
 """c"""
 
-
-
-
-
-    
-
-
-
-
-
-
-for i in range(nSamples):
-
-
-
-
-
-testing = pd.read_csv(DATA_DIR + 'test_set.csv')
-
-meta_testing = pd.read_csv(DATA_DIR + 'test_set_metadata.csv')
-
-m = testing.object_id < 448280
-testing = testing[m]
-
-
-un_testing = np.unique(testing.object_id)
-
-un_testing.shape
-
-
-
-
-training.sample(5)
-
-meta_training.sample(5)
-
-
-#ddf
-m = meta_training.ddf == 1
-
-q = meta_training[m]
-
-len (np.unique(meta_training.object_id))
-
-l = []
-
-for id in un_testing:
-
-
-    m = testing.object_id == id
-
-    q = testing[m]
-
-    q = q.sort_values(by = ['passband', 'mjd'])
-
-    m = q.passband == 0
-
-    q = q[m]
-
-    res = get_num_large_groups(q, 3, 40)
-
-    l.append(res)
-
-    print(f"res = {res}")
-
-
-
-an = np.array(l)
-
-np.min(an)
-np.max(an)
-
-
-
-analyze_groups(q, 3, 40)
 
 
 def get_groups(q, bandwidth):
@@ -315,15 +244,43 @@ def analyze_groups(q, group_threshold, bandwidth):
 
 
 
-    
+DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
+DATA_DIR_BASEMENT = "D:\\XXX\\"
+DATA_DIR = DATA_DIR_PORTABLE
+
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 500)
 
 
 
+training = pd.read_csv(DATA_DIR + 'training_set.csv')
 
-    
+meta_training = pd.read_csv(DATA_DIR + 'training_set_metadata.csv')
+
+all_IDs = meta_training.object_id
+
+assert all_IDs.shape == np.unique(meta_training.object_id).shape
 
 
+m = training.passband == 0
 
 
+training = training[m]
+
+
+m = training.object_id == 1920
+
+q = training[m]
+
+m = q.passband == 0
+
+q = q[m]
+
+df_res = pd.DataFrame({'object_id' :all_IDs})   
+
+w2 = df_res.apply(get_sequence, axis = 1, args = (training, 3, 10))
+
+
+  
 
 
