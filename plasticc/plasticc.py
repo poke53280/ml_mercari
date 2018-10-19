@@ -42,7 +42,7 @@ def get_flux_sample(x_mjd, y_flux, y_std):
     return y_out
 
 
-def get_sequence(x, df, internal_width, num_samples):
+def get_sequence(x, df, internal_width, num_samples, col_prefix):
 
     nStepSize = internal_width/num_samples
 
@@ -151,7 +151,6 @@ def get_sequence(x, df, internal_width, num_samples):
 
     d['num_points_used_group'] = num_points_used_group
 
-
     # output_gauss = rank_gauss(output)
 
     s = MinMaxScaler()
@@ -159,6 +158,14 @@ def get_sequence(x, df, internal_width, num_samples):
     output_scaled = s.fit_transform(output.reshape(-1, 1)).squeeze()
 
     d.update(dict(zip(output_idx, output_scaled)))
+
+
+    k = d.keys()
+    v = d.values()
+
+    k = [col_prefix + str(x) for x in k]
+
+    d = dict(zip (k, v))
 
 
     return pd.Series(d)
@@ -278,9 +285,53 @@ q = q[m]
 
 df_res = pd.DataFrame({'object_id' :all_IDs})   
 
-w2 = df_res.apply(get_sequence, axis = 1, args = (training, 3, 10))
+w2 = df_res.apply(get_sequence, axis = 1, args = (training, 3, 10, 'pim'))
 
 
-  
+# Create balanced binary dataset by oversampling/sample generation
+
+iTargetClass = 90
+
+
+
+
+m_true = (meta_training.target == iTargetClass)
+
+m_false = ~m_true
+
+
+
+df_true = generate_dataset(meta_training, training, m_true, 10000)
+
+df_false = generate_dataset(meta_training, training, m_false, 10)
+
+def generate_dataset(meta_training, training, m_filter, num_samples):
+
+    meta_filtered = meta_training[m_filter]
+
+    ids = np.array(meta_filtered.object_id)
+
+    id_sampled = np.random.choice(ids, size = num_samples, replace=True)
+
+    df = pd.DataFrame({'object_id' :id_sampled})
+
+
+    w0 = df.apply(get_sequence, axis = 1, args = (training, 3, 10, 'prefix_0_'))
+    w1 = df.apply(get_sequence, axis = 1, args = (training, 3, 10, 'prefix_1_'))
+
+    w = pd.concat([w0, w1], axis = 1)
+
+
+    # Continue here.
+
+
+    w = w.assign(object_id = df.object_id)
+
+    meta_id_target = meta_filtered[['object_id', 'target']]
+   
+    w = w.merge(meta_id_target, how = 'left', left_on= 'object_id', right_on = 'object_id')
+    
+    return w
+
 
 
