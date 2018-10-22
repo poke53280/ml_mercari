@@ -6,26 +6,8 @@ from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
 from sklearn.preprocessing import MinMaxScaler
-
-
-local_dir = os.getenv('LOCAL_PY_DIR')
-
-assert local_dir is not None, "Set environment variable LOCAL_PY_DIR to parent folder of ai_lab_datapipe folder. Instructions in code."
-
-# * 'Windows/Start'button
-# * Type 'environment...'. 
-# * Select option 'Edit environment variables for your account' (NOT: 'Edit the system environment variables)
-# * New. LOCAL_PY_DIR. Value is parent folder to ai_lab_datapipe
-# * Restart IDE/python context. 
-
-print(f"Local python top directoy is set to {local_dir}")
-os.chdir(local_dir)
-
-
-from ai_lab_datapipe.sf_pipeline.TimeLineTool import *
-
-from ml_mercari.dae.denoising import rank_gauss
-
+import sys
+import itertools
 
 
 
@@ -42,11 +24,64 @@ def get_flux_sample(x_mjd, y_flux, y_std):
     return y_out
 
 
-def get_sequence(x, df, internal_width, num_samples, col_prefix):
+
+def get_sequence_fast(x, df):
+
+    l_bandwidth = [3, 30, 50]
+
+    m = training.object_id == 615
+
+    q = training[m].copy()
+
+    p = []
+
+    for iPassband in range(6):
+
+        d = {}
+
+        m_b = q.passband == iPassband
+        q_b = q[m_b].copy()
+
+        ar_mjd = np.array(q_b.mjd)
+        ar_flux = np.array(q_b.flux)
+        ar_fluxerr = np.array(q_b.flux_err)
+
+        d["mjd"] = ar_mjd
+        d["flux"] = ar_flux
+        d["flux_err"] = ar_fluxerr
+        
+        d["groups"] = []
+
+        nd = np.diff(ar_mjd)
+        
+        for b in l_bandwidth:
+            
+            m = nd > b
+            sorted = np.empty(shape = len(ar_mjd), dtype = np.int)
+            sorted[1:] = m.cumsum()
+            sorted[0] = 0
+
+            d["groups"].append(sorted)
+
+        p.append(d)
+
+    
+    l_num_samples = [10, 100]
+    
+    
+    #list(itertools.product(*[l_passbands, l_num_samples, l_internal_width]))
+
+   
+
+    sorted = get_groups(training[m], l_internal_width[0])
+
+
+
+def get_sequence(x, df, internal_width, num_samples, n_passband, col_prefix):
 
     nStepSize = internal_width/num_samples
 
-    m = df.object_id == x['object_id']
+    m = (df.object_id == x['object_id']) & (df.passband == n_passband)
 
     q = df[m]
 
@@ -76,7 +111,6 @@ def get_sequence(x, df, internal_width, num_samples, col_prefix):
 
     y_out = get_flux_sample(x_mjd, y_flux, y_std)
 
-
     L_full_width = x_mjd.max() - x_mjd.min()
 
     output = np.empty(shape = num_samples, dtype = np.float)
@@ -85,7 +119,6 @@ def get_sequence(x, df, internal_width, num_samples, col_prefix):
         f = lambda x: y_out[0]
     else:
         f = interp1d(x_mjd, y_out)
-
 
     if L_full_width >= internal_width:
 
@@ -106,7 +139,6 @@ def get_sequence(x, df, internal_width, num_samples, col_prefix):
             value = f(x_sample)
             output[i] = value
 
-
     else:
        center_min = x_mjd.min() + 0.5 * internal_width
        center_max = x_mjd.max() - 0.5 * internal_width
@@ -125,13 +157,10 @@ def get_sequence(x, df, internal_width, num_samples, col_prefix):
             value = f(x_sample)
             output[i] = value
 
-
     d = {}
-
 
     output_idx = range(output.shape[0])
 
-    
 
     d['flux_min'] = np.min(output)
     d['flux_max'] = np.max(output)
@@ -173,7 +202,6 @@ def get_sequence(x, df, internal_width, num_samples, col_prefix):
 """c"""
 
 
-
 def get_groups(q, bandwidth):
      a = np.array(q.mjd)
      nd = np.diff(a)
@@ -191,6 +219,103 @@ def get_num_large_groups(q, group_threshold, bandwidth):
     m = y >= group_threshold
     return m.sum()
 
+
+
+def generate_dataset_fast(meta_filtered, training, num_samples):
+    
+    ids = np.array(meta_filtered.object_id)
+
+    id_sampled = np.random.choice(ids, size = num_samples, replace=True)
+
+    df = pd.DataFrame({'object_id' :id_sampled})
+
+    df_slim = df.copy()
+
+    df_sample = df_slim.apply(get_sequence_fast, axis = 1, args = (training))
+
+    df = pd.concat([df, df_sample], axis = 1)
+
+    meta_id_target = meta_filtered[['object_id', 'target']]
+   
+    df = df.merge(meta_id_target, how = 'left', left_on= 'object_id', right_on = 'object_id')
+    
+    return df
+
+
+
+
+
+
+
+def generate_dataset(meta_filtered, training, num_samples):
+
+    ids = np.array(meta_filtered.object_id)
+
+    id_sampled = np.random.choice(ids, size = num_samples, replace=True)
+
+    df = pd.DataFrame({'object_id' :id_sampled})
+
+    df_slim = df.copy()
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 3, 100, 0, '0'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 3, 100, 1, '1'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 3, 100, 2, '2'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 3, 100, 3, '3'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 3, 100, 4, '4'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 3, 100, 5, '5'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 30, 100, 0, '6'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 30, 100, 1, '7'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 30, 100, 2, '8'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 30, 100, 3, '9'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 30, 100, 4, '10'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 30, 100, 5, '11'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 50, 100, 0, '12'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 50, 100, 1, '13'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 50, 100, 2, '14'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 50, 100, 3, '15'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 50, 100, 4, '16'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    df_sample = df_slim.apply(get_sequence, axis = 1, args = (training, 50, 100, 5, '17'))
+    df = pd.concat([df, df_sample], axis = 1)
+
+    meta_id_target = meta_filtered[['object_id', 'target']]
+   
+    df = df.merge(meta_id_target, how = 'left', left_on= 'object_id', right_on = 'object_id')
+    
+    return df
 
 
 def analyze_groups(q, group_threshold, bandwidth):
@@ -214,13 +339,11 @@ def analyze_groups(q, group_threshold, bandwidth):
 
     print(f"#Groups >= 3: {m.sum()}")
 
-
     for idx in range(len(sorted)):
 
         m = sorted == idx
 
         idx = np.where(m)[0]
-
 
         if idx.shape[0] < 2:
             continue
@@ -233,19 +356,12 @@ def analyze_groups(q, group_threshold, bandwidth):
 
         y_out = get_flux_sample(x_mjd, y_flux, y_std)
 
-
         f = interp1d(x_mjd, y_out)
 
-
         xnew = np.linspace(x_mjd.min(), x_mjd.max(), num=41, endpoint=True)
-    
 
         plt.plot(x_mjd, y_out, 'o', xnew, f(xnew), '-')
-
-    
         plt.legend(['data', 'linear'], loc='best')
-
-   
 
     plt.show()
 
@@ -258,80 +374,78 @@ DATA_DIR = DATA_DIR_PORTABLE
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 500)
 
+def generate_slice(iSplit, filename_desc, target_class):
+ 
+
+    training_filename = DATA_DIR + filename_desc + "_training_" + str(iSplit) + ".pkl"
+
+    training = pd.read_pickle(training_filename)
+
+    meta_training = pd.read_pickle(DATA_DIR + filename_desc + "_meta_" + str(iSplit) + ".pkl")
+
+    IDs = meta_training.object_id
+
+    assert IDs.shape == np.unique(IDs).shape
+
+    m_true = (meta_training.target == target_class)
 
 
-training = pd.read_csv(DATA_DIR + 'training_set.csv')
+    df_true = generate_dataset(meta_training[m_true], training, 20000)
+    df_false = generate_dataset(meta_training[~m_true], training, 20000)
 
-meta_training = pd.read_csv(DATA_DIR + 'training_set_metadata.csv')
+    df = pd.concat([df_true, df_false], axis = 0)
 
-all_IDs = meta_training.object_id
+    anTarget = np.array(df.target, dtype = int)
 
-assert all_IDs.shape == np.unique(meta_training.object_id).shape
+    m = anTarget == target_class
 
+    anTarget90 = np.empty(shape = anTarget.shape, dtype = int)
 
-m = training.passband == 0
+    anTarget90[m] = 1
+    anTarget90[~m] = 0
 
+    df = df.assign(target_90 = anTarget90)
 
-training = training[m]
+    df = df.sample(frac=1).reset_index(drop=True)
 
-
-m = training.object_id == 1920
-
-q = training[m]
-
-m = q.passband == 0
-
-q = q[m]
-
-df_res = pd.DataFrame({'object_id' :all_IDs})   
-
-w2 = df_res.apply(get_sequence, axis = 1, args = (training, 3, 10, 'pim'))
+    df = df.drop(['target'], axis = 1)
 
 
-# Create balanced binary dataset by oversampling/sample generation
+    anIDs = np.unique(df.object_id)
 
-iTargetClass = 90
-
-
+    print(f"#Unique objects in training set: {anIDs.shape[0]}")
 
 
-m_true = (meta_training.target == iTargetClass)
+    filename = DATA_DIR + "df_t_" + filename_desc + "_" + str(iSplit)+ ".pkl"
 
-m_false = ~m_true
+    df.to_pickle(filename)
+
+    print(f"Saved dataset as '{filename}'")
 
 
 
-df_true = generate_dataset(meta_training, training, m_true, 10000)
 
-df_false = generate_dataset(meta_training, training, m_false, 10)
-
-def generate_dataset(meta_training, training, m_filter, num_samples):
-
-    meta_filtered = meta_training[m_filter]
-
-    ids = np.array(meta_filtered.object_id)
-
-    id_sampled = np.random.choice(ids, size = num_samples, replace=True)
-
-    df = pd.DataFrame({'object_id' :id_sampled})
-
-
-    w0 = df.apply(get_sequence, axis = 1, args = (training, 3, 10, 'prefix_0_'))
-    w1 = df.apply(get_sequence, axis = 1, args = (training, 3, 10, 'prefix_1_'))
-
-    w = pd.concat([w0, w1], axis = 1)
-
-
-    # Continue here.
-
-
-    w = w.assign(object_id = df.object_id)
-
-    meta_id_target = meta_filtered[['object_id', 'target']]
-   
-    w = w.merge(meta_id_target, how = 'left', left_on= 'object_id', right_on = 'object_id')
+def main():
     
-    return w
+    l = []
+    for arg in sys.argv[1:]:
+        l.append(arg)
+
+    desc = l[0]
+    i_split = int(l[1])
+    i_targetclass = int(l[2])
+
+    print(f"desc: {desc}")
+    print(f"split idx {i_split}")
+    print(f"target class: {i_targetclass}")
+
+    assert i_split >= 0
+
+    generate_slice(i_split, desc, i_targetclass)
+ 
 
 
 
+
+if __name__ == "__main__":
+    main()

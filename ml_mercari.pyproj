@@ -140,6 +140,18 @@
     <Compile Include="plasticc\plasticc.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="plasticc\plasticc_lgbm.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="plasticc\plasticc_merge.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="plasticc\plasticc_nn.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="plasticc\plasticc_split.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="porto_seguro\porto_seguro.py">
       <SubType>Code</SubType>
     </Compile>
