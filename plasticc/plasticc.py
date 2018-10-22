@@ -64,7 +64,7 @@ def get_sequence_fast(x, df):
             d["groups"].append(sorted)
 
         p.append(d)
-
+        CONTINUE HERE...
     
     l_num_samples = [10, 100]
     
@@ -73,7 +73,7 @@ def get_sequence_fast(x, df):
 
    
 
-    sorted = get_groups(training[m], l_internal_width[0])
+    
 
 
 
