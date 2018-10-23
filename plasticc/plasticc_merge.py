@@ -2,8 +2,12 @@
 
 #def - merge and save
 
+import sys
+import pandas as pd
 
-
+DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
+DATA_DIR_BASEMENT = "D:\\XXX\\"
+DATA_DIR = DATA_DIR_PORTABLE
 
 def main():
     # print command line arguments

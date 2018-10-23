@@ -43,11 +43,15 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 500)
 
                     #df_t_split_attempt_superwide_no_leak2018-10-22_14-44_0
-filename_base = DATA_DIR + "df_t_44cm_Merged.pkl"
+filename_base = DATA_DIR + "df_t_colossal_0.pkl"
 
 
 
-df = pd.read_pickle(filename)
+df = pd.read_pickle(filename_base)
+
+del df2
+
+gc.collect()
 
 y = df['target_90']
 df = df.drop(['target_90'], axis = 1)
@@ -85,12 +89,12 @@ for n_fold, (trn_idx_unique, val_idx_unique) in enumerate(folds.split(uniqueIDs)
 
     print (n_fold)
 
-    clf = LGBMClassifier(n_estimators=29300, learning_rate=0.01, max_depth=6, num_leaves = 31,
-                         silent=-1, verbose=-1, bagging_fraction =0.7, bagging_freq = 3)
+    clf = LGBMClassifier(n_estimators=199300, learning_rate=0.1, max_depth=4, num_leaves = 127,
+                         silent=-1, verbose=-1)
 
 
     clf.fit(trn_x, trn_y,  eval_set= [(trn_x, trn_y), (val_x, val_y)],
-            eval_metric='auc', verbose=100, early_stopping_rounds=150)  
+            eval_metric='auc', verbose=25, early_stopping_rounds=400)  
 
     oof_preds[val_idx] = clf.predict_proba(val_x, num_iteration=clf.best_iteration_)[:, 1]
 
@@ -128,8 +132,18 @@ print('Full AUC score %.3f' % roc_auc_score(y, oof_preds))
 # 0.782, 0.762
 
 
+# New dataset (fast, sampling all bands)
 
+# AUC 0.6
 
+# New dataset fixed bug 200,000 per 1/3. Trained on 1/3
+#
+# AUC 0.88
+#
+
+# 2/ 3 very similar
+
+ 
 
 
 

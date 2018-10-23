@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>cc77cf4b-e52a-4996-852b-eba94c92124b</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>mp\sort_ml.py</StartupFile>
+    <StartupFile>plasticc\plasticc.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -147,6 +147,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="plasticc\plasticc_nn.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="plasticc\plasticc_predict.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="plasticc\plasticc_split.py">
