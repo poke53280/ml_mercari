@@ -15,21 +15,7 @@ from lightgbm import LGBMClassifier
 
 
 
-local_dir = os.getenv('LOCAL_PY_DIR')
 
-assert local_dir is not None, "Set environment variable LOCAL_PY_DIR to parent folder of ai_lab_datapipe folder. Instructions in code."
-
-# * 'Windows/Start'button
-# * Type 'environment...'. 
-# * Select option 'Edit environment variables for your account' (NOT: 'Edit the system environment variables)
-# * New. LOCAL_PY_DIR. Value is parent folder to ai_lab_datapipe
-# * Restart IDE/python context. 
-
-print(f"Local python top directoy is set to {local_dir}")
-os.chdir(local_dir)
-
-from ai_lab_datapipe.sf_pipeline.TimeLineTool import *
-from ml_mercari.dae.denoising import rank_gauss
 
 
 
@@ -42,27 +28,27 @@ DATA_DIR = DATA_DIR_PORTABLE
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 500)
 
-                    #df_t_split_attempt_superwide_no_leak2018-10-22_14-44_0
-filename_base = DATA_DIR + "df_t_colossal_0.pkl"
+
+filename_base = DATA_DIR + "df_t_xhu_Merged.pkl"
 
 
 
 df = pd.read_pickle(filename_base)
 
-del df2
-
 gc.collect()
 
 y = df['target_90']
-df = df.drop(['target_90'], axis = 1)
 
-y = np.array(y, dtype = float)
-y = y.astype(np.float32)
+
+gc.collect()
+
+y = np.array(y, dtype = np.float16)
 
 object_ID = df['object_id']
 
-df = df.drop(['object_id'], axis = 1)
+df = df.drop(['object_id', 'target_90'], axis = 1)
 
+gc.collect()
 
 data = df.values
 data = data.astype(np.float32)
@@ -89,8 +75,7 @@ for n_fold, (trn_idx_unique, val_idx_unique) in enumerate(folds.split(uniqueIDs)
 
     print (n_fold)
 
-    clf = LGBMClassifier(n_estimators=199300, learning_rate=0.1, max_depth=4, num_leaves = 127,
-                         silent=-1, verbose=-1)
+    clf = LGBMClassifier(n_estimators=199300, learning_rate=0.1, max_depth=4, num_leaves = 127, silent=-1, verbose=-1)
 
 
     clf.fit(trn_x, trn_y,  eval_set= [(trn_x, trn_y), (val_x, val_y)],

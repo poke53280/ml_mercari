@@ -10,6 +10,8 @@ from sklearn.preprocessing import MinMaxScaler
 import sys
 import itertools
 
+from datetime import datetime
+
 
 
 def get_flux_sample(x_mjd, y_flux, y_std):
@@ -26,18 +28,34 @@ def get_flux_sample(x_mjd, y_flux, y_std):
 
 
 
-def get_sequence(q, NUM_ITERS, l_bandwidth, num_intervals):
+def get_sequence_float32_sequence(q, num_iters, l_bandwidth, num_samples):
+
+    ar_mjd_all = np.array(q.umjd, dtype = np.float32)
+
+    ar_mjd_all /= 1000.0
+
+    mjd_min = np.min(ar_mjd_all)
+    mjd_max = np.max(ar_mjd_all)
+
+    mjd_length = mjd_max - mjd_min
 
     func_x = []
     func_y = []
+
+    flux_err_scale_down = 500/ 255.0
 
     for iPassband in range(6):
 
         q_b = q[q.passband == iPassband]
 
-        ar_mjd = np.array(q_b.mjd)
-        ar_flux = np.array(q_b.flux)
-        ar_fluxerr = np.array(q_b.flux_err)
+        ar_mjd = np.array(q_b.umjd, dtype = np.float32)
+
+        ar_mjd /= 1000.0
+
+        ar_flux = np.array(q_b.uFlux, dtype = np.float32)
+        ar_fluxerr = np.array(q_b.uFluxErr, dtype = np.float32)
+
+        ar_fluxerr *= flux_err_scale_down
 
         y_out = get_flux_sample(ar_mjd, ar_flux, ar_fluxerr)
 
@@ -45,36 +63,40 @@ def get_sequence(q, NUM_ITERS, l_bandwidth, num_intervals):
         func_y.append(y_out)
 
     """c"""
+    
+    afRes = np.empty(shape = (num_iters, num_samples * len (l_bandwidth) * 6), dtype = np.float32)
 
-    ar_mjd_all = q.mjd
-
-    mjd_min = np.min(ar_mjd_all)
-    mjd_max = np.max(ar_mjd_all)
-
-    mjd_length = mjd_max - mjd_min
-
-    afRes = np.empty(shape = (NUM_ITERS, num_intervals * len (l_bandwidth) * 6), dtype = np.float32)
-
-    for idx in range (NUM_ITERS):
+    for idx in range (num_iters):
 
         afResOffset = 0
 
         for b in l_bandwidth:
-   
-            if b > (mjd_max - mjd_min):
+
+            if b > mjd_length:
                 print(f"low = {mjd_min - b + mjd_max - mjd_min}, high = {mjd_min}")
-                mjd_start = np.random.uniform(low = mjd_min - b + mjd_max - mjd_min, high = mjd_min)
+                mjd_start = np.random.uniform(low = mjd_min - b + mjd_length, high = mjd_min)
             else:
                 mjd_start = np.random.uniform(low = mjd_min, high = mjd_max - b)
 
-            x_samples = np.linspace(mjd_start, mjd_start + b, num_intervals)
+            x_samples = np.linspace(mjd_start, mjd_start + b, num_samples)
 
             for iPassband in range(6):
 
                 fSampleValues = np.interp(x_samples, func_x[iPassband], func_y[iPassband], left = y_out[0], right = y_out[-1])
 
-                afRes[idx, afResOffset:afResOffset + num_intervals] = fSampleValues
-                afResOffset += num_intervals
+                isUINT8 = False
+                if isUINT8:
+                    fSampleValues -= fSampleValues.min()
+
+                    if fSampleValues.max() > 0:
+                        fSampleValues  /= fSampleValues.max()
+
+                    fSampleValues *= 255.0
+
+                    fSampleValues = fSampleValues.astype(np.uint8)
+
+                afRes[idx, afResOffset:afResOffset + num_samples] = fSampleValues
+                afResOffset += num_samples
 
         """c"""
 
@@ -82,13 +104,19 @@ def get_sequence(q, NUM_ITERS, l_bandwidth, num_intervals):
     return afRes
 
 
-def generate_dataset(meta_filtered, training, num_iters, l_bandwidth, num_samples):
+def generate_dataset(meta, data, num_iters, l_bandwidth, num_samples):
+
+    start = datetime.now()
+
+    nItems = meta.shape[0]
+
+    print(f"Generating {num_iters} x {nItems} (iters x items) rows of item data...")
     
-    isTrain = 'target' in meta_filtered.columns
+    isTrain = 'target' in meta.columns
 
-    ids = np.array(meta_filtered.object_id)
+    ids = np.array(meta.object_id, dtype=np.int32)
 
-    res = generate_dataset_array(ids, training, num_iters, l_bandwidth, num_samples)
+    res = generate_dataset_array(ids, data, num_iters, l_bandwidth, num_samples)
 
     print("---0---")
     
@@ -105,28 +133,53 @@ def generate_dataset(meta_filtered, training, num_iters, l_bandwidth, num_sample
     print("---3---")
 
     if isTrain:
-        meta_id_target = meta_filtered[['object_id', 'target']]
+        meta_id_target = meta[['object_id', 'target']]
         df = df.merge(meta_id_target, how = 'left', left_on= 'object_id', right_on = 'object_id')
 
     print("---4---")
 
-    df = pd.concat([df, df_res], axis = 1)
+  
+    df_res = df_res.assign(object_id = df['object_id'])
+
+    if isTrain:
+        df_res = df_res.assign(target = df['target'])
+   
 
     print("---5---")
 
     print("Dataset generation done.")
+
+    end = datetime.now()
+
+    dT = end - start
     
-    return df
+    dSeconds = dT.total_seconds()
+
+    nRowsPerSecond = (num_iters * nItems)/ dSeconds
+    nItemsPerSecond = nItems / dSeconds
+
+    total_item_count = 3492890
+
+    rPredictedTimeSecs = dSeconds * total_item_count / nItems
+
+    rPredictedTimeHrs = rPredictedTimeSecs/3600.0
+
+    print(f"Time spent generating {num_iters} x {nItems}: {dSeconds:.1f}s.  rows/s: {nRowsPerSecond:.1f} items/s: {nItemsPerSecond:.1f}")
+
+    print(f"   => Prediction for all {total_item_count} items: {rPredictedTimeHrs:.1f}h")
+
+    
+    return df_res
 
 """c"""
 
-def generate_dataset_array(ids, df, num_iters, l_bandwidth, num_samples):
-    
+def generate_dataset_array(ids, data, num_iters, l_bandwidth, num_samples):
+
     element_size = num_samples * len(l_bandwidth) * 6
 
     nItems = ids.shape[0]
 
-    afRes = np.empty(shape=(nItems * num_iters, element_size), dtype = np.float)
+    afRes = np.empty(shape=(nItems * num_iters, element_size), dtype = np.float32)
 
     afResOffset = 0
 
@@ -135,12 +188,11 @@ def generate_dataset_array(ids, df, num_iters, l_bandwidth, num_samples):
         if idx % 100 == 0:
             print(f"Processing item {idx}/{nItems}...")
 
+        m = data.object_id == id
 
-        m = df.object_id == id
+        #q = data[m].copy()
 
-        q = df[m].copy()
-
-        res = get_sequence(q, num_iters, l_bandwidth, num_samples)
+        res = get_sequence_float32_sequence(data[m], num_iters, l_bandwidth, num_samples)
 
         afRes[num_iters*idx:num_iters*idx+num_iters, :] = res
 
@@ -169,11 +221,11 @@ def generate_test_slice(iSplit, desc):
     data = pd.read_pickle(data_filename)
     meta = pd.read_pickle(meta_filename)
 
-    num_iters = 1
+    num_iters = 10
 
     df = generate_dataset(meta, data, num_iters, l_bandwidth, num_samples)
 
-    filename = DATA_DIR + "df_t_test_" + data_filename + "_" + str(iSplit)+ ".pkl"
+    filename = DATA_DIR + "test_processed" + desc + "_" + str(iSplit)+ ".pkl"
 
     df.to_pickle(filename)
 
@@ -182,7 +234,7 @@ def generate_test_slice(iSplit, desc):
 
 def generate_slice(iSplit, filename_desc, target_class):
 
-    num_items_each = 100000
+    num_items_each = 200000
 
     training_filename = DATA_DIR + filename_desc + "_training_" + str(iSplit) + ".pkl"
     
@@ -288,12 +340,26 @@ def main():
 if __name__ == "__main__":
     main()
 
+TODO: MOVE TRANSFORM OUT TO CALC FORMAT IN COMPACT
 
 def dev_start():
-    data = pd.read_csv(DATA_DIR + 'training_set.csv')
     meta = pd.read_csv(DATA_DIR + 'training_set_metadata.csv')
+    data = pd.read_csv(DATA_DIR + 'training_set.csv')
 
-    data.object_id.value_counts()
+    MIN_MDJ = 59580.0338
+    rFluxScaleDown = 15000.0/ 65535
+    flux_err_scale_down = 500/ 255.0
+    
+   
+    data_c = pd.read_pickle(DATA_DIR + 'compact_training_data.pkl')
+
+    mjd = ((data_c.umjd / 10000.0) + MIN_MDJ).astype(np.float32)
+    
+    flux = ((data_c.uFlux * rFluxScaleDown) - 5000).astype(np.float32)
+
+    flux_err = (data_c.uFluxErr * flux_err_scale_down * rFluxScaleDown).astype(np.float32)
+
+    CONTINUE HERE
 
 
     id = 248547
@@ -302,3 +368,10 @@ def dev_start():
 
     q = data[m]
 
+    q_c = data_c[m].copy()
+
+    q_c.dtypes
+  
+
+
+    

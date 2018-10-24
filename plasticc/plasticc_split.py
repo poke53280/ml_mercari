@@ -42,34 +42,40 @@ def main():
 
     desc = l[1]
     num_splits = int (l[2])
+    do_splits = int(l[3])
 
-    print(f"Tr/Te: {tr_te}")
-    print(f"File desc: {desc}")
-    print(f"Num splits: {num_splits}")
+    assert num_splits > 0, f"num_splits > 0"
+
+    assert do_splits <= num_splits, f"do_splits <= num_splits"
 
     assert tr_te == "te" or tr_te == "tr"
-
     isTest = (tr_te == "te")
 
     if isTest:
-        data = pd.read_csv(DATA_DIR + 'test_set.csv')
+        print(f"Test split")
+    else:
+        print("Train split")
+
+    print(f"File desc: {desc}")
+    print(f"Num splits: {num_splits}")
+    print(f"Do splits: {do_splits}")
+
+    if isTest:
+        data = pd.read_pickle(DATA_DIR + 'compact_test_data.pkl')
         meta = pd.read_csv(DATA_DIR + 'test_set_metadata.csv')
 
         datafile_prefix = DATA_DIR + desc + "_test"
         metafile_prefix = DATA_DIR + desc + "_test_meta"
 
-
     else:
-        data = pd.read_csv(DATA_DIR + 'training_set.csv')
+        data = pd.read_pickle(DATA_DIR + 'compact_training_data.pkl')
         meta = pd.read_csv(DATA_DIR + 'training_set_metadata.csv')
 
         datafile_prefix = DATA_DIR + desc + "_training"
         metafile_prefix = DATA_DIR + desc + "_training_meta"
+    
 
-
-    assert num_splits > 0
-
-    for iSplit in range(num_splits):
+    for iSplit in range(do_splits):
         split_and_save(data, datafile_prefix, meta, metafile_prefix, iSplit, num_splits)
 
     """c"""
