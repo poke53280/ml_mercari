@@ -80,6 +80,9 @@
     <Compile Include="general\dataset.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="general\Interpolator.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="general\KDE_study.py">
       <SubType>Code</SubType>
     </Compile>

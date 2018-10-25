@@ -340,7 +340,7 @@ def main():
 if __name__ == "__main__":
     main()
 
-TODO: MOVE TRANSFORM OUT TO CALC FORMAT IN COMPACT
+# TODO: MOVE TRANSFORM OUT TO CALC FORMAT IN COMPACT
 
 def dev_start():
     meta = pd.read_csv(DATA_DIR + 'training_set_metadata.csv')
@@ -359,7 +359,7 @@ def dev_start():
 
     flux_err = (data_c.uFluxErr * flux_err_scale_down * rFluxScaleDown).astype(np.float32)
 
-    CONTINUE HERE
+    # CONTINUE HERE
 
 
     id = 248547
