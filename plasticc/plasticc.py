@@ -30,7 +30,7 @@ def get_flux_sample(x_mjd, y_flux, y_std):
 
 def get_sequence_float32_sequence(q, num_iters, l_bandwidth, num_samples):
 
-    ar_mjd_all = np.array(q.umjd, dtype = np.float32)
+    ar_mjd_all = np.array(q.mjd, dtype = np.float32)
 
     ar_mjd_all /= 1000.0
 
@@ -48,12 +48,12 @@ def get_sequence_float32_sequence(q, num_iters, l_bandwidth, num_samples):
 
         q_b = q[q.passband == iPassband]
 
-        ar_mjd = np.array(q_b.umjd, dtype = np.float32)
+        ar_mjd = np.array(q_b.mjd, dtype = np.float32)
 
         ar_mjd /= 1000.0
 
-        ar_flux = np.array(q_b.uFlux, dtype = np.float32)
-        ar_fluxerr = np.array(q_b.uFluxErr, dtype = np.float32)
+        ar_flux = np.array(q_b.flux, dtype = np.float32)
+        ar_fluxerr = np.array(q_b.flux_err, dtype = np.float32)
 
         ar_fluxerr *= flux_err_scale_down
 
@@ -73,7 +73,7 @@ def get_sequence_float32_sequence(q, num_iters, l_bandwidth, num_samples):
         for b in l_bandwidth:
 
             if b > mjd_length:
-                print(f"low = {mjd_min - b + mjd_max - mjd_min}, high = {mjd_min}")
+                # print(f"low = {mjd_min - b + mjd_max - mjd_min}, high = {mjd_min}")
                 mjd_start = np.random.uniform(low = mjd_min - b + mjd_length, high = mjd_min)
             else:
                 mjd_start = np.random.uniform(low = mjd_min, high = mjd_max - b)
@@ -84,16 +84,82 @@ def get_sequence_float32_sequence(q, num_iters, l_bandwidth, num_samples):
 
                 fSampleValues = np.interp(x_samples, func_x[iPassband], func_y[iPassband], left = y_out[0], right = y_out[-1])
 
-                isUINT8 = False
-                if isUINT8:
-                    fSampleValues -= fSampleValues.min()
+                afRes[idx, afResOffset:afResOffset + num_samples] = fSampleValues
+                afResOffset += num_samples
 
-                    if fSampleValues.max() > 0:
-                        fSampleValues  /= fSampleValues.max()
+        """c"""
 
-                    fSampleValues *= 255.0
+    """c"""
+    return afRes
 
-                    fSampleValues = fSampleValues.astype(np.uint8)
+
+def get_sequence_float32_sequence_2(q, num_iters, l_bandwidth, num_samples):
+
+    ar_mjd_all = np.array(q.mjd, dtype = np.float32)
+
+    ar_mjd_all /= 1000.0
+
+    mjd_min = np.min(ar_mjd_all)
+    mjd_max = np.max(ar_mjd_all)
+
+    mjd_length = mjd_max - mjd_min
+
+    flux_err_scale_down = 500/ 255.0
+
+    sequence = []
+
+    for iPassband in range(6):
+
+        q_b = q[q.passband == iPassband]
+
+        ar_mjd = np.array(q_b.mjd, dtype = np.float32)
+
+        ar_mjd /= 1000.0
+
+        ar_flux = np.array(q_b.flux, dtype = np.float32)
+        ar_fluxerr = np.array(q_b.flux_err, dtype = np.float32)
+
+        ar_fluxerr *= flux_err_scale_down
+
+        y_out = get_flux_sample(ar_mjd, ar_flux, ar_fluxerr)
+
+        sequence.append (np.interp(ar_mjd_all, ar_mjd, y_out, left=None, right=None, period=None))
+
+    """c"""
+    
+    afRes = np.empty(shape = (num_iters, num_samples * len (l_bandwidth) * 6), dtype = np.float32)
+
+    for idx in range (num_iters):
+
+        afResOffset = 0
+
+        for b in l_bandwidth:
+
+            if b > mjd_length:
+                # print(f"low = {mjd_min - b + mjd_max - mjd_min}, high = {mjd_min}")
+                mjd_start = np.random.uniform(low = mjd_min - b + mjd_length, high = mjd_min)
+            else:
+                mjd_start = np.random.uniform(low = mjd_min, high = mjd_max - b)
+
+            x_samples = np.linspace(mjd_start, mjd_start + b, num_samples)
+
+
+            j = np.searchsorted(ar_mjd_all, x_samples) - 1
+
+            m = j >= ar_mjd_all.shape[0] -1
+
+            j[m] = ar_mjd_all.shape[0] -2
+
+            m = j < 0
+            j[m] = 0
+
+
+            d = (x_samples - ar_mjd_all[j]) / (ar_mjd_all[j + 1] - ar_mjd_all[j])
+
+
+            for iPassband in range(6):
+
+                fSampleValues = (1 - d) * sequence[iPassband][j] + sequence[iPassband][j + 1] * d
 
                 afRes[idx, afResOffset:afResOffset + num_samples] = fSampleValues
                 afResOffset += num_samples
@@ -102,6 +168,7 @@ def get_sequence_float32_sequence(q, num_iters, l_bandwidth, num_samples):
 
     """c"""
     return afRes
+
 
 
 def generate_dataset(meta, data, num_iters, l_bandwidth, num_samples):
@@ -204,7 +271,7 @@ DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
 DATA_DIR_BASEMENT = "D:\\XXX\\"
 DATA_DIR = DATA_DIR_PORTABLE
 
-l_bandwidth = [1, 2, 3, 5, 10, 30, 50, 100, 200, 400]
+l_bandwidth = [3, 30, 90]
 num_samples = 100
 
 pd.set_option('display.max_columns', 500)
@@ -344,7 +411,7 @@ if __name__ == "__main__":
 
 def dev_start():
     meta = pd.read_csv(DATA_DIR + 'training_set_metadata.csv')
-    data = pd.read_csv(DATA_DIR + 'training_set.csv')
+    # data = pd.read_csv(DATA_DIR + 'training_set.csv')
 
     MIN_MDJ = 59580.0338
     rFluxScaleDown = 15000.0/ 65535
@@ -359,18 +426,10 @@ def dev_start():
 
     flux_err = (data_c.uFluxErr * flux_err_scale_down * rFluxScaleDown).astype(np.float32)
 
-    # CONTINUE HERE
+
+    data = pd.DataFrame({'object_id': data_c.object_id, 'mjd' : mjd, 'flux':flux, 'flux_err': flux_err, 'passband': data_c.passband})
 
 
-    id = 248547
-
-    m = (data.object_id == id)
-
-    q = data[m]
-
-    q_c = data_c[m].copy()
-
-    q_c.dtypes
   
 
 
