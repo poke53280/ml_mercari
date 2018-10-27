@@ -32,8 +32,6 @@ def get_sequence_float32_sequence(q, num_iters, l_bandwidth, num_samples):
 
     ar_mjd_all = np.array(q.mjd, dtype = np.float32)
 
-    ar_mjd_all /= 1000.0
-
     mjd_min = np.min(ar_mjd_all)
     mjd_max = np.max(ar_mjd_all)
 
@@ -42,15 +40,11 @@ def get_sequence_float32_sequence(q, num_iters, l_bandwidth, num_samples):
     func_x = []
     func_y = []
 
-    flux_err_scale_down = 500/ 255.0
-
     for iPassband in range(6):
 
         q_b = q[q.passband == iPassband]
 
         ar_mjd = np.array(q_b.mjd, dtype = np.float32)
-
-        ar_mjd /= 1000.0
 
         ar_flux = np.array(q_b.flux, dtype = np.float32)
         ar_fluxerr = np.array(q_b.flux_err, dtype = np.float32)
@@ -420,6 +414,11 @@ def dev_start():
    
     data_c = pd.read_pickle(DATA_DIR + 'compact_training_data.pkl')
 
+    data_c = pd.read_pickle(DATA_DIR + 'xhu_test_2.pkl')
+
+   
+
+
     mjd = ((data_c.umjd / 10000.0) + MIN_MDJ).astype(np.float32)
     
     flux = ((data_c.uFlux * rFluxScaleDown) - 5000).astype(np.float32)
@@ -429,7 +428,10 @@ def dev_start():
 
     data = pd.DataFrame({'object_id': data_c.object_id, 'mjd' : mjd, 'flux':flux, 'flux_err': flux_err, 'passband': data_c.passband})
 
+    ids = np.unique(data.object_id)
 
+    m = data_c.object_id == ids[1291]
+    data[m]
   
 
 

@@ -29,7 +29,7 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 500)
 
 
-filename_base = DATA_DIR + "df_t_xhu_Merged.pkl"
+filename_base = DATA_DIR + "df_t_mmeat_0.pkl"
 
 
 
@@ -128,7 +128,10 @@ print('Full AUC score %.3f' % roc_auc_score(y, oof_preds))
 
 # 2/ 3 very similar
 
- 
+# Then lost it.
+# Trying to pick up on same.
+#
+
 
 
 

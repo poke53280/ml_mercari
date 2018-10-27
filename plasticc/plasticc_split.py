@@ -61,14 +61,14 @@ def main():
     print(f"Do splits: {do_splits}")
 
     if isTest:
-        data = pd.read_pickle(DATA_DIR + 'compact_test_data.pkl')
+        data = pd.read_csv(DATA_DIR + 'test_set.csv')
         meta = pd.read_csv(DATA_DIR + 'test_set_metadata.csv')
 
         datafile_prefix = DATA_DIR + desc + "_test"
         metafile_prefix = DATA_DIR + desc + "_test_meta"
 
     else:
-        data = pd.read_pickle(DATA_DIR + 'compact_training_data.pkl')
+        data = pd.read_csv(DATA_DIR + 'training_set.csv')
         meta = pd.read_csv(DATA_DIR + 'training_set_metadata.csv')
 
         datafile_prefix = DATA_DIR + desc + "_training"
