@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import gc
 import h5py
+import os
+from importlib import reload
 
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 500)
@@ -12,6 +14,16 @@ pd.set_option('display.max_colwidth', 500)
 DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
 DATA_DIR_BASEMENT = "D:\\XXX\\"
 DATA_DIR = DATA_DIR_PORTABLE
+
+local_dir = os.getenv('LOCAL_PY_DIR')
+assert local_dir is not None, "Set environment variable LOCAL_PY_DIR to parent folder of ai_lab_datapipe folder. Instructions in code."
+
+print(f"Local python top directoy is set to {local_dir}")
+os.chdir(local_dir)
+
+from ml_mercari.plasticc.plasticc_inner import process_single_item_inner0
+
+from ml_mercari.general.TimeSlotAllocator import *
 
 
 #######################################################################
@@ -77,7 +89,6 @@ del idx
 gc.collect()
 
 
-
 def get_data(idx_chunk, idx_start_object, idx_end_object, idx_start_of_first):
 
     assert idx_end_object > 0
@@ -100,19 +111,7 @@ def get_data(idx_chunk, idx_start_object, idx_end_object, idx_start_of_first):
 
 """c"""  
 
-####################################################################################
-#
-#    process_single_item()
-#
 
-
-def process_single_item(df, idx_begin, idx_end):
-    an_id = df.object_id.values[idx_begin:idx_end]
-
-    assert an_id.min() == an_id.max()
-
-    return an_id.shape[0]
-"""c"""
 
 
 ####################################################################################
@@ -140,7 +139,7 @@ def processChunk(df, idx_chunk, idx_start_of_first):
         idx_begin = from_idx - idx_start_of_first
         idx_end   = to_idx - idx_start_of_first
 
-        nRowCount += process_single_item(df, idx_begin, idx_end)
+        nRowCount += process_single_item_inner0(df, idx_begin, idx_end)
     
     return nRowCount
 
@@ -172,7 +171,7 @@ gc.collect()
 
 print(f"Row count in dataset: {idx[-1]}. Number of objects: {idx.shape[0]}")
 
-n_split = 1
+n_split = 300
 
 num_chunks = 400
 
@@ -186,14 +185,12 @@ assert len(l_chunk_idx) == num_chunks
 
 print(f"Number of chunks: {num_chunks}")
 
-
 i_split = 0
 assert i_split >= 0 and i_split < n_split
 processChunks = all_splits[i_split]
 
 
 c = process_chunk_set(l_chunk_idx, processChunks)
-
 
 
 def process_chunk_set(l_chunk_idx, processChunks):
