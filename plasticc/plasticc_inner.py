@@ -1,13 +1,15 @@
 
+import numpy as np
+
 
 ####################################################################################
 #
 #    process_single_item_inner0()
 #
 
-def process_single_item_inner0(df, idx_begin, idx_end):
+def process_single_item_inner0(df, idx_begin, idx_end, data_out):
     
-    # an_id = df.object_id.values[idx_begin:idx_end]
+    an_id = df.object_id.values[idx_begin:idx_end]
 
     ar_mjd = df.mjd.values[idx_begin:idx_end]
     au_passband = df.passband.values[idx_begin:idx_end]
@@ -17,14 +19,12 @@ def process_single_item_inner0(df, idx_begin, idx_end):
 
     ais_detected = df.detected.values[idx_begin:idx_end]
 
-    # assert an_id.min() == an_id.max()
+    assert an_id.min() == an_id.max()
 
     #assert 4 == 5
 
-    return an_id.shape[0]
+    return ar_mjd.shape[0]
 """c"""
-
-# Early stage load/preprocess: Sort by passband after object, then mjd.
 
 # Append counter for new passband? Ref new object et.c.
 

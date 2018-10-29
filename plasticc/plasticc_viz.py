@@ -33,9 +33,16 @@ from ml_mercari.general.TimeSlotAllocator import *
 
 def read_data(filename):
 
-    return pd.read_csv(filename,
+    df = pd.read_csv(filename,
                 usecols=["object_id", "mjd", "passband", "flux", "flux_err", "detected"],
                 dtype = {'object_id': np.int32, 'mjd':np.float32, 'passband':np.uint8, 'flux':np.float32, 'flux_err': np.float32, 'detected': np.bool})
+
+
+    print("Sorting...")
+    df.sort_values(by = ['object_id', 'passband', 'mjd'], inplace = True)
+    df = df.reset_index(drop=True)
+
+    return df
 
 """c"""
 
@@ -61,6 +68,10 @@ def get_run_length_stops(id_s):
 
 data_test = read_data(DATA_DIR + 'test_set.csv')
 data_train = read_data(DATA_DIR + 'training_set.csv')
+
+gc.collect()
+
+print("Concatenating...")
 
 df = pd.concat([data_test, data_train], axis = 0 )
 
@@ -119,13 +130,17 @@ def get_data(idx_chunk, idx_start_object, idx_end_object, idx_start_of_first):
 #    processChunk()
 #
 
-def processChunk(df, idx_chunk, idx_start_of_first):
+def processChunk(df, idx_chunk, idx_start_of_first, data_out):
 
-    print(f"Objects in chunk: {idx_chunk.shape[0]}")
-    
+    num_objects = idx_chunk.shape[0]
+
+    print(f"Objects in chunk: {num_objects}")
+
+    assert data_out.shape[0] == num_objects
+
     nRowCount = 0
 
-    for loc_obj_id in range (0, idx_chunk.shape[0]):
+    for loc_obj_id in range (0, num_objects):
 
         if loc_obj_id == 0:
             from_idx = 0
@@ -139,7 +154,7 @@ def processChunk(df, idx_chunk, idx_start_of_first):
         idx_begin = from_idx - idx_start_of_first
         idx_end   = to_idx - idx_start_of_first
 
-        nRowCount += process_single_item_inner0(df, idx_begin, idx_end)
+        nRowCount += process_single_item_inner0(df, idx_begin, idx_end, data_out[loc_obj_id, :])
     
     return nRowCount
 
@@ -190,12 +205,20 @@ assert i_split >= 0 and i_split < n_split
 processChunks = all_splits[i_split]
 
 
-c = process_chunk_set(l_chunk_idx, processChunks)
+c, l = process_chunk_set(l_chunk_idx, processChunks)
 
+
+
+#######################################################
+#
+#    process_chunk_set
+#
 
 def process_chunk_set(l_chunk_idx, processChunks):
     
     nElementCount = 0
+
+    l_chunk_data_out = []
 
     for iChunk in processChunks:
 
@@ -213,15 +236,21 @@ def process_chunk_set(l_chunk_idx, processChunks):
 
         df = get_data(idx_chunk, idx_start_object, idx_end_object, idx_start_of_first)
 
-        rowcount = processChunk(df, idx_chunk, idx_start_of_first)
+        DATA_OUT_SIZE = 100
+       
+        data_out = np.empty(shape = (idx_chunk.shape[0], DATA_OUT_SIZE), dtype = np.float32)
+
+        rowcount = processChunk(df, idx_chunk, idx_start_of_first, data_out)
 
         assert rowcount == df.shape[0]
+
+        l_chunk_data_out.append(data_out)
 
         #print(f"Chunk {iChunk +1}/{num_chunks} with {idx_chunk.shape[0]} object(s) and {df.shape[0]} element(s). Time = {dT:.1f}s")
 
         nElementCount += df.shape[0]
 
-    return nElementCount
+    return nElementCount, l_chunk_data_out
         
 
 """c"""
