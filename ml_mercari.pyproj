@@ -146,6 +146,9 @@
     <Compile Include="plasticc\plasticc_compact.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="plasticc\plasticc_import.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="plasticc\plasticc_inner.py">
       <SubType>Code</SubType>
     </Compile>

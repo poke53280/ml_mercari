@@ -270,6 +270,8 @@ num_samples = 100
 
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 500)
+pd.set_option('display.max_colwidth', 500)
+
 
 
 

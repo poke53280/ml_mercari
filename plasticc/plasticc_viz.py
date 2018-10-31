@@ -2,103 +2,108 @@
 import numpy as np
 import pandas as pd
 import gc
-import h5py
-import os
-from importlib import reload
+from datetime import datetime
 
-pd.set_option('display.max_columns', 500)
-pd.set_option('display.width', 500)
-
-pd.set_option('display.max_colwidth', 500)
+from scipy.stats import skew, kurtosis
 
 DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
 DATA_DIR_BASEMENT = "D:\\XXX\\"
 DATA_DIR = DATA_DIR_PORTABLE
 
-local_dir = os.getenv('LOCAL_PY_DIR')
-assert local_dir is not None, "Set environment variable LOCAL_PY_DIR to parent folder of ai_lab_datapipe folder. Instructions in code."
-
-print(f"Local python top directoy is set to {local_dir}")
-os.chdir(local_dir)
-
-from ml_mercari.plasticc.plasticc_inner import process_single_item_inner0
-
-from ml_mercari.general.TimeSlotAllocator import *
-
-
-#######################################################################
-#
-#     read_data
-#
-
-def read_data(filename):
-
-    df = pd.read_csv(filename,
-                usecols=["object_id", "mjd", "passband", "flux", "flux_err", "detected"],
-                dtype = {'object_id': np.int32, 'mjd':np.float32, 'passband':np.uint8, 'flux':np.float32, 'flux_err': np.float32, 'detected': np.bool})
-
-
-    print("Sorting...")
-    df.sort_values(by = ['object_id', 'passband', 'mjd'], inplace = True)
-    df = df.reset_index(drop=True)
-
-    return df
-
-"""c"""
-
-#######################################################################
-#
-#     get_run_length_stops
-#
-#       Input: sorted array
-#
-#      Returns one beyond index for all value firsts
-
-def get_run_length_stops(id_s):
-
-    m = np.diff(id_s) != 0
-    a = np.where(m)[0]
-    a = a + 1
-    a = np.append(a, id_s.shape[0])
-
-    a = a.astype(dtype = np.int32)
-
-    return a
-"""c"""
-
-data_test = read_data(DATA_DIR + 'test_set.csv')
-data_train = read_data(DATA_DIR + 'training_set.csv')
-
-gc.collect()
-
-print("Concatenating...")
-
-df = pd.concat([data_test, data_train], axis = 0 )
-
-del data_test
-del data_train
-gc.collect()
-
-idx = get_run_length_stops(df.object_id)
-
-print (df.shape)
-
-df_idx = pd.DataFrame(idx)
-
 filename = DATA_DIR + 'data.h5'
 
-store = pd.HDFStore(filename)
 
-store.put('data', df)
-store.put('idx', df_idx)
+####################################################################################
+#
+#    process_single_get_data_out_size()
+#
 
-store.close()
+def process_single_get_data_out_size():
+    return 52 * 6
 
-del df
-del idx
 
-gc.collect()
+####################################################################################
+#
+#    process_single_get_data_out_type()
+#
 
+
+def process_single_get_data_out_type():
+    return np.float32
+
+####################################################################################
+#
+#    get_stats()
+#
+
+def get_stats(afValues, afData, b):
+    stats = np.array([afValues.shape[0], afValues.min(), afValues.max(), afValues.mean(), np.median(afValues), afValues.std(), afValues.sum(),skew(afValues), kurtosis(afValues), np.percentile(afValues, q = 5),  np.percentile(afValues, q = 25), np.percentile(afValues, q = 75),  np.percentile(afValues, q = 95)])
+
+    afData[b: b + stats.shape[0]] = stats
+
+    return b + stats.shape[0]
+
+####################################################################################
+#
+#    sample_and_get_stats()
+#
+
+def sample_and_get_stats(x, y, num_samples, afData, iWrite):
+
+    x_min = np.min(x)
+    x_max = np.max(x)
+    
+    slot_x = np.linspace(x_min, x_max, num_samples, endpoint=True)
+
+    y_out = np.interp(slot_x, x, y, left=None, right=None, period=None)
+
+    iWrite = get_stats(y_out, afData, iWrite)
+
+    return iWrite
+
+
+####################################################################################
+#
+#    process_single_item_inner0()
+#
+
+def process_single_item_inner0(df, idx_begin, idx_end, data_out):
+    
+
+    all_bands = np.array([0, 1, 2, 3, 4, 5])
+
+    start_indinces = np.searchsorted(df.iloc[idx_begin:idx_end].passband.values, all_bands, side = 'left')
+
+    stop_indices = start_indinces[1:]
+    stop_indices = np.append(stop_indices, df.iloc[idx_begin:idx_end].passband.shape[0])
+
+    iWrite = 0
+
+    for b, e in zip (start_indinces, stop_indices):
+
+        v = df.iloc[idx_begin:idx_end][b:e]
+
+        assert e > b, "e > b"
+
+        iWrite = get_stats(v.flux.values, data_out, iWrite)
+        iWrite = get_stats(v.flux_err.values, data_out, iWrite)
+
+        iWrite = get_stats(v.mjd.values - np.min(v.mjd.values), data_out, iWrite)
+
+        num_samples = 20
+
+        iWrite = sample_and_get_stats(v.mjd.values, v.flux.values, num_samples, data_out, iWrite)
+
+
+"""c"""
+
+
+
+
+####################################################################################
+#
+#    get_data()
+#
 
 def get_data(idx_chunk, idx_start_object, idx_end_object, idx_start_of_first):
 
@@ -124,7 +129,6 @@ def get_data(idx_chunk, idx_start_object, idx_end_object, idx_start_of_first):
 
 
 
-
 ####################################################################################
 #
 #    processChunk()
@@ -138,9 +142,11 @@ def processChunk(df, idx_chunk, idx_start_of_first, data_out):
 
     assert data_out.shape[0] == num_objects
 
-    nRowCount = 0
-
     for loc_obj_id in range (0, num_objects):
+
+        if loc_obj_id % 50 == 0:
+            print(f"Processing {loc_obj_id}/ {num_objects}...")
+
 
         if loc_obj_id == 0:
             from_idx = 0
@@ -154,25 +160,65 @@ def processChunk(df, idx_chunk, idx_start_of_first, data_out):
         idx_begin = from_idx - idx_start_of_first
         idx_end   = to_idx - idx_start_of_first
 
-        nRowCount += process_single_item_inner0(df, idx_begin, idx_end, data_out[loc_obj_id, :])
+        process_single_item_inner0(df, idx_begin, idx_end, data_out[loc_obj_id, :])
     
-    return nRowCount
+ 
+
+#######################################################
+#
+#    process_chunk_set
+#
+
+def process_chunk_set(l_chunk_idx, processChunks):
+    
+    datasize_per_object = process_single_get_data_out_size()
+    data_out_type = process_single_get_data_out_type()
+
+    nElementCount = 0
+
+    l_chunk_data_out = []
+
+    for iChunk in processChunks:
+
+        idx_chunk = l_chunk_idx[iChunk]
+
+        # Start of first object
+        if iChunk == 0:
+            idx_start_of_first = 0
+        else:
+            idx_start_of_first = l_chunk_idx[iChunk -1][-1]
+
+        # Process objects in chunk
+        idx_start_object = 0
+        idx_end_object = idx_chunk.shape[0]
+
+        # Read in all chunk data in dataframe
+
+        df = get_data(idx_chunk, idx_start_object, idx_end_object, idx_start_of_first)
+
+        # Allocate out memory
+       
+        data_out = np.empty(shape = (idx_chunk.shape[0], datasize_per_object), dtype = data_out_type)
+
+        processChunk(df, idx_chunk, idx_start_of_first, data_out)
+
+        l_chunk_data_out.append(data_out)
+
+        #print(f"Chunk {iChunk +1}/{num_chunks} with {idx_chunk.shape[0]} object(s) and {df.shape[0]} element(s). Time = {dT:.1f}s")
+
+        nElementCount += df.shape[0]
+
+    return nElementCount, l_chunk_data_out
+        
+
+"""c"""
+
 
 ####################################################################################
 #
 # Reset. load
 #
 
-import numpy as np
-import pandas as pd
-import gc
-from datetime import datetime
-
-DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
-DATA_DIR_BASEMENT = "D:\\XXX\\"
-DATA_DIR = DATA_DIR_PORTABLE
-
-filename = DATA_DIR + 'data.h5'
 
 store = pd.HDFStore(filename)
 
@@ -186,9 +232,9 @@ gc.collect()
 
 print(f"Row count in dataset: {idx[-1]}. Number of objects: {idx.shape[0]}")
 
-n_split = 300
+n_split = 3000
 
-num_chunks = 400
+num_chunks = 40000
 
 an = np.array(range(num_chunks))
 
@@ -205,118 +251,20 @@ assert i_split >= 0 and i_split < n_split
 processChunks = all_splits[i_split]
 
 
+start = datetime.now()
+
 c, l = process_chunk_set(l_chunk_idx, processChunks)
 
+end = datetime.now()
 
+dT = end - start
+dSeconds = dT.total_seconds()
 
-#######################################################
-#
-#    process_chunk_set
-#
-
-def process_chunk_set(l_chunk_idx, processChunks):
-    
-    nElementCount = 0
-
-    l_chunk_data_out = []
-
-    for iChunk in processChunks:
-
-        idx_chunk = l_chunk_idx[iChunk]
-
-        # Start of first object
-        if iChunk == 0:
-            idx_start_of_first = 0
-        else:
-            idx_start_of_first = l_chunk_idx[iChunk -1][-1]
-
-        # All objects in chunk
-        idx_start_object = 0
-        idx_end_object = idx_chunk.shape[0]
-
-        df = get_data(idx_chunk, idx_start_object, idx_end_object, idx_start_of_first)
-
-        DATA_OUT_SIZE = 100
-       
-        data_out = np.empty(shape = (idx_chunk.shape[0], DATA_OUT_SIZE), dtype = np.float32)
-
-        rowcount = processChunk(df, idx_chunk, idx_start_of_first, data_out)
-
-        assert rowcount == df.shape[0]
-
-        l_chunk_data_out.append(data_out)
-
-        #print(f"Chunk {iChunk +1}/{num_chunks} with {idx_chunk.shape[0]} object(s) and {df.shape[0]} element(s). Time = {dT:.1f}s")
-
-        nElementCount += df.shape[0]
-
-    return nElementCount, l_chunk_data_out
-        
-
-"""c"""
-
-print(f"Read elements: {nElementCount}")
-
-assert nElementCount == idx[-1]
-
-total_end = datetime.now()
-
-dT_total = total_end - total_start
-
-dT_total = dT_total.total_seconds()
-
-print(f"Total time = {dT_total:.1f}s")
+print(f"Seconds {dSeconds} for 1 split out of {n_split}")
 
 
 
 
-
-
-
-
-
-
-
-    res_G = np.empty(shape = num_rows, dtype = np.uint16)
-    res_mjd = np.empty(shape = num_rows, dtype = np.uint16)
-
-    for idx in range(num_items):
-
-        if idx % 100 == 0:
-            print(f"Processing item {idx}/{num_items}...")
-
-        start_idx = idx_array[idx]
-
-        if idx == num_items -1:
-            end_idx = num_rows
-        else:
-            end_idx = idx_array[idx +1]
-
-        armjd = mjd_s[start_idx: end_idx]
-
-        armjd -= np.min(armjd)
-
-        m = np.diff(armjd) > 2
-
-        cluster = np.concatenate([[0], np.cumsum(m)]) 
-
-        res_G[start_idx: end_idx] = cluster
-
-        nClusters = cluster.max()
-
-        for c in range (nClusters):
-            m = (cluster == c)
-
-            time_adjusted = np.min(armjd[m])
-            time_adjusted = int (0.5 + time_adjusted)
-
-            res_mjd[start_idx:end_idx][m] = time_adjusted
-    """c""" 
-
-    print(f"{res_mjd.shape}")
-
-# data = data.assign(G = res_G)
-# data = data.assign(T_ADJ = res_mjd)
 
 if __name__ == "__main__":
     main()
