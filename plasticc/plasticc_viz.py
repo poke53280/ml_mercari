@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import gc
 from datetime import datetime
+import sys
 
 from scipy.stats import skew, kurtosis
 
@@ -98,14 +99,12 @@ def process_single_item_inner0(df, idx_begin, idx_end, data_out):
 """c"""
 
 
-
-
 ####################################################################################
 #
 #    get_data()
 #
 
-def get_data(idx_chunk, idx_start_object, idx_end_object, idx_start_of_first):
+def get_data(store, idx_chunk, idx_start_object, idx_end_object, idx_start_of_first):
 
     assert idx_end_object > 0
     assert idx_start_object < idx_end_object
@@ -169,7 +168,7 @@ def processChunk(df, idx_chunk, idx_start_of_first, data_out):
 #    process_chunk_set
 #
 
-def process_chunk_set(l_chunk_idx, processChunks):
+def process_chunk_set(store, l_chunk_idx, processChunks):
     
     datasize_per_object = process_single_get_data_out_size()
     data_out_type = process_single_get_data_out_type()
@@ -194,7 +193,7 @@ def process_chunk_set(l_chunk_idx, processChunks):
 
         # Read in all chunk data in dataframe
 
-        df = get_data(idx_chunk, idx_start_object, idx_end_object, idx_start_of_first)
+        df = get_data(store, idx_chunk, idx_start_object, idx_end_object, idx_start_of_first)
 
         # Allocate out memory
        
@@ -216,56 +215,63 @@ def process_chunk_set(l_chunk_idx, processChunks):
 
 ####################################################################################
 #
-# Reset. load
 #
 
+def run(i_split):
 
-store = pd.HDFStore(filename)
+    store = pd.HDFStore(filename)
 
-df_idx = pd.read_hdf(store, 'idx')
+    df_idx = pd.read_hdf(store, 'idx')
 
-idx = np.array(df_idx[0], dtype = np.int32)
+    idx = np.array(df_idx[0], dtype = np.int32)
 
-del df_idx
+    del df_idx
 
-gc.collect()
+    gc.collect()
 
-print(f"Row count in dataset: {idx[-1]}. Number of objects: {idx.shape[0]}")
+    print(f"Row count in dataset: {idx[-1]}. Number of objects: {idx.shape[0]}")
 
-n_split = 3000
+    n_split = 500
 
-num_chunks = 40000
+    num_chunks = 500
 
-an = np.array(range(num_chunks))
+    an = np.array(range(num_chunks))
 
-all_splits = np.array_split(an, n_split)
+    all_splits = np.array_split(an, n_split)
 
-l_chunk_idx = np.array_split(idx, num_chunks)
+    l_chunk_idx = np.array_split(idx, num_chunks)
 
-assert len(l_chunk_idx) == num_chunks
+    assert len(l_chunk_idx) == num_chunks
 
-print(f"Number of chunks: {num_chunks}")
+    print(f"Number of chunks: {num_chunks}")
 
-i_split = 0
-assert i_split >= 0 and i_split < n_split
-processChunks = all_splits[i_split]
-
-
-start = datetime.now()
-
-c, l = process_chunk_set(l_chunk_idx, processChunks)
-
-end = datetime.now()
-
-dT = end - start
-dSeconds = dT.total_seconds()
-
-print(f"Seconds {dSeconds} for 1 split out of {n_split}")
+    assert i_split >= 0 and i_split < n_split
+    processChunks = all_splits[i_split]
 
 
+    start = datetime.now()
+
+    c, l = process_chunk_set(store, l_chunk_idx, processChunks)
+
+    end = datetime.now()
+
+    dT = end - start
+    dSeconds = dT.total_seconds()
+
+    print(f"Seconds {dSeconds} for 1 split out of {n_split}")
 
 
 
 if __name__ == "__main__":
-    main()
+    l = []
+    for arg in sys.argv[1:]:
+        l.append(arg)
+
+    i_split = int(l[0])
+
+    print(f"Running split {i_split}")
+
+    run (i_split)
+    
+
 
