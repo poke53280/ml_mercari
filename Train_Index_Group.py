@@ -1,6 +1,10 @@
 
 
- 
+import pandas as pd
+import numpy as np
+
+
+
 def full_sum(df):
     l_b = list()
 
@@ -18,10 +22,21 @@ def full_sum(df):
 """c"""
 
 
-df = pd.DataFrame( {'a':['A','A','B','B','B','C'], 'b':[1,2,5,5,4,6], 'c': [9,5,6,4,2,5]})
-
-q = df.groupby('a').apply(full_sum)
+num_objects = 90
 
 
-q
+df = pd.DataFrame({'id': np.random.choice(range(num_objects), 1000),
+                   'a': np.random.randn(1000),
+                   'b': np.random.randn(1000),
+                   'c': np.random.randn(1000),
+                   'd': np.random.randn(1000),
+                   'N': np.random.randint(100, 1000, (1000))})
 
+
+
+g = df.groupby('id')
+
+g.agg(['sum'])
+
+
+q = df[df.id == 89]

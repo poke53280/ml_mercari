@@ -5,7 +5,9 @@ from scipy.stats import skew, kurtosis
 
 
 
-
+DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
+DATA_DIR_BASEMENT = "D:\\XXX\\"
+DATA_DIR = DATA_DIR_PORTABLE
 
 # jump start from scratch
 
@@ -17,7 +19,7 @@ m = df.object_id == 130659834
 df[m]
 
 
-q = df[m].sort_values(by = ['passband', 'mjd'])
+q = df[m].sort_values(by = ['mjd'])
 
 df = q
 

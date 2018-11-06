@@ -12,6 +12,8 @@ from sklearn.metrics import roc_auc_score
 from lightgbm import LGBMClassifier
 
 
+
+
 DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
 DATA_DIR_BASEMENT = "D:\\XXX\\"
 DATA_DIR = DATA_DIR_PORTABLE
@@ -33,7 +35,6 @@ def process_single_get_data_out_size():
 #    process_single_get_data_out_type()
 #
 
-
 def process_single_get_data_out_type():
     return np.float32
 
@@ -43,7 +44,7 @@ def process_single_get_data_out_type():
 #
 
 def get_stats(afValues, afData, b):
-    stats = np.array([afValues.shape[0], afValues.min(), afValues.max(), afValues.mean(), np.median(afValues), afValues.std(), afValues.sum(),skew(afValues), kurtosis(afValues), np.percentile(afValues, q = 5),  np.percentile(afValues, q = 25), np.percentile(afValues, q = 75),  np.percentile(afValues, q = 95)])
+    stats = np.array([afValues.shape[0], afValues.min(), afValues.max(), afValues.mean(), np.median(afValues), afValues.std(), afValues.sum(), skew(afValues), kurtosis(afValues),np.percentile(afValues, q = 5), np.percentile(afValues, q = 25), np.percentile(afValues, q = 75),  np.percentile(afValues, q = 95)])
 
     afData[b: b + stats.shape[0]] = stats
 
@@ -99,7 +100,6 @@ def process_single_item_inner0(df, idx_begin, idx_end, data_out):
         num_samples = 20
 
         iWrite = sample_and_get_stats(v.mjd.values, v.flux.values, num_samples, data_out, iWrite)
-
 
 """c"""
 
@@ -227,7 +227,7 @@ def train():
 
         print (n_fold)
 
-        clf = LGBMClassifier(n_estimators=200, learning_rate=0.01, max_depth=5, num_leaves = 31, silent=-1, verbose=-1)
+        clf = LGBMClassifier(n_estimators=20000, learning_rate=0.01, num_leaves = 255, silent=-1, verbose=-1)
 
 
         clf.fit(trn_x, trn_y,  eval_set= [(trn_x, trn_y), (val_x, val_y)], eval_metric='auc', verbose=25, early_stopping_rounds=400)  
