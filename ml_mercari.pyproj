@@ -167,6 +167,9 @@
     <Compile Include="plasticc\plasticc_nn.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="plasticc\plasticc_numba.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="plasticc\plasticc_predict.py">
       <SubType>Code</SubType>
     </Compile>
