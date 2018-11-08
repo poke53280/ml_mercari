@@ -176,6 +176,9 @@
     <Compile Include="plasticc\plasticc_split.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="plasticc\plasticc_stratify.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="plasticc\plasticc_viz.py">
       <SubType>Code</SubType>
     </Compile>

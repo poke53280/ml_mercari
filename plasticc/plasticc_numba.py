@@ -10,6 +10,47 @@ import gc
 
 from numba import jit
 
+
+def getNumTargets(anTarget, itarget, num_items):
+
+    m = (anTarget == itarget)
+    
+    assert m.sum() >= num_items, f"Not enough target = {itarget}: {m.sum()} < {num_items}"
+    
+    cumsum = np.cumsum(m)
+    idx = np.searchsorted(cumsum, num_items)
+
+    m[idx +1:] = False
+
+    return m
+
+"""c"""
+
+
+# Equal amounts of two targets, maximum number
+
+def getBalancedSplit(anTarget, itarget0, itarget1):
+
+    ntarget0 = (anTarget == itarget0).sum()
+    ntarget1 = (anTarget == itarget1).sum()
+
+    nTargetsForClass = np.min([ntarget0, ntarget1])
+
+    assert nTargetsForClass > 0
+
+    print(f"Extracting {nTargetsForClass} item(s) of either target type")
+
+    m0 = getNumTargets(anTarget, itarget0, nTargetsForClass)
+    m1 = getNumTargets(anTarget, itarget1, nTargetsForClass)
+
+    m_both = m0 | m1
+
+    return m_both
+
+"""c"""
+
+
+
 #######################################################################
 #
 #     get_run_length_stops
@@ -31,8 +72,6 @@ def get_run_length_stops(id_s):
 
 #@jit(nopython=True)
 def generate_fast(data_sample, a_all, y_all, p_all, begin_offset, lengths, num_objects):
-
-    start = datetime.now()
 
     for i in range(num_objects):
         min = begin_offset[i]
@@ -87,13 +126,54 @@ def generate_fast(data_sample, a_all, y_all, p_all, begin_offset, lengths, num_o
         data_sample[i, :] = res
 
 
-    end = datetime.now()
 
-    dT = end - start
-    dSeconds = dT.total_seconds()
+def generate_sets(df_meta, df, num_sets):
 
-    print(f"Seconds {dSeconds}")
 
+    y = np.array (df_meta.target, dtype = np.int32)
+
+    idx = get_run_length_stops(df.object_id.values)
+
+    idx = np.insert(idx, 0, 0)
+
+    begin_offset = idx[:-1]
+    lengths = np.diff(idx)
+
+    num_objects = begin_offset.shape[0]
+
+    del idx
+
+    a_all = df['mjd'].values.astype(dtype = np.float32)
+    p_all = df['passband'].values.astype(dtype = np.int32)
+
+    y_flux = df['flux'].values.astype(dtype = np.float32)
+    y_flux_err = df['flux_err'].values.astype(dtype = np.float32)
+
+    y_all = np.random.normal(y_flux, y_flux_err).astype(dtype = np.float32)
+
+    data = np.empty((num_sets *  num_objects, 1200), dtype = np.float32)
+
+    generate_fast(data[0:num_objects, :], a_all, y_all, p_all, begin_offset, lengths, num_objects)
+
+
+    for i in range(num_sets):
+        if i % 10 == 0:
+            print(f"Generating {i+1}/ {num_sets}")
+
+        y_all = np.random.normal(y_flux, y_flux_err)
+
+        start_idx = i * num_objects
+        end_idx = start_idx + num_objects
+
+        generate_fast(data[start_idx:end_idx, :], a_all, y_all, p_all, begin_offset, lengths, num_objects)
+
+    
+    y_tot = np.tile(y, num_sets)
+
+    y = y_tot
+
+    return data, y
+"""c"""
 
 
 
@@ -104,61 +184,38 @@ DATA_DIR = DATA_DIR_PORTABLE
 df_meta = pd.read_csv(DATA_DIR + "training_set_metadata.csv")
 df = pd.read_csv(DATA_DIR + "training_set.csv")
 
-num_sets = 500
 
-y = np.array (df_meta.target, dtype = np.int32)
+num_sets = 60
 
-idx = get_run_length_stops(df.object_id.values)
-
-idx = np.insert(idx, 0, 0)
-
-begin_offset = idx[:-1]
-lengths = np.diff(idx)
-
-num_objects = begin_offset.shape[0]
-
-del idx
-
-a_all = df['mjd'].values.astype(dtype = np.float32)
-p_all = df['passband'].values.astype(dtype = np.int32)
-
-y_flux = df['flux'].values.astype(dtype = np.float32)
-y_flux_err = df['flux_err'].values.astype(dtype = np.float32)
-
-y_all = np.random.normal(y_flux, y_flux_err).astype(dtype = np.float32)
-
-data = np.empty( ( (num_sets + 1) *  num_objects, 1200), dtype = np.float32)
-
-generate_fast(data[0:num_objects, :], a_all, y_all, p_all, begin_offset, lengths, num_objects)
+data, y = generate_sets(df_meta, df, num_sets)
 
 
-for i in range(num_sets):
-    print(f"Generating {i+1}/ {num_sets}")
-    y_all = np.random.normal(y_flux, y_flux_err)
-
-    start_idx = (i + 1) * num_objects
-    end_idx = start_idx + num_objects
-
-    generate_fast(data[start_idx:end_idx, :], a_all, y_all, p_all, begin_offset, lengths, num_objects)
-
-    
-y_tot = np.tile(y, num_sets + 1)
-
-y = y_tot
+num_all = y.shape[0]
 
 
-m = y == 90
+ntarget0 = (y == 90).sum()
+ntarget1 = (y == 52).sum()
 
-y[m] = 1
-y[~m] = 0
+nTargetsForClass = np.min([ntarget0, ntarget1])
+
+print(f"# Elements per class: {nTargetsForClass}")
+
+m0 = getNumTargets (y, 90, nTargetsForClass)
+m1 = getNumTargets (y, 52, nTargetsForClass)
+
+y[m0] = 1
+y[m1] = 0
+
+m = m0 | m1
+
+y = y[m]
+data = data[m]
+
+print(f"Element reduction {num_all} => 2 x {nTargetsForClass}")
 
 
-num_tot = y.shape[0]
 
-num_pos = m.sum()
-num_neg = num_tot - num_pos
-
-r_scale_pos = num_neg / num_pos
+gc.collect()
 
 num_splits = 8
 
@@ -173,7 +230,7 @@ for n_fold, (trn_idx, val_idx) in enumerate(folds.split(data)):
 
     print (f"Fold {n_fold + 1} / {num_splits}")
 
-    clf = LGBMClassifier(n_estimators=20000, learning_rate=0.01, num_leaves = 255, silent=-1, verbose=-1, scale_pos_weight = r_scale_pos)
+    clf = LGBMClassifier(n_estimators=20000, learning_rate=0.01, num_leaves = 255, silent=-1, verbose=-1)
 
     clf.fit(trn_x, trn_y,  eval_set= [(trn_x, trn_y), (val_x, val_y)], eval_metric='auc', verbose=10, early_stopping_rounds=400)  
 

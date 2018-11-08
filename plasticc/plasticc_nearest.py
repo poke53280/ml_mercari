@@ -227,3 +227,28 @@ Training until validation scores don't improve for 400 rounds.
 [775]	valid_0's auc: 0.730177	valid_1's auc: 0.723935
 
 
+# on + 500 same as old:
+[10]	valid_0's auc: 0.699383	valid_1's auc: 0.696548
+[20]	valid_0's auc: 0.705956	valid_1's auc: 0.702758
+[30]	valid_0's auc: 0.709452	valid_1's auc: 0.705933
+[40]	valid_0's auc: 0.711771	valid_1's auc: 0.708221
+[50]	valid_0's auc: 0.714044	valid_1's auc: 0.710468
+[60]	valid_0's auc: 0.71573	valid_1's auc: 0.712051
+[70]	valid_0's auc: 0.717299	valid_1's auc: 0.713439
+[80]	valid_0's auc: 0.718761	valid_1's auc: 0.714747
+[90]	valid_0's auc: 0.720308	valid_1's auc: 0.716098
+[100]	valid_0's auc: 0.721582	valid_1's auc: 0.717329
+[110]	valid_0's auc: 0.722907	valid_1's auc: 0.718582
+[120]	valid_0's auc: 0.724117	valid_1's auc: 0.71971
+[130]	valid_0's auc: 0.725249	valid_1's auc: 0.720735
+[140]	valid_0's auc: 0.726342	valid_1's auc: 0.72175
+[150]	valid_0's auc: 0.727436	valid_1's auc: 0.722683
+[160]	valid_0's auc: 0.728543	valid_1's auc: 0.723647
+[170]	valid_0's auc: 0.729661	valid_1's auc: 0.724589
+[180]	valid_0's auc: 0.730673	valid_1's auc: 0.725539
+[190]	valid_0's auc: 0.731646	valid_1's auc: 0.726436
+[200]	valid_0's auc: 0.732543	valid_1's auc: 0.72727
+[210]	valid_0's auc: 0.733444	valid_1's auc: 0.728074
+[220]	valid_0's auc: 0.734327	valid_1's auc: 0.728849
+
+
