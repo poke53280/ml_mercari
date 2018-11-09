@@ -130,7 +130,7 @@ def generate_fast(data_sample, a_all, y_all, p_all, begin_offset, lengths, num_o
 def generate_sets(df_meta, df, num_sets):
 
 
-    y = np.array (df_meta.target, dtype = np.int32)
+    
 
     idx = get_run_length_stops(df.object_id.values)
 
@@ -168,11 +168,11 @@ def generate_sets(df_meta, df, num_sets):
         generate_fast(data[start_idx:end_idx, :], a_all, y_all, p_all, begin_offset, lengths, num_objects)
 
     
-    y_tot = np.tile(y, num_sets)
+    y = np.tile(np.array (df_meta.target, dtype = np.int32), num_sets)
 
-    y = y_tot
+    id = np.tile(np.array (df_meta.object_id, dtype = np.int64), num_sets)
 
-    return data, y
+    return data, y, id
 """c"""
 
 
@@ -187,7 +187,7 @@ df = pd.read_csv(DATA_DIR + "training_set.csv")
 
 num_sets = 60
 
-data, y = generate_sets(df_meta, df, num_sets)
+data, y, ids = generate_sets(df_meta, df, num_sets)
 
 
 num_all = y.shape[0]
@@ -210,23 +210,37 @@ m = m0 | m1
 
 y = y[m]
 data = data[m]
+ids = ids[m]
 
 print(f"Element reduction {num_all} => 2 x {nTargetsForClass}")
 
-
-
 gc.collect()
 
-num_splits = 8
+
+
+
+
+
+
+num_splits = 10
+
+uniqueIDs = np.unique(ids)
+
 
 folds = KFold(n_splits=num_splits, shuffle=True, random_state=11)
 
 oof_preds = np.zeros(data.shape[0])
 
-for n_fold, (trn_idx, val_idx) in enumerate(folds.split(data)):
+for n_fold, (trn_idx_unique, val_idx_unique) in enumerate(folds.split(uniqueIDs)):
+
+    trn_ids = uniqueIDs[trn_idx_unique]
+    val_ids = uniqueIDs[val_idx_unique]
+
+    m_trn = np.in1d(ids, trn_ids) 
+    m_val = np.in1d(ids, val_ids)
         
-    trn_x, trn_y = data[trn_idx], y[trn_idx]
-    val_x, val_y = data[val_idx], y[val_idx]
+    trn_x, trn_y = data[m_trn], y[m_trn]
+    val_x, val_y = data[m_val], y[m_val]
 
     print (f"Fold {n_fold + 1} / {num_splits}")
 
