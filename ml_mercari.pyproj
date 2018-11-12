@@ -143,6 +143,9 @@
     <Compile Include="p0\__init__.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="plasticc\plasticc_seq.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="plasticc\plasticc.py">
       <SubType>Code</SubType>
     </Compile>
