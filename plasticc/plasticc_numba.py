@@ -218,10 +218,6 @@ gc.collect()
 
 
 
-
-
-
-
 num_splits = 10
 
 uniqueIDs = np.unique(ids)
@@ -230,6 +226,11 @@ uniqueIDs = np.unique(ids)
 folds = KFold(n_splits=num_splits, shuffle=True, random_state=11)
 
 oof_preds = np.zeros(data.shape[0])
+
+
+#e = folds.split(uniqueIDs)
+#(trn_idx_unique, val_idx_unique) = e.__next__()
+#n_fold = 0
 
 for n_fold, (trn_idx_unique, val_idx_unique) in enumerate(folds.split(uniqueIDs)):
 
@@ -244,13 +245,13 @@ for n_fold, (trn_idx_unique, val_idx_unique) in enumerate(folds.split(uniqueIDs)
 
     print (f"Fold {n_fold + 1} / {num_splits}")
 
-    clf = LGBMClassifier(n_estimators=20000, learning_rate=0.01, num_leaves = 255, silent=-1, verbose=-1)
+    clf = LGBMClassifier(n_estimators=20000, learning_rate=0.01, num_leaves = 255, silent=-1, verbose=-1, metric = 'auc')
 
     clf.fit(trn_x, trn_y,  eval_set= [(trn_x, trn_y), (val_x, val_y)], eval_metric='auc', verbose=10, early_stopping_rounds=400)  
 
-    oof_preds[val_idx] = clf.predict_proba(val_x, num_iteration=clf.best_iteration_)[:, 1]
+    oof_preds[m_val] = clf.predict(val_x, num_iteration=clf.best_iteration_)
 
-    print('Fold %2d AUC : %.3f' % (n_fold + 1, roc_auc_score(val_y, oof_preds[val_idx])))
+    print('Fold %2d AUC : %.3f' % (n_fold + 1, roc_auc_score(val_y, oof_preds[m_val])))
     del clf, trn_x, trn_y, val_x, val_y
     gc.collect()
 

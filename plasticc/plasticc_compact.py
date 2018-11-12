@@ -1,30 +1,115 @@
 
 DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
-DATA_DIR_BASEMENT = "D:\\XXX\\"
-DATA_DIR = DATA_DIR_PORTABLE
+DATA_DIR_SERVER = "D:\\t149900\\"
+DATA_DIR = DATA_DIR_SERVER
 
 import gc
 import numpy as np
 import pandas as pd
 
 
-data = pd.read_csv(DATA_DIR + 'test_set.csv')
+def get_cluster_info(x, proximity):
+
+    xd = np.diff(x)
+    m = xd < proximity
+    aw = np.where(~m)[0]
+
+    g_high_idx_inclusive = np.append(aw, x.shape[0] -1)
+    low_idx_inclusive = np.append(0, aw + 1)
+
+    num_elements = g_high_idx_inclusive - low_idx_inclusive + 1 
+
+    x_min = x[low_idx_inclusive]
+    x_max = x[g_high_idx_inclusive]
+
+    x_diff = x_max - x_min
+
+    return x_diff, num_elements
+"""c"""
+
+def cluster_info(id, closeness):
+
+    m_data = (data.object_id == id)
+
+    x = data[m_data].mjd.values
+
+    l, n = get_cluster_info(x, closeness)
+
+    assert l.shape == n.shape
+    assert n.sum() == x.shape[0]
+
+    idx = np.argsort(n)[::-1]
+
+    n = n[idx]
+    l = l[idx]
+
+    n = np.append(n, np.zeros(4))
+    l = np.append(l, np.zeros(4))
+    n = n[:4]
+    l = l[:4]
+
+    return l, n, x.shape[0]
+
+"""c"""
 
 
+
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 500)
+pd.set_option('display.max_colwidth', 500)
+
+np.set_printoptions(precision=2)
+np.set_printoptions(suppress=True)
+
+meta = pd.read_csv(DATA_DIR + 'training_set_metadata.csv')
 data = pd.read_csv(DATA_DIR + 'training_set.csv')
 
+m = meta.ddf == 0
 
-# Remove detected, currently not in use
-
-data = data.drop(['detected'], axis = 1)
-gc.collect()
-
-data = data.assign(object_id = pd.to_numeric(data.object_id, downcast = 'signed'))
-gc.collect()
+meta = meta[m]
 
 
-data = data.assign(passband = pd.to_numeric(data.passband, downcast = 'unsigned'))
-gc.collect()
+ids = meta.object_id.values
+
+al = np.empty((ids.shape[0], 4), dtype = np.float32)
+an = np.empty((ids.shape[0], 4), dtype = np.int32)
+
+samples = np.empty(ids.shape[0], dtype = np.int32)
+
+closeness = 10
+
+for idx, id in enumerate(ids):
+    id = np.random.choice(ids)
+    l, n, s = cluster_info(id, closeness)
+
+    al[idx, :] = l[:4]
+    an[idx, :] = n[:4]
+    samples[idx] = s
+
+meta = meta.assign(n = samples)
+
+meta = meta.assign(n_0 = an[:, 0])
+meta = meta.assign(l_0 = al[:, 0])
+
+meta = meta.assign(n_1 = an[:, 1])
+meta = meta.assign(l_1 = al[:, 1])
+
+meta = meta.assign(n_2 = an[:, 2])
+meta = meta.assign(l_2 = al[:, 2])
+
+meta = meta.assign(n_3 = an[:, 3])
+meta = meta.assign(l_3 = al[:, 3])
+
+
+meta.n_0.describe()
+meta.l_0.describe()
+
+meta.n_1.describe()
+meta.l_1.describe()
+
+meta.n_2.describe()
+meta.l_2.describe()
+
 
 
 # train: data.mjd.min()

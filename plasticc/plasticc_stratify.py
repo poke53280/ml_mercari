@@ -36,24 +36,29 @@ def generate_single_target(df_meta_all, df_all, itarget, num_desired_elements):
 
 
 DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
-DATA_DIR_BASEMENT = "D:\\XXX\\"
-DATA_DIR = DATA_DIR_PORTABLE
+DATA_DIR_SERVER = "D:\\t149900\\"
+DATA_DIR = DATA_DIR_SERVER
 
 df_meta_all = pd.read_csv(DATA_DIR + "training_set_metadata.csv")
 df_all = pd.read_csv(DATA_DIR + "training_set.csv")
 
 
-num_desired_elements = 100000
+num_desired_elements = 5000000
 
 d0, y_0, ids_0 = generate_single_target(df_meta_all, df_all, 52, num_desired_elements)
 
 d1, y_1, ids_1 = generate_single_target(df_meta_all, df_all, 90, num_desired_elements)
 
-
 data = np.vstack([d0, d1])
 y = np.hstack([y_0, y_1])
 
 ids = np.hstack([ids_0, ids_1])
+
+m52 = y == 52
+m90 = y == 90
+
+y[m52] = 0
+y[m90] = 1
 
 
 
