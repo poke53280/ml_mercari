@@ -49,7 +49,7 @@ def get_binned_sequence(y, num_bins):
 
     # Test bin count:
 
-    y_c = np.empty(y_s.shape, dtype = np.int32)
+    y_c = np.empty(y_s.shape, dtype = np.uint16)
 
     for i, (a, b) in enumerate (zip (idx_lo, idx_hi)):
 
@@ -71,6 +71,79 @@ def get_binned_sequence(y, num_bins):
 
     return y_cat_tot
 
+
+
+####################################################################################
+#
+#   pimpim
+#
+#
+
+
+def pimpim(df, id, slot_size, num_bins_y):
+
+    m = df.object_id == id
+
+    x = df.mjd.values[np.where(m)]
+
+    x = x - x.min()
+
+    p = df.passband.values[np.where(m)]
+
+    y_this_read_out = y_read_out[np.where(m)]
+
+    num_bins_x = int (.5 + x.max()/slot_size)
+
+    bins = np.linspace(0,  x.max(), num_bins_x, endpoint = False)
+
+    digitized = np.digitize(x, bins)
+    digitized = digitized - 1
+
+    out = np.empty((6, num_bins_x), dtype = np.float32)
+    out[:, :] = np.nan
+
+    for b in range (6):
+
+        m = (p == b)
+
+        y_p = y_this_read_out[np.where(m)]
+        d_p = digitized[np.where(m)]
+
+        out[b, d_p] = y_p
+
+
+    colsum = np.nansum(out, axis = 0)
+    m = colsum == 0
+
+    out[0, m] = num_bins_y * 6
+
+    out[1, :] += (num_bins_y * 1)
+    out[2, :] += (num_bins_y * 2)
+    out[3, :] += (num_bins_y * 3)
+    out[4, :] += (num_bins_y * 4)
+    out[5, :] += (num_bins_y * 5)
+
+
+    # !!! No zeroes/Padding value.
+
+    out = out.flatten(order = 'F')
+    m = np.isnan(out)
+    out = out[~m]
+
+    l, start, value = rle(out)
+
+    m = (value == num_bins_y * 6)
+
+    l = l[m]
+    start = start[m]
+    out[start] += l
+
+    m = (out == num_bins_y * 6)
+
+    out = out[~m]
+
+    return out
+"""c"""
 
 
 
@@ -96,71 +169,21 @@ pd.set_option('display.max_colwidth', 500)
 slot_size = 5
 
 
-num_bins = 150
-
+num_bins_y = 150
 
 num_sequence_length = 200
 
 y = df.flux.values
 p = df.passband.values
 
-### BEGIN binning experiments
-
-
-y_err = df.flux_err.values
-
-assert y.shape == y_err.shape
-
-
-y_cat = get_binned_sequence(y, num_bins)
-
-y_err_cat = get_binned_sequence(y_err, num_bins)
-
-
-df = df.assign(y_cat = y_cat)
-
-df = df.assign(y_err_cat = y_err_cat)
-
-y_combo = y_cat * 150 + y_err_cat
-
-
-np.unique(y_combo).shape
-
-
-df = df.assign(y_g = y_combo)
-
-
-s = df.y_g.astype('category')
-
-
-q = s.value_counts()
-
-an = q.values
-
-m = an < 10
 
 
 
-m = df.y_g == 22496
-
-df[m]
-
-
-### END binning experiments
-
-
-
-
-
-
-
-
-y_read_out = np.empty(y.shape, dtype = np.int32)
+y_read_out = np.empty(y.shape, dtype = np.uint16)
 
 for b in range(6):
     m = (p == b)
-    y_read_out[m] = ((num_levels -1) * (y[m] - np.min(y[m])) / y[m].max()).astype(dtype = np.int32)
-
+    y_read_out[m] = get_binned_sequence(y[m], num_bins_y)
 
 """c"""
 
@@ -172,15 +195,14 @@ num_objects = uniqueID.shape[0]
 
 start = datetime.now()
 
-anData = np.zeros((num_objects,num_sequence_length), dtype = np.uint16)
+anData = np.zeros((num_objects,num_sequence_length), dtype = np.uint16)   # To empty after debug
 
-
-res_size = []
+res_size = np.zeros(num_objects, dtype = np.uint16)
 
 for ix, x in enumerate(uniqueID):
-    res = pimpim(df, x)
+    res = pimpim(df, x, slot_size, num_bins_y)
 
-    res_size.append(res.shape[0])
+    res_size[ix] = res.shape[0]
 
     res = res.astype(np.uint16)
     res = res[:num_sequence_length]
@@ -194,82 +216,80 @@ dSeconds = dT.total_seconds()
 
 print(f"time: {dSeconds:.2f}s")
 
+value_area = np.clip(res_size, 0, num_sequence_length)
+
+# Values from 0 to value_area (excl) for all rows.
+
+sample_init_size = 10
+
+# Collect data snippets.
 
 
 
-def pimpim(df, id):
+iRow = 0
+iMin = 0
+iMax = value_area[iRow] - sample_init_size
 
-    m = df.object_id == id
-
-    x = df.mjd.values[np.where(m)]
-
-    x = x - x.min()
-
-    p = df.passband.values[np.where(m)]
-
-    y_this_read_out = y_read_out[np.where(m)]
-
-    num_bins = int (.5 + x.max()/slot_size)
-
-    bins = np.linspace(0,  x.max(), num_bins, endpoint = False)
-
-    digitized = np.digitize(x, bins)
-    digitized = digitized - 1
-
-    out = np.empty((6, num_bins), dtype = np.float32)
-    out[:, :] = np.nan
-
-    for b in range (6):
-
-        m = (p == b)
-
-        y_p = y_this_read_out[np.where(m)]
-        d_p = digitized[np.where(m)]
-
-        out[b, d_p] = y_p
+iOffset = np.random.choice(range(iMin, iMax))
 
 
-    colsum = np.nansum(out, axis = 0)
-    m = colsum == 0
+data_raw = anData[iRow, iOffset: iOffset + sample_init_size]
 
-    out[0, m] = num_levels * 6
+m = data_raw >= 6 * num_bins_y
 
-    out[1, :] += (num_levels * 1)
-    out[2, :] += (num_levels * 2)
-    out[3, :] += (num_levels * 3)
-    out[4, :] += (num_levels * 4)
-    out[5, :] += (num_levels * 5)
+iCut = sample_init_size
+
+if m.sum() > 0:
+    iCut = np.where(m)[0][0]
+   
+if iCut > 0:
+    data_out = data_raw[0:iCut]
 
 
-    # !!! No zeroes/Padding value.
 
-    out = out.flatten(order = 'F')
-    m = np.isnan(out)
-    out = out[~m]
 
-    l, start, value = rle(out)
 
-    m = (value == num_levels * 6)
 
-    l = l[m]
-    start = start[m]
-    out[start] += l
 
-    m = (out == num_levels * 6)
 
-    out = out[~m]
-
-    return out
-"""c"""
 
 
 # Replace parts
+#
+# Source:
+# * Data interval fixed size from non null area of row.
+# * Remove all breaks
+# * Take note of source size
+#
+# * Destination: Offset into row inside the non null area so that source size will fit.
+# * Keep all breaks
+
+# Possibly get from other source for each break.
+
+
+
+
+
+nMaxBreakInclusive = np.max(anData)
+nMinBreakInclusive = 6 * num_bins_y
+
+anData.shape
+
+
+
+
+
+
+
+
+
+
 
 
 an = anData[3090,:]
 
 
-# Replace mask. Leave all breaks, and don't introduce breaks.
+# Leave all breaks, and don't introduce breaks.
 
 # Leave all zeros, and don't introduce any zeros.
 
