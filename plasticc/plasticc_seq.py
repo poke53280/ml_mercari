@@ -19,6 +19,59 @@ def rle(inarray):
             p = np.cumsum(np.append(0, z))[:-1] # positions
             return(z, p, ia[i])
 
+####################################################################################
+#
+#   get_binned_sequence
+#
+#
+
+def get_binned_sequence(y, num_bins):
+
+    num_elements = y.shape[0]
+
+    y_s = np.sort(y)
+    y_arg_sort = np.argsort(y)
+
+    elements_per_bin = int (.5 + num_elements/num_bins)
+
+    idx_lo = []
+    idx_hi = []
+
+    for b in range(num_bins):
+
+        idx_lo.append(b  * elements_per_bin)
+
+        if b == num_bins - 1:
+            idx_hi.append(num_elements)
+        else:
+            idx_hi.append( (b + 1) * elements_per_bin)
+
+
+    # Test bin count:
+
+    y_c = np.empty(y_s.shape, dtype = np.int32)
+
+    for i, (a, b) in enumerate (zip (idx_lo, idx_hi)):
+
+        nElements = b - a
+
+        y_c[a:b] = i
+
+        print(f"{i}: {nElements}")
+
+
+    y_cat_tot = np.empty(y_c.shape, dtype = np.int32)
+    y_cat_tot[:] = np.nan
+
+    y_cat_tot[y_arg_sort] = y_c
+
+    assert np.isnan(y_cat_tot).sum() == 0
+    assert np.min(y_cat_tot) == 0
+    assert np.max(y_cat_tot) == (num_bins - 1)
+
+    return y_cat_tot
+
+
 
 
 DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
@@ -40,19 +93,66 @@ pd.set_option('display.width', 500)
 pd.set_option('display.max_colwidth', 500)
 
 
-# Get y_min and y_max per band for full training set
-
-num_levels = 150
 slot_size = 5
+
+
+num_bins = 150
 
 
 num_sequence_length = 200
 
-
-
 y = df.flux.values
-
 p = df.passband.values
+
+### BEGIN binning experiments
+
+
+y_err = df.flux_err.values
+
+assert y.shape == y_err.shape
+
+
+y_cat = get_binned_sequence(y, num_bins)
+
+y_err_cat = get_binned_sequence(y_err, num_bins)
+
+
+df = df.assign(y_cat = y_cat)
+
+df = df.assign(y_err_cat = y_err_cat)
+
+y_combo = y_cat * 150 + y_err_cat
+
+
+np.unique(y_combo).shape
+
+
+df = df.assign(y_g = y_combo)
+
+
+s = df.y_g.astype('category')
+
+
+q = s.value_counts()
+
+an = q.values
+
+m = an < 10
+
+
+
+m = df.y_g == 22496
+
+df[m]
+
+
+### END binning experiments
+
+
+
+
+
+
 
 
 y_read_out = np.empty(y.shape, dtype = np.int32)
