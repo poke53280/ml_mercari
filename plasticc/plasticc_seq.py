@@ -146,7 +146,6 @@ def pimpim(df, id, slot_size, num_bins_y):
 """c"""
 
 
-
 DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
 DATA_DIR_BASEMENT = "D:\\XXX\\"
 DATA_DIR = DATA_DIR_PORTABLE
@@ -176,9 +175,6 @@ num_sequence_length = 200
 y = df.flux.values
 p = df.passband.values
 
-
-
-
 y_read_out = np.empty(y.shape, dtype = np.uint16)
 
 for b in range(6):
@@ -191,7 +187,6 @@ for b in range(6):
 uniqueID = np.unique(df.object_id.values)
 
 num_objects = uniqueID.shape[0]
-
 
 start = datetime.now()
 
@@ -216,6 +211,10 @@ dSeconds = dT.total_seconds()
 
 print(f"time: {dSeconds:.2f}s")
 
+anDataConst = anData.copy()
+
+
+
 value_area = np.clip(res_size, 0, num_sequence_length)
 
 # Values from 0 to value_area (excl) for all rows.
@@ -224,106 +223,91 @@ sample_init_size = 10
 
 # Collect data snippets.
 
+num_snippets = 3000
+
+anSnippet = np.zeros((num_snippets, sample_init_size), dtype = np.uint16)
+aSnippetSize = np.empty(num_snippets, dtype = np.uint16)
+
+for iSnippet in range(num_snippets):
+
+    iRow = np.random.choice(range(0, anDataConst.shape[0]-1))
+    iMin = 0
+    iMax = value_area[iRow] - sample_init_size
+
+    iOffset = np.random.choice(range(iMin, iMax))
+
+    data_raw = anDataConst[iRow, iOffset: iOffset + sample_init_size]
+
+    m = data_raw >= 6 * num_bins_y
+
+    iCut = sample_init_size
+
+    if m.sum() > 0:
+        iCut = np.where(m)[0][0]
+
+    anSnippet[iSnippet, 0:iCut] = data_raw[0:iCut]
+    aSnippetSize[iSnippet] = iCut
+
+"""c"""
 
 
-iRow = 0
-iMin = 0
-iMax = value_area[iRow] - sample_init_size
+# Post process - remove small runs
 
-iOffset = np.random.choice(range(iMin, iMax))
+m = aSnippetSize < 2
 
-
-data_raw = anData[iRow, iOffset: iOffset + sample_init_size]
-
-m = data_raw >= 6 * num_bins_y
-
-iCut = sample_init_size
-
-if m.sum() > 0:
-    iCut = np.where(m)[0][0]
-   
-if iCut > 0:
-    data_out = data_raw[0:iCut]
+anSnippet = anSnippet[~m]
+aSnippetSize = aSnippetSize[~m]
 
 
+# Got snippet bank
 
+# Apply to data
 
+anData = anDataConst.copy()
 
+num_shuffles = 3
 
+for iShuffle in range(num_shuffles):
 
+    for iRow in range(num_objects):
 
+        iMin = 0
+        iMax = value_area[iRow] - sample_init_size
 
+        iOffset = np.random.choice(range(iMin, iMax))
 
-# Replace parts
-#
-# Source:
-# * Data interval fixed size from non null area of row.
-# * Remove all breaks
-# * Take note of source size
-#
-# * Destination: Offset into row inside the non null area so that source size will fit.
-# * Keep all breaks
+        data_raw = anDataConst[iRow, iOffset: iOffset + sample_init_size]
 
-# Possibly get from other source for each break.
+        m = data_raw >= 6 * num_bins_y
 
+        iCut = sample_init_size
 
+        if m.sum() > 0:
+            iCut = np.where(m)[0][0]
 
+        # Can replace values 0..iCut
 
+        r = list (range(0, anSnippet.shape[0]))
 
-nMaxBreakInclusive = np.max(anData)
-nMinBreakInclusive = 6 * num_bins_y
+        iSnippetRow = np.random.choice(r)
+
+        anSnippetData = anSnippet[iSnippetRow]
+        nSnippetSize = aSnippetSize[iSnippetRow]
+
+        nReplaceRun = np.amin([nSnippetSize, iCut])
+
+        anData[iRow, iOffset: iOffset + nReplaceRun] = anSnippetData[0:nReplaceRun]
+
 
 anData.shape
+anDataConst.shape
 
+m = anData == anDataConst
 
+nEqual = m.sum()
+nAll = anData.shape[0] * anData.shape[1]
 
+nDiff = nAll - nEqual
+rDiff = 100.0 * nDiff / nAll
 
-
-
-
-
-
-
-
-
-an = anData[3090,:]
-
-
-# Leave all breaks, and don't introduce breaks.
-
-# Leave all zeros, and don't introduce any zeros.
-
-length = 20
-
-m0 = an == 0
-
-mb = an >= (num_levels * 6)
-
-
-m_leave = m0 | mb
-
-
-anReplace = range(4, 23)
-
-n = m_leave.shape[0]
-
-aMask = np.zeros(n)
-
-aMask[anReplace] = 1
-
-aMask = aMask.astype(np.bool)
-
-mFinal = aMask & ~m_leave
-
-
-
-Anoise = A
-
-
-# Start and length
-
-
-
-
-
-
+print(f"Diff: {rDiff:.1f}%")

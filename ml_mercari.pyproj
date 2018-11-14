@@ -176,6 +176,9 @@
     <Compile Include="plasticc\plasticc_predict.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="plasticc\plasticc_seq2seq.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="plasticc\plasticc_split.py">
       <SubType>Code</SubType>
     </Compile>
