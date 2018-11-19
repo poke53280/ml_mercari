@@ -259,6 +259,8 @@ anSnippet = anSnippet[~m]
 aSnippetSize = aSnippetSize[~m]
 
 
+anSnippet.shape
+
 # Got snippet bank
 
 # Apply to data
