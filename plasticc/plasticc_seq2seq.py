@@ -3,53 +3,120 @@ import numpy as np
 from keras.layers import Input
 from keras.layers import Embedding
 from keras.layers import Dense
+from keras.layers import Flatten
+
+from keras.layers import Subtract
 
 from keras.models import Model
 
+from keras.constraints import unitnorm
+
 import tensorflow as tf
-
-# plasticc_seq provides:
-#anData.shape
-#anDataConst.shape
+from sklearn.model_selection import KFold
 
 
-num_rows = 7
-sentenceLength = 6
+# Generate data
 
 vocab_size = 5
+num_rows = 7
 
 anDataConst = np.random.randint(0, vocab_size, size = (num_rows, sentenceLength), dtype = np.uint16)
 anData = anDataConst.copy()
 
-
-emb_obj = Embedding(output_dim=3, input_dim=vocab_size, name="Embedding")
-
-encoder_inputs = Input(shape=(sentenceLength,), name="Encoder_input")
-target_inputs = Input(shape=(sentenceLength,), name="target_input")
-
-x = emb_obj (encoder_inputs)
-
-x = Dense(64) (x)
-
-x = Dense(64) (3 * vocab_size)
-
-# Input string is now from embedding to same shape as embedding
-
-# Target string is now from embedding
-t = emb_obj(target_inputs)
-
-model = Model(x, t)
-
-diff = 'x - t' ex: rmse
+anData[:, :] = 3
 
 
-#
-# Train so that x and t are close/zero.
-#
-# When close:
-#
-# Network can deliver/predict the embedding of target value / after reverse map deliver the target value.
-#
+sentenceLength = 6
+
+
+# In here with # plasticc_seq data
+
+
+vocab_size = np.max(anData) + 1 
+
+sentenceLength = anData.shape[1]
+num_rows = anData.shape[0]
+
+
+num_dim_out_emb = 6
+
+
+anZeroDiff = np.zeros( (num_rows, sentenceLength * num_dim_out_emb), dtype = np.float32)
+
+
+num_folds = 9
+lRunFolds = list (range(num_folds))
+
+kf = KFold(n_splits=num_folds, shuffle=True, random_state=22)
+
+lKF = list (enumerate(kf.split(anData)))
+
+for iFold in lRunFolds:
+
+    print(f"iFold {iFold}")
+
+    iLoop, (train_index, test_index) = lKF[iFold]
+
+    anDataTrain = anData[train_index]
+    anDataConstTrain = anDataConst[train_index]
+    anZeroDiffTrain = anZeroDiff[train_index]
+
+    anDataValid = anData[test_index]
+    anDataConstValid = anDataConst[test_index]
+    anZeroDiffValid = anZeroDiff[test_index]
+
+
+    encoder_inputs = Input(shape=(sentenceLength,), name="Encoder_input")
+    target_inputs = Input(shape=(sentenceLength,), name="target_input")
+
+    emb_obj = Embedding(output_dim=num_dim_out_emb, input_dim=vocab_size, name="Embedding", embeddings_constraint=unitnorm(axis=1))
+
+    x = emb_obj (encoder_inputs)
+
+
+    x = Flatten() (x)
+    x = Dense(8) (x)
+    x = Dense(1) (x)
+
+    t = emb_obj (target_inputs)
+
+    t = Flatten() (t)
+
+    subtracted = Subtract()([x, t])
+
+    model = Model([encoder_inputs, target_inputs], subtracted)
+
+    model.compile(loss='mse', optimizer='sgd')
+
+    model.fit(x = [anDataTrain,  anDataConstTrain], y = anZeroDiffTrain, validation_data = [[anDataValid,  anDataConstValid],anZeroDiffValid], epochs = 10)
+
+    z_p = model.predict(x = [anDataValid,  anDataConstValid])
+
+    mse = (z_p* z_p).mean()
+
+    print(f"Valid set RMSE = {rmse:.3f}")
+    
+    # M = emb_obj.get_weights()[0]
+    
+
+
+
+x_pred = np.array([2, 3, 2, 4, 1, 2], dtype = np.uint16)
+
+x_pred = x_pred.reshape(1, -1)
+
+t_pred = x_pred
+
+t_pred[:] = 3
+
+
+z_pred = model.predict([x_pred, t_pred])
+
+
+rms_error = np.abs(z_pred).mean()
+
+rms_error
+
 #
 
 

@@ -267,7 +267,7 @@ anSnippet.shape
 
 anData = anDataConst.copy()
 
-num_shuffles = 3
+num_shuffles = 10
 
 for iShuffle in range(num_shuffles):
 
