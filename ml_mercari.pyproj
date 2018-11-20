@@ -298,6 +298,9 @@
     <Compile Include="Train_Stemmer.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="txt\txt.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="typing\typing.py">
       <SubType>Code</SubType>
     </Compile>
@@ -313,6 +316,7 @@
     <Folder Include="ga\" />
     <Folder Include="imageai\" />
     <Folder Include="mp\" />
+    <Folder Include="txt\" />
     <Folder Include="plasticc\" />
     <Folder Include="typing\" />
     <Folder Include="tf-tpu\" />

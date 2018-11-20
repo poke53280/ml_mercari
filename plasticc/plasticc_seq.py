@@ -65,9 +65,9 @@ def get_binned_sequence(y, num_bins):
 
     y_cat_tot[y_arg_sort] = y_c
 
-    assert np.isnan(y_cat_tot).sum() == 0
-    assert np.min(y_cat_tot) == 0
-    assert np.max(y_cat_tot) == (num_bins - 1)
+    assert np.isnan(y_cat_tot).sum() == 0, "np.isnan(y_cat_tot).sum() == 0"
+    assert np.min(y_cat_tot) == 0, "np.min(y_cat_tot) == 0"
+    assert np.max(y_cat_tot) == (num_bins - 1), "np.max(y_cat_tot) == (num_bins - 1)"
 
     return y_cat_tot
 
@@ -145,13 +145,150 @@ def pimpim(df, id, slot_size, num_bins_y):
     return out
 """c"""
 
+def get_first_items(nFirstItems, filename):
+    store = pd.HDFStore(filename)
+
+    # run length stop indices
+    df_idx = pd.read_hdf(store, 'idx')
+
+    idx = np.array(df_idx[0], dtype = np.int32)
+
+    idx = np.insert(idx, 0, 0)
+
+    begin_offset = idx[:-1]
+    lengths = np.diff(idx)
+
+    del df_idx
+    del idx
+
+    gc.collect()
+
+    assert begin_offset.shape[0] == lengths.shape[0]
+
+    print(f"num items = {begin_offset.shape[0]}")
+
+    assert nFirstItems <= begin_offset.shape[0]
+
+    iBeyondLast = begin_offset[nFirstItems]
+    
+    df = store.select('data', start = 0 , stop = iBeyondLast )
+    df = df.reset_index(drop = True)
+
+    return df
+"""c"""
+
+
+
+
+def collect_snippets(anDataConst, value_area, anSnippet, aSnippetSize, nMinSnippetSize):
+
+    num_snippets = anSnippet.shape[0]
+
+    sample_init_size = anSnippet.shape[1]
+
+    assert value_area.shape[0] == anDataConst.shape[0]
+
+    for iSnippet in range(num_snippets):
+
+        iRow = np.random.choice(range(0, anDataConst.shape[0]-1))
+        iMin = 0
+        iMax = value_area[iRow] - sample_init_size
+
+        iOffset = np.random.choice(range(iMin, iMax))
+
+        data_raw = anDataConst[iRow, iOffset: iOffset + sample_init_size]
+
+        iFirstBreakChar = 6 * num_bins_y
+
+        m = data_raw >= iFirstBreakChar
+
+        iCut = sample_init_size
+
+        if m.sum() > 0:
+            iCut = np.where(m)[0][0]
+
+        anSnippet[iSnippet, 0:iCut] = data_raw[0:iCut]
+        aSnippetSize[iSnippet] = iCut
+
+    """c"""
+
+    # Post process - remove small runs
+
+    m = aSnippetSize < nMinSnippetSize
+
+    anSnippet = anSnippet[~m]
+    aSnippetSize = aSnippetSize[~m]
+
+    return anSnippet, aSnippetSize
+
+"""c"""
+
+
+def add_noise(anDataConst, anData, value_area, anSnippet, aSnippetSize):
+
+    num_objects = anDataConst.shape[0]
+
+    sample_init_size = anSnippet.shape[1]
+
+
+    for iRow in range(num_objects):
+
+        iMin = 0
+        iMax = value_area[iRow] - sample_init_size
+
+        iOffset = np.random.choice(range(iMin, iMax + 1))
+
+        assert iOffset >= 0
+        assert iOffset + sample_init_size <= anDataConst.shape[1]
+
+        data_raw = anDataConst[iRow, iOffset: iOffset + sample_init_size]
+
+        iFirstBreakChar = 6 * num_bins_y
+
+        m = data_raw >= iFirstBreakChar
+
+        iCut = sample_init_size
+
+        if m.sum() > 0:
+            iCut = np.where(m)[0][0]
+
+        # Can replace values 0..iCut
+
+        iSnippetRow = np.random.randint(0, anSnippet.shape[0])
+
+        anSnippetData = anSnippet[iSnippetRow]
+        nSnippetSize = aSnippetSize[iSnippetRow]
+
+        nReplaceRun = np.amin([nSnippetSize, iCut])
+
+        anData[iRow, iOffset: iOffset + nReplaceRun] = anSnippetData[0:nReplaceRun]
+
+
+    m = anData == anDataConst
+
+    nEqual = m.sum()
+    nAll = anData.shape[0] * anData.shape[1]
+
+    nDiff = nAll - nEqual
+    rDiff = 100.0 * nDiff / nAll
+
+    print(f"add_noise diff elements: {rDiff:.1f}%")
+
+"""c"""
+
+
 
 DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
 DATA_DIR_BASEMENT = "D:\\XXX\\"
 DATA_DIR = DATA_DIR_PORTABLE
 
-df_meta = pd.read_csv(DATA_DIR + "training_set_metadata.csv")
+
+df = get_first_items(70000, DATA_DIR + 'data.h5')
+
 df = pd.read_csv(DATA_DIR + "training_set.csv")
+
+
+
 
 np.set_printoptions(precision=2)
 np.set_printoptions(suppress=True)
@@ -195,6 +332,10 @@ anData = np.zeros((num_objects,num_sequence_length), dtype = np.uint16)   # To e
 res_size = np.zeros(num_objects, dtype = np.uint16)
 
 for ix, x in enumerate(uniqueID):
+
+    if ix % 50 == 0:
+        print(ix)
+
     res = pimpim(df, x, slot_size, num_bins_y)
 
     res_size[ix] = res.shape[0]
@@ -213,103 +354,18 @@ print(f"time: {dSeconds:.2f}s")
 
 anDataConst = anData.copy()
 
-
-
-value_area = np.clip(res_size, 0, num_sequence_length)
-
 # Values from 0 to value_area (excl) for all rows.
-
-sample_init_size = 10
-
-# Collect data snippets.
-
-num_snippets = 3000
-
-anSnippet = np.zeros((num_snippets, sample_init_size), dtype = np.uint16)
-aSnippetSize = np.empty(num_snippets, dtype = np.uint16)
-
-for iSnippet in range(num_snippets):
-
-    iRow = np.random.choice(range(0, anDataConst.shape[0]-1))
-    iMin = 0
-    iMax = value_area[iRow] - sample_init_size
-
-    iOffset = np.random.choice(range(iMin, iMax))
-
-    data_raw = anDataConst[iRow, iOffset: iOffset + sample_init_size]
-
-    m = data_raw >= 6 * num_bins_y
-
-    iCut = sample_init_size
-
-    if m.sum() > 0:
-        iCut = np.where(m)[0][0]
-
-    anSnippet[iSnippet, 0:iCut] = data_raw[0:iCut]
-    aSnippetSize[iSnippet] = iCut
-
-"""c"""
+value_area = np.clip(res_size, None, num_sequence_length)
 
 
-# Post process - remove small runs
-
-m = aSnippetSize < 2
-
-anSnippet = anSnippet[~m]
-aSnippetSize = aSnippetSize[~m]
+np.save(DATA_DIR + "anDataConst_70000", anDataConst)
+np.save(DATA_DIR + "value_area_70000", value_area)
 
 
-anSnippet.shape
-
-# Got snippet bank
-
-# Apply to data
-
-anData = anDataConst.copy()
-
-num_shuffles = 10
-
-for iShuffle in range(num_shuffles):
-
-    for iRow in range(num_objects):
-
-        iMin = 0
-        iMax = value_area[iRow] - sample_init_size
-
-        iOffset = np.random.choice(range(iMin, iMax))
-
-        data_raw = anDataConst[iRow, iOffset: iOffset + sample_init_size]
-
-        m = data_raw >= 6 * num_bins_y
-
-        iCut = sample_init_size
-
-        if m.sum() > 0:
-            iCut = np.where(m)[0][0]
-
-        # Can replace values 0..iCut
-
-        r = list (range(0, anSnippet.shape[0]))
-
-        iSnippetRow = np.random.choice(r)
-
-        anSnippetData = anSnippet[iSnippetRow]
-        nSnippetSize = aSnippetSize[iSnippetRow]
-
-        nReplaceRun = np.amin([nSnippetSize, iCut])
-
-        anData[iRow, iOffset: iOffset + nReplaceRun] = anSnippetData[0:nReplaceRun]
+anDataConst_new = np.load(DATA_DIR + "anDataConst_70000.npy")
+value_area_new = np.load(DATA_DIR + "value_area_70000.npy")
 
 
-anData.shape
-anDataConst.shape
+(anDataConst_new == anDataConst).all()
+(value_area_new == value_area).all()
 
-m = anData == anDataConst
-
-nEqual = m.sum()
-nAll = anData.shape[0] * anData.shape[1]
-
-nDiff = nAll - nEqual
-rDiff = 100.0 * nDiff / nAll
-
-print(f"Diff: {rDiff:.1f}%")

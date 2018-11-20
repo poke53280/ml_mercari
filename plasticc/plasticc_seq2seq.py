@@ -6,6 +6,9 @@ from keras.layers import Dense
 from keras.layers import Flatten
 
 from keras.layers import Subtract
+from keras.layers import LSTM
+from keras.layers import TimeDistributed
+
 
 from keras.models import Model
 
@@ -15,27 +18,12 @@ import tensorflow as tf
 from sklearn.model_selection import KFold
 
 
-# Generate data
-
-vocab_size = 5
-num_rows = 7
-
-anDataConst = np.random.randint(0, vocab_size, size = (num_rows, sentenceLength), dtype = np.uint16)
-anData = anDataConst.copy()
-
-anData[:, :] = 3
 
 
-sentenceLength = 6
+vocab_size = np.max(anDataConst) + 1 
 
-
-# In here with # plasticc_seq data
-
-
-vocab_size = np.max(anData) + 1 
-
-sentenceLength = anData.shape[1]
-num_rows = anData.shape[0]
+sentenceLength = anDataConst.shape[1]
+num_rows = anDataConst.shape[0]
 
 
 num_dim_out_emb = 6
@@ -49,21 +37,40 @@ lRunFolds = list (range(num_folds))
 
 kf = KFold(n_splits=num_folds, shuffle=True, random_state=22)
 
-lKF = list (enumerate(kf.split(anData)))
+lKF = list (enumerate(kf.split(anDataConst)))
 
-for iFold in lRunFolds:
+lMSE = []
+
+iFold = 0
+
+
+for iFold in range(1):
 
     print(f"iFold {iFold}")
 
     iLoop, (train_index, test_index) = lKF[iFold]
 
-    anDataTrain = anData[train_index]
+
+    num_snippets = 10000
+    sample_init_size = 20
+
+    anSnippetTrain = np.zeros((num_snippets, sample_init_size), dtype = np.uint16)
+    aSnippetSizeTrain = np.empty(num_snippets, dtype = np.uint16)
+
     anDataConstTrain = anDataConst[train_index]
     anZeroDiffTrain = anZeroDiff[train_index]
 
-    anDataValid = anData[test_index]
+    anSnippetTrain, aSnippetSizeTrain = collect_snippets(anDataConstTrain, value_area[train_index], anSnippetTrain, aSnippetSizeTrain, 5)
+
+
+    anSnippetValid = np.zeros((num_snippets, sample_init_size), dtype = np.uint16)
+    aSnippetSizeValid = np.empty(num_snippets, dtype = np.uint16)
+
     anDataConstValid = anDataConst[test_index]
     anZeroDiffValid = anZeroDiff[test_index]
+
+    anSnippetValid, aSnippetSizeValid = collect_snippets(anDataConstValid, value_area[test_index], anSnippetValid, aSnippetSizeValid, 5)
+
 
 
     encoder_inputs = Input(shape=(sentenceLength,), name="Encoder_input")
@@ -73,12 +80,41 @@ for iFold in lRunFolds:
 
     x = emb_obj (encoder_inputs)
 
+    # New, non-trainable embedding lookup.
+    # Training at num_shuffles = 10   Epoch 9   loss: 0.1423 - val_loss: 0.1403  Valid set MSE = 0.1403
 
-    x = Flatten() (x)
+
+    x = LSTM(16, return_sequences=True) (x)
+
     x = Dense(8) (x)
+    x = Flatten() (x)
     x = Dense(1) (x)
 
+    # Old:
+
+    # Shuffle 15 not ok
+    #x = Flatten() (x)
+    #x = Dense(512) (x)
+    #x = Dense(512) (x)
+    #x = Dense(32) (x)
+    #x = Dense(1) (x)
+
+    # Shuffle 15 not ok
+    #x = LSTM(128, return_sequences=True) (x)
+    #x = LSTM(128, return_sequences=True) (x)
+    #x = TimeDistributed(Dense(vocab_size)) (x)
+    #x = Flatten() (x)
+    #x = Dense(1) (x)
+
+    # Shuffle 10 ok and fast, shuffle 15 not ok.
+    #x = Flatten() (x)
+    #x = Dense(8) (x)
+    #x = Dense(1) (x)
+
     t = emb_obj (target_inputs)
+
+    t.trainable = False
+
 
     t = Flatten() (t)
 
@@ -86,18 +122,101 @@ for iFold in lRunFolds:
 
     model = Model([encoder_inputs, target_inputs], subtracted)
 
-    model.compile(loss='mse', optimizer='sgd')
+    model.compile(loss='mse', optimizer='adam')
 
-    model.fit(x = [anDataTrain,  anDataConstTrain], y = anZeroDiffTrain, validation_data = [[anDataValid,  anDataConstValid],anZeroDiffValid], epochs = 10)
 
-    z_p = model.predict(x = [anDataValid,  anDataConstValid])
+    num_shuffles = 10
 
-    mse = (z_p* z_p).mean()
+    num_epochs = 17
 
-    print(f"Valid set RMSE = {rmse:.3f}")
+
+    for iEpoch in range(num_epochs):
+
+        print(f"Epoch {iEpoch + 1}/ {num_epochs}")
+
+        anDataTrain = anDataConstTrain.copy()
+        anDataValid = anDataConstValid.copy()
+
+        for iShuffle in range(num_shuffles):
+            add_noise(anDataConstTrain, anDataTrain, value_area[train_index], anSnippetTrain, aSnippetSizeTrain)
+            add_noise(anDataConstValid, anDataValid, value_area[test_index], anSnippetValid, aSnippetSizeValid)
+
+
+        h = model.fit(x = [anDataTrain,  anDataConstTrain], y = anZeroDiffTrain, validation_data = ([anDataValid,  anDataConstValid], anZeroDiffValid), epochs = 1, verbose = 1)
+
+        z_p = model.predict(x = [anDataValid,  anDataConstValid])
+
+        mse = (z_p* z_p).mean()
+
+        print(f"Valid set MSE = {mse:.4f}")
+
+
+    """c"""
+
+
+    
+
+    
+
+    
     
     # M = emb_obj.get_weights()[0]
     
+
+
+afMSE = np.array(lMSE)
+
+print(f"MSE for all folds: {np.mean(afMSE)} +/ {np.std(afMSE)}")
+
+# emb 6 dense 8 dense 1
+#
+#
+# 500 epochs. Fold 0
+# loss: 0.1396 - val_loss: 0.1400
+# Improving on stop
+# + 500:
+# loss: 0.1323 - val_loss: 0.1327
+# Improvinb a bit
+# + 500:
+# loss: 0.1232 - val_loss: 0.1237
+# + 500:
+# loss: 0.1118 - val_loss: 0.1124
+# + 500:
+# loss: 0.0985 - val_loss: 0.0991
+# + 500:
+# loss: 0.0837 - val_loss: 0.0844
+# + 500:
+# loss: 0.0684 - val_loss: 0.0691
+# + 500:
+# loss: 0.0539 - val_loss: 0.0545
+# + 500:
+# loss: 0.0410 - val_loss: 0.0415
+# + 500:
+# loss: 0.0303 - val_loss: 0.0308
+# + 500:
+# loss: 0.0220 - val_loss: 0.0224
+# + 500:
+# loss: 0.0159 - val_loss: 0.0162
+# + 500:
+# loss: 0.0115 - val_loss: 0.0117
+# + 500:
+# loss: 0.0084 - val_loss: 0.0086
+# + 500:
+# loss: 0.0062 - val_loss: 0.0063
+# + 500:
+# loss: 0.0047 - val_loss: 0.0048
+# + 500:
+# loss: 0.0035 - val_loss: 0.0036
+# +5000:
+# loss: 4.2427e-04 - val_loss: 4.5462e-04
+
+
+
+
+
+# 100 epochs emb 6 dense 512 dense 1
+# Improving on stop
+
 
 
 
