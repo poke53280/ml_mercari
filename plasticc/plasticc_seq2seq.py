@@ -18,6 +18,15 @@ import tensorflow as tf
 from sklearn.model_selection import KFold
 
 
+# Store and cut down data for test
+
+anDataConstBackup = anDataConst.copy()
+value_areaBackup = value_area.copy()
+
+
+anDataConst = anDataConst[:7000]
+value_area = value_area[:7000]
+
 
 
 vocab_size = np.max(anDataConst) + 1 
@@ -51,7 +60,7 @@ for iFold in range(1):
     iLoop, (train_index, test_index) = lKF[iFold]
 
 
-    num_snippets = 10000
+    num_snippets = 100000
     sample_init_size = 20
 
     anSnippetTrain = np.zeros((num_snippets, sample_init_size), dtype = np.uint16)
@@ -63,6 +72,11 @@ for iFold in range(1):
     anSnippetTrain, aSnippetSizeTrain = collect_snippets(anDataConstTrain, value_area[train_index], anSnippetTrain, aSnippetSizeTrain, 5)
 
 
+    np.save(DATA_DIR + "anSnippetTrain_100000", anSnippetTrain)
+    np.save(DATA_DIR + "aSnippetSizeTrain_100000", aSnippetSizeTrain)
+
+
+
     anSnippetValid = np.zeros((num_snippets, sample_init_size), dtype = np.uint16)
     aSnippetSizeValid = np.empty(num_snippets, dtype = np.uint16)
 
@@ -70,6 +84,19 @@ for iFold in range(1):
     anZeroDiffValid = anZeroDiff[test_index]
 
     anSnippetValid, aSnippetSizeValid = collect_snippets(anDataConstValid, value_area[test_index], anSnippetValid, aSnippetSizeValid, 5)
+
+    np.save(DATA_DIR + "anSnippetValid_100000", anSnippetValid)
+    np.save(DATA_DIR + "aSnippetSizeValid_100000", aSnippetSizeValid)
+
+
+
+    anSnippetTrain = np.load(DATA_DIR + "anSnippetTrain_100000.npy")
+    aSnippetSizeTrain = np.load(DATA_DIR + "aSnippetSizeTrain_100000.npy")
+
+    anSnippetValid = np.load(DATA_DIR + "anSnippetValid_100000.npy")
+    aSnippetSizeValid = np.load(DATA_DIR + "aSnippetSizeValid_100000.npy")
+
+
 
 
 
@@ -80,42 +107,41 @@ for iFold in range(1):
 
     x = emb_obj (encoder_inputs)
 
-    # New, non-trainable embedding lookup.
-    # Training at num_shuffles = 10   Epoch 9   loss: 0.1423 - val_loss: 0.1403  Valid set MSE = 0.1403
 
+    # Valid set MSE = 0.1617
+    #x = LSTM(16, return_sequences=True) (x)
 
-    x = LSTM(16, return_sequences=True) (x)
+    #x = Dense(8) (x)
+    #x = Flatten() (x)
+    #x = Dense(1) (x)
 
-    x = Dense(8) (x)
+    
+    x = Flatten() (x)
+    x = Dense(512) (x)
+    x = Dense(512) (x)
+    x = Dense(32) (x)
+    x = Dense(1) (x)
+
+    # Valid set MSE = 0.166
+    x = LSTM(128, return_sequences=True) (x)
+    x = LSTM(128, return_sequences=True) (x)
+    x = TimeDistributed(Dense(vocab_size)) (x)
     x = Flatten() (x)
     x = Dense(1) (x)
 
-    # Old:
+    
+    x = Flatten() (x)
+    x = Dense(8) (x)
+    x = Dense(1) (x)
 
-    # Shuffle 15 not ok
-    #x = Flatten() (x)
-    #x = Dense(512) (x)
-    #x = Dense(512) (x)
-    #x = Dense(32) (x)
-    #x = Dense(1) (x)
+    emb_obj_t = Embedding(output_dim=num_dim_out_emb, input_dim=vocab_size, name="Embedding_T", embeddings_constraint=unitnorm(axis=1))
 
-    # Shuffle 15 not ok
-    #x = LSTM(128, return_sequences=True) (x)
-    #x = LSTM(128, return_sequences=True) (x)
-    #x = TimeDistributed(Dense(vocab_size)) (x)
-    #x = Flatten() (x)
-    #x = Dense(1) (x)
+    assert hasattr(emb_obj_t, 'trainable')
 
-    # Shuffle 10 ok and fast, shuffle 15 not ok.
-    #x = Flatten() (x)
-    #x = Dense(8) (x)
-    #x = Dense(1) (x)
+    emb_obj_t.trainable = False
 
-    t = emb_obj (target_inputs)
-
-    t.trainable = False
-
-
+    t = emb_obj_t (target_inputs)
+   
     t = Flatten() (t)
 
     subtracted = Subtract()([x, t])
@@ -124,11 +150,12 @@ for iFold in range(1):
 
     model.compile(loss='mse', optimizer='adam')
 
+    num_shuffles = 4
 
-    num_shuffles = 10
+    num_epochs = 20
 
-    num_epochs = 17
-
+    emb_obj_t.set_weights(emb_obj.get_weights())
+    
 
     for iEpoch in range(num_epochs):
 
@@ -140,9 +167,27 @@ for iFold in range(1):
         for iShuffle in range(num_shuffles):
             add_noise(anDataConstTrain, anDataTrain, value_area[train_index], anSnippetTrain, aSnippetSizeTrain)
             add_noise(anDataConstValid, anDataValid, value_area[test_index], anSnippetValid, aSnippetSizeValid)
+        """c"""
 
+        num_full_batch = anDataTrain.shape[0]
 
-        h = model.fit(x = [anDataTrain,  anDataConstTrain], y = anZeroDiffTrain, validation_data = ([anDataValid,  anDataConstValid], anZeroDiffValid), epochs = 1, verbose = 1)
+        num_requested_mini_batch = 1024
+
+        num_splits = int (num_full_batch / num_requested_mini_batch)
+
+        ixr = np.array_split(range(num_full_batch), num_splits)
+
+        for i, ix in enumerate(ixr):
+
+            if i % 7 == 0:
+                print(f"Batch {i +1 } / {num_splits} EVAL batch")
+                h = model.fit(x = [anDataTrain[ix],  anDataConstTrain[ix]], y = anZeroDiffTrain[ix], validation_data = ([anDataValid,  anDataConstValid], anZeroDiffValid), epochs = 1, verbose = 2)
+            else:
+                # print(f"Batch {i +1 } / {num_splits}")
+                h = model.fit(x = [anDataTrain[ix],  anDataConstTrain[ix]], y = anZeroDiffTrain[ix], epochs = 1, verbose = 0)
+            
+
+            emb_obj_t.set_weights(emb_obj.get_weights())
 
         z_p = model.predict(x = [anDataValid,  anDataConstValid])
 
@@ -152,13 +197,10 @@ for iFold in range(1):
 
 
     """c"""
-
-
+"""c"""
     
 
-    
 
-    
     
     # M = emb_obj.get_weights()[0]
     

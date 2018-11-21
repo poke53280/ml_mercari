@@ -362,10 +362,7 @@ np.save(DATA_DIR + "anDataConst_70000", anDataConst)
 np.save(DATA_DIR + "value_area_70000", value_area)
 
 
-anDataConst_new = np.load(DATA_DIR + "anDataConst_70000.npy")
-value_area_new = np.load(DATA_DIR + "value_area_70000.npy")
+anDataConst = np.load(DATA_DIR + "anDataConst_70000.npy")
+value_area = np.load(DATA_DIR + "value_area_70000.npy")
 
-
-(anDataConst_new == anDataConst).all()
-(value_area_new == value_area).all()
 
