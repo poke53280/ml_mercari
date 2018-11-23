@@ -1,5 +1,7 @@
 
 import numpy as np
+import pandas as pd
+import gc
 from keras.layers import Input
 from keras.layers import Embedding
 from keras.layers import Dense
@@ -18,28 +20,113 @@ import tensorflow as tf
 from sklearn.model_selection import KFold
 
 
-# Store and cut down data for test
 
-anDataConstBackup = anDataConst.copy()
-value_areaBackup = value_area.copy()
+def add_noise(anDataConst, anData, value_area, anSnippet, aSnippetSize):
 
+    num_objects = anDataConst.shape[0]
 
-anDataConst = anDataConst[:7000]
-value_area = value_area[:7000]
+    sample_init_size = anSnippet.shape[1]
 
 
+    for iRow in range(num_objects):
+
+        iMin = 0
+        iMax = value_area[iRow] - sample_init_size
+
+        iOffset = np.random.choice(range(iMin, iMax + 1))
+
+        assert iOffset >= 0
+        assert iOffset + sample_init_size <= anDataConst.shape[1]
+
+        data_raw = anDataConst[iRow, iOffset: iOffset + sample_init_size]
+
+        iFirstBreakChar = 6 * num_bins_y
+
+        m = data_raw >= iFirstBreakChar
+
+        iCut = sample_init_size
+
+        if m.sum() > 0:
+            iCut = np.where(m)[0][0]
+
+        # Can replace values 0..iCut
+
+        iSnippetRow = np.random.randint(0, anSnippet.shape[0])
+
+        anSnippetData = anSnippet[iSnippetRow]
+        nSnippetSize = aSnippetSize[iSnippetRow]
+
+        nReplaceRun = np.amin([nSnippetSize, iCut])
+
+        anData[iRow, iOffset: iOffset + nReplaceRun] = anSnippetData[0:nReplaceRun]
+
+
+    m = anData == anDataConst
+
+    nEqual = m.sum()
+    nAll = anData.shape[0] * anData.shape[1]
+
+    nDiff = nAll - nEqual
+    rDiff = 100.0 * nDiff / nAll
+
+    print(f"add_noise diff elements: {rDiff:.1f}%")
+
+"""c"""
+
+
+
+######## LOAD START
+
+
+
+DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
+DATA_DIR_BASEMENT = "D:\\XXX\\"
+DATA_DIR = DATA_DIR_PORTABLE
+
+num_snip_per_row = 10
+slot_size = 5
+num_bins_y = 150
+num_sequence_length = 200
+
+anDataConst = np.load(DATA_DIR + "anData_all.npy")
+value_area = np.load(DATA_DIR + "value_area_all.npy")
+
+NCUT = 300000
+
+anDataConst = anDataConst[:NCUT]
+value_area = value_area[:NCUT]
+
+
+# Load snippets
+
+anSnippet = np.load(DATA_DIR + "anSnippet_all.npy")
+aSnippetSize = np.load(DATA_DIR + "aSnippetSize_all.npy")
+
+anSnippet = anSnippet[:NCUT* num_snip_per_row]
+aSnippetSize = aSnippetSize[:NCUT* num_snip_per_row]
 
 vocab_size = np.max(anDataConst) + 1 
 
 sentenceLength = anDataConst.shape[1]
 num_rows = anDataConst.shape[0]
 
+ac = np.linspace(start = 0, stop = 1, num = 150)
 
-num_dim_out_emb = 6
+nBreaks = 1 + np.max(anDataConst) -  6 * num_bins_y
 
+ab = np.linspace(start = 0, stop = 1, num = nBreaks)
 
-anZeroDiff = np.zeros( (num_rows, sentenceLength * num_dim_out_emb), dtype = np.float32)
+emb = np.zeros((vocab_size, 7), dtype = np.float32)
 
+for b in range(6):
+    print(f"{b * 150} - {(b+1) * 150}")
+    emb[b * 150: (b+1) * 150, b] = ac
+
+"""c"""
+
+emb[6* 150: 6*150 + nBreaks, 6] = ab
+
+anZeroDiff = np.zeros( (num_rows, sentenceLength * 7), dtype = np.float32)
 
 num_folds = 9
 lRunFolds = list (range(num_folds))
@@ -59,74 +146,66 @@ for iFold in range(1):
 
     iLoop, (train_index, test_index) = lKF[iFold]
 
-
-    num_snippets = 100000
-    sample_init_size = 20
-
-    anSnippetTrain = np.zeros((num_snippets, sample_init_size), dtype = np.uint16)
-    aSnippetSizeTrain = np.empty(num_snippets, dtype = np.uint16)
-
     anDataConstTrain = anDataConst[train_index]
     anZeroDiffTrain = anZeroDiff[train_index]
 
-    anSnippetTrain, aSnippetSizeTrain = collect_snippets(anDataConstTrain, value_area[train_index], anSnippetTrain, aSnippetSizeTrain, 5)
+    anSnipIDxTrain = np.empty((train_index.shape[0], num_snip_per_row), dtype = int)
+    anSnipIDxTrain[:, 0] = train_index
+    anSnipIDxTrain[:, 0] *= num_snip_per_row
 
+    for i in range(1, num_snip_per_row):
+        anSnipIDxTrain[:, i] = anSnipIDxTrain[:, i-1] + 1
+    """c"""
 
-    np.save(DATA_DIR + "anSnippetTrain_100000", anSnippetTrain)
-    np.save(DATA_DIR + "aSnippetSizeTrain_100000", aSnippetSizeTrain)
+    anSnipIDxTrain = anSnipIDxTrain.flatten(order = 'C')
 
-
-
-    anSnippetValid = np.zeros((num_snippets, sample_init_size), dtype = np.uint16)
-    aSnippetSizeValid = np.empty(num_snippets, dtype = np.uint16)
+    anSnippetTrain = anSnippet[anSnipIDxTrain]
+    aSnippetSizeTrain = aSnippetSize[anSnipIDxTrain]
 
     anDataConstValid = anDataConst[test_index]
     anZeroDiffValid = anZeroDiff[test_index]
 
-    anSnippetValid, aSnippetSizeValid = collect_snippets(anDataConstValid, value_area[test_index], anSnippetValid, aSnippetSizeValid, 5)
+    anSnipIDxValid = np.empty((test_index.shape[0], num_snip_per_row), dtype = int)
+    anSnipIDxValid[:, 0] = test_index
+    anSnipIDxValid[:, 0] *= num_snip_per_row
 
-    np.save(DATA_DIR + "anSnippetValid_100000", anSnippetValid)
-    np.save(DATA_DIR + "aSnippetSizeValid_100000", aSnippetSizeValid)
+    for i in range(1, num_snip_per_row):
+        anSnipIDxValid[:, i] = anSnipIDxValid[:, i-1] + 1
+    """c"""
 
+    anSnipIDxValid = anSnipIDxValid.flatten(order = 'C')
 
-
-    anSnippetTrain = np.load(DATA_DIR + "anSnippetTrain_100000.npy")
-    aSnippetSizeTrain = np.load(DATA_DIR + "aSnippetSizeTrain_100000.npy")
-
-    anSnippetValid = np.load(DATA_DIR + "anSnippetValid_100000.npy")
-    aSnippetSizeValid = np.load(DATA_DIR + "aSnippetSizeValid_100000.npy")
-
-
-
-
+    anSnippetValid = anSnippet[anSnipIDxValid]
+    aSnippetSizeValid = aSnippetSize[anSnipIDxValid]
 
     encoder_inputs = Input(shape=(sentenceLength,), name="Encoder_input")
     target_inputs = Input(shape=(sentenceLength,), name="target_input")
 
-    emb_obj = Embedding(output_dim=num_dim_out_emb, input_dim=vocab_size, name="Embedding", embeddings_constraint=unitnorm(axis=1))
+#    emb_obj = Embedding(output_dim=num_dim_out_emb, input_dim=vocab_size, name="Embedding", embeddings_constraint=unitnorm(axis=1))
+
+    emb_obj = Embedding(emb.shape[0], emb.shape[1], weights=[emb], trainable=False)
 
     x = emb_obj (encoder_inputs)
 
-
-    # Valid set MSE = 0.1617
-    #x = LSTM(16, return_sequences=True) (x)
-
-    #x = Dense(8) (x)
-    #x = Flatten() (x)
-    #x = Dense(1) (x)
-
-    
     x = Flatten() (x)
-    x = Dense(512) (x)
-    x = Dense(512) (x)
-    x = Dense(32) (x)
-    x = Dense(1) (x)
 
-    # Valid set MSE = 0.166
+    x = Dense(1400) (x)
+    x = Dense(1400) (x)
+    
+
+    # 45 mins. on high noise. (shuffle 8)
+    # Valid set MSE = 0.0335
     x = LSTM(128, return_sequences=True) (x)
     x = LSTM(128, return_sequences=True) (x)
     x = TimeDistributed(Dense(vocab_size)) (x)
     x = Flatten() (x)
+    x = Dense(1) (x)
+
+    x = LSTM(128, return_sequences=True) (x)
+    x = TimeDistributed(Dense(vocab_size)) (x)
+    x = Dense(512) (x)
+    x = Flatten() (x)
+    x = Dense(32) (x)
     x = Dense(1) (x)
 
     
@@ -134,13 +213,13 @@ for iFold in range(1):
     x = Dense(8) (x)
     x = Dense(1) (x)
 
-    emb_obj_t = Embedding(output_dim=num_dim_out_emb, input_dim=vocab_size, name="Embedding_T", embeddings_constraint=unitnorm(axis=1))
+    #emb_obj_t = Embedding(output_dim=num_dim_out_emb, input_dim=vocab_size, name="Embedding_T", embeddings_constraint=unitnorm(axis=1))
 
-    assert hasattr(emb_obj_t, 'trainable')
+    #assert hasattr(emb_obj_t, 'trainable')
 
-    emb_obj_t.trainable = False
+    #emb_obj_t.trainable = False
 
-    t = emb_obj_t (target_inputs)
+    t = emb_obj (target_inputs)
    
     t = Flatten() (t)
 
@@ -150,11 +229,11 @@ for iFold in range(1):
 
     model.compile(loss='mse', optimizer='adam')
 
-    num_shuffles = 4
+    num_shuffles = 8
 
     num_epochs = 20
 
-    emb_obj_t.set_weights(emb_obj.get_weights())
+#     emb_obj_t.set_weights(emb_obj.get_weights())
     
 
     for iEpoch in range(num_epochs):
@@ -169,25 +248,8 @@ for iFold in range(1):
             add_noise(anDataConstValid, anDataValid, value_area[test_index], anSnippetValid, aSnippetSizeValid)
         """c"""
 
-        num_full_batch = anDataTrain.shape[0]
-
-        num_requested_mini_batch = 1024
-
-        num_splits = int (num_full_batch / num_requested_mini_batch)
-
-        ixr = np.array_split(range(num_full_batch), num_splits)
-
-        for i, ix in enumerate(ixr):
-
-            if i % 7 == 0:
-                print(f"Batch {i +1 } / {num_splits} EVAL batch")
-                h = model.fit(x = [anDataTrain[ix],  anDataConstTrain[ix]], y = anZeroDiffTrain[ix], validation_data = ([anDataValid,  anDataConstValid], anZeroDiffValid), epochs = 1, verbose = 2)
-            else:
-                # print(f"Batch {i +1 } / {num_splits}")
-                h = model.fit(x = [anDataTrain[ix],  anDataConstTrain[ix]], y = anZeroDiffTrain[ix], epochs = 1, verbose = 0)
-            
-
-            emb_obj_t.set_weights(emb_obj.get_weights())
+        h = model.fit(batch_size=16, x = [anDataTrain,  anDataConstTrain], y = anZeroDiffTrain, validation_data = ([anDataValid,  anDataConstValid], anZeroDiffValid), epochs = 1, verbose = 1)
+           
 
         z_p = model.predict(x = [anDataValid,  anDataConstValid])
 
@@ -199,6 +261,39 @@ for iFold in range(1):
     """c"""
 """c"""
     
+
+
+anDataValid
+anDataConstValid
+
+
+# Unit model
+
+encoder_inputs = Input(shape=(sentenceLength,), name="Encoder_input")
+target_inputs = Input(shape=(sentenceLength,), name="target_input")
+
+emb_obj = Embedding(emb.shape[0], emb.shape[1], weights=[emb], trainable=False)
+
+x = emb_obj (encoder_inputs)
+x = Flatten() (x)
+
+t = emb_obj (target_inputs)
+t = Flatten() (t)
+
+subtracted = Subtract()([x, t])
+
+model_unit = Model([encoder_inputs, target_inputs], subtracted)
+
+model_unit.compile(loss='mse', optimizer='adam')
+
+
+model_unit.summary()
+
+z_p = model_unit.predict(x = [anDataValid,  anDataConstValid])
+
+mse = (z_p* z_p).mean()
+
+print(f"Valid set MSE = {mse:.4f}")
 
 
     

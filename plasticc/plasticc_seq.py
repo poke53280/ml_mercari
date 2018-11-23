@@ -5,6 +5,8 @@ import pandas as pd
 import gc
 from datetime import datetime
 
+from timeit import default_timer as timer
+
 
 def rle(inarray):
         """ returns: tuple (runlengths, startpositions, values) """
@@ -72,25 +74,29 @@ def get_binned_sequence(y, num_bins):
     return y_cat_tot
 
 
-
 ####################################################################################
 #
 #   pimpim
 #
-#
 
 
-def pimpim(df, id, slot_size, num_bins_y):
+def pimpim(df, offset, length, slot_size, num_bins_y):
 
-    m = df.object_id == id
+    t = list()
+    t.append(timer())
+    
 
-    x = df.mjd.values[np.where(m)]
+    x = df.mjd.values[offset: offset + length].copy()
 
     x = x - x.min()
 
-    p = df.passband.values[np.where(m)]
+    t.append(timer())
 
-    y_this_read_out = y_read_out[np.where(m)]
+    p = df.passband.values[offset: offset + length]
+    y_this_read_out = y_read_out[offset: offset + length]
+
+
+    t.append(timer())
 
     num_bins_x = int (.5 + x.max()/slot_size)
 
@@ -102,6 +108,8 @@ def pimpim(df, id, slot_size, num_bins_y):
     out = np.empty((6, num_bins_x), dtype = np.float32)
     out[:, :] = np.nan
 
+    t.append(timer())
+
     for b in range (6):
 
         m = (p == b)
@@ -111,7 +119,9 @@ def pimpim(df, id, slot_size, num_bins_y):
 
         out[b, d_p] = y_p
 
+    t.append(timer())
 
+        
     colsum = np.nansum(out, axis = 0)
     m = colsum == 0
 
@@ -123,6 +133,9 @@ def pimpim(df, id, slot_size, num_bins_y):
     out[4, :] += (num_bins_y * 4)
     out[5, :] += (num_bins_y * 5)
 
+    t.append(timer())
+   
+
 
     # !!! No zeroes/Padding value.
 
@@ -130,9 +143,13 @@ def pimpim(df, id, slot_size, num_bins_y):
     m = np.isnan(out)
     out = out[~m]
 
+    t.append(timer())
+
     l, start, value = rle(out)
 
     m = (value == num_bins_y * 6)
+
+    t.append(timer())
 
     l = l[m]
     start = start[m]
@@ -142,8 +159,11 @@ def pimpim(df, id, slot_size, num_bins_y):
 
     out = out[~m]
 
-    return out
+    t.append(timer())
+
+    return out, t
 """c"""
+
 
 def get_first_items(nFirstItems, filename):
     store = pd.HDFStore(filename)
@@ -169,112 +189,75 @@ def get_first_items(nFirstItems, filename):
 
     assert nFirstItems <= begin_offset.shape[0]
 
-    iBeyondLast = begin_offset[nFirstItems]
+    iLastElement = nFirstItems - 1
+
+    iBeyondLast = begin_offset[iLastElement] + lengths[iLastElement]
     
     df = store.select('data', start = 0 , stop = iBeyondLast )
     df = df.reset_index(drop = True)
 
-    return df
+    return df, begin_offset, lengths
 """c"""
 
 
+# Generate snippets 
+
+num_snip_per_row = 10
+
+num_rows = anDataConst.shape[0]
+
+num_snippets = num_snip_per_row * num_rows
+
+sample_init_size = 20
+
+anSnippet = np.zeros((num_snippets, sample_init_size), dtype = np.uint16)
+aSnippetSize = np.empty(num_snippets, dtype = np.uint16)
 
 
-def collect_snippets(anDataConst, value_area, anSnippet, aSnippetSize, nMinSnippetSize):
+iSnippet = 0
 
-    num_snippets = anSnippet.shape[0]
+for iRow in range(num_rows):
 
-    sample_init_size = anSnippet.shape[1]
+    if iRow % 10000 == 0:
+        print(f"Row {iRow} / {num_rows}")
 
-    assert value_area.shape[0] == anDataConst.shape[0]
+    anDataRow = anDataConst[iRow].copy()
 
-    for iSnippet in range(num_snippets):
+    iMin = 0
+    iMax = value_area[iRow] - sample_init_size
 
-        iRow = np.random.choice(range(0, anDataConst.shape[0]-1))
-        iMin = 0
-        iMax = value_area[iRow] - sample_init_size
+    iFirstBreakChar = 6 * num_bins_y
 
-        iOffset = np.random.choice(range(iMin, iMax))
+    m = anDataRow >= iFirstBreakChar
 
-        data_raw = anDataConst[iRow, iOffset: iOffset + sample_init_size]
+    for i in range(num_snip_per_row):
 
-        iFirstBreakChar = 6 * num_bins_y
+        iOffset = np.random.choice(range(iMin, iMax +1 ))
 
-        m = data_raw >= iFirstBreakChar
+        data_raw = anDataRow[iOffset : iOffset + sample_init_size]
+
+        m_this = m[iOffset : iOffset + sample_init_size]
 
         iCut = sample_init_size
 
-        if m.sum() > 0:
-            iCut = np.where(m)[0][0]
+        if m_this.sum() > 0:
+            iCut = np.where(m_this)[0][0]
 
         anSnippet[iSnippet, 0:iCut] = data_raw[0:iCut]
         aSnippetSize[iSnippet] = iCut
 
-    """c"""
-
-    # Post process - remove small runs
-
-    m = aSnippetSize < nMinSnippetSize
-
-    anSnippet = anSnippet[~m]
-    aSnippetSize = aSnippetSize[~m]
-
-    return anSnippet, aSnippetSize
+        iSnippet = iSnippet + 1
 
 """c"""
 
+# Save snippets
 
-def add_noise(anDataConst, anData, value_area, anSnippet, aSnippetSize):
-
-    num_objects = anDataConst.shape[0]
-
-    sample_init_size = anSnippet.shape[1]
+np.save(DATA_DIR + "anSnippet_all", anSnippet)
+np.save(DATA_DIR + "aSnippetSize_all", aSnippetSize)
 
 
-    for iRow in range(num_objects):
-
-        iMin = 0
-        iMax = value_area[iRow] - sample_init_size
-
-        iOffset = np.random.choice(range(iMin, iMax + 1))
-
-        assert iOffset >= 0
-        assert iOffset + sample_init_size <= anDataConst.shape[1]
-
-        data_raw = anDataConst[iRow, iOffset: iOffset + sample_init_size]
-
-        iFirstBreakChar = 6 * num_bins_y
-
-        m = data_raw >= iFirstBreakChar
-
-        iCut = sample_init_size
-
-        if m.sum() > 0:
-            iCut = np.where(m)[0][0]
-
-        # Can replace values 0..iCut
-
-        iSnippetRow = np.random.randint(0, anSnippet.shape[0])
-
-        anSnippetData = anSnippet[iSnippetRow]
-        nSnippetSize = aSnippetSize[iSnippetRow]
-
-        nReplaceRun = np.amin([nSnippetSize, iCut])
-
-        anData[iRow, iOffset: iOffset + nReplaceRun] = anSnippetData[0:nReplaceRun]
 
 
-    m = anData == anDataConst
-
-    nEqual = m.sum()
-    nAll = anData.shape[0] * anData.shape[1]
-
-    nDiff = nAll - nEqual
-    rDiff = 100.0 * nDiff / nAll
-
-    print(f"add_noise diff elements: {rDiff:.1f}%")
-
-"""c"""
 
 
 
@@ -283,11 +266,22 @@ DATA_DIR_BASEMENT = "D:\\XXX\\"
 DATA_DIR = DATA_DIR_PORTABLE
 
 
-df = get_first_items(70000, DATA_DIR + 'data.h5')
 
-df = pd.read_csv(DATA_DIR + "training_set.csv")
+df_meta_test = pd.read_csv(DATA_DIR + "test_set_metadata.csv")
+num_total_test = np.unique(df_meta_test.object_id.values).shape[0]
 
 
+df_meta = pd.read_csv(DATA_DIR + "training_set_metadata.csv")
+num_total_training = np.unique(df_meta.object_id.values).shape[0]
+
+num_objects = num_total_test + num_total_training
+
+
+# num items = 3500738
+df, begin_offset, anLength = get_first_items(num_objects, DATA_DIR + 'data.h5')
+
+
+assert num_objects == np.unique(df.object_id.values).shape[0]
 
 
 np.set_printoptions(precision=2)
@@ -321,28 +315,35 @@ for b in range(6):
 """c"""
 
 
-uniqueID = np.unique(df.object_id.values)
-
-num_objects = uniqueID.shape[0]
 
 start = datetime.now()
 
-anData = np.zeros((num_objects,num_sequence_length), dtype = np.uint16)   # To empty after debug
+anData = np.zeros((num_objects,num_sequence_length), dtype = np.uint16)   
 
 res_size = np.zeros(num_objects, dtype = np.uint16)
 
-for ix, x in enumerate(uniqueID):
+timers = np.zeros(100, dtype = np.float32)
 
-    if ix % 50 == 0:
-        print(ix)
+for ix in range(num_objects):
 
-    res = pimpim(df, x, slot_size, num_bins_y)
+    if ix % 100000 == 0:
+        print(f"{ix} {num_objects}...")
+
+    offset_this = begin_offset[ix]
+    length = anLength[ix]
+
+    res, t = pimpim(df, offset_this, length, slot_size, num_bins_y)
+
+    t_diff = np.diff(np.array(t))
+
+    timers[0:t_diff.shape[0]] += t_diff
 
     res_size[ix] = res.shape[0]
 
     res = res.astype(np.uint16)
     res = res[:num_sequence_length]
     anData[ix, 0:res.shape[0]] = res
+
 
 
 end = datetime.now()
@@ -352,17 +353,11 @@ dSeconds = dT.total_seconds()
 
 print(f"time: {dSeconds:.2f}s")
 
-anDataConst = anData.copy()
-
 # Values from 0 to value_area (excl) for all rows.
 value_area = np.clip(res_size, None, num_sequence_length)
 
 
-np.save(DATA_DIR + "anDataConst_70000", anDataConst)
-np.save(DATA_DIR + "value_area_70000", value_area)
-
-
-anDataConst = np.load(DATA_DIR + "anDataConst_70000.npy")
-value_area = np.load(DATA_DIR + "value_area_70000.npy")
+np.save(DATA_DIR + "anData_all", anData)
+np.save(DATA_DIR + "value_area_all", value_area)
 
 
