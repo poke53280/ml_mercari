@@ -91,11 +91,12 @@ num_sequence_length = 200
 anDataConst = np.load(DATA_DIR + "anData_all.npy")
 value_area = np.load(DATA_DIR + "value_area_all.npy")
 
-NCUT = 300000
+NCUT = 1000000
 
 anDataConst = anDataConst[:NCUT]
 value_area = value_area[:NCUT]
 
+gc.collect()
 
 # Load snippets
 
@@ -104,6 +105,8 @@ aSnippetSize = np.load(DATA_DIR + "aSnippetSize_all.npy")
 
 anSnippet = anSnippet[:NCUT* num_snip_per_row]
 aSnippetSize = aSnippetSize[:NCUT* num_snip_per_row]
+
+gc.collect()
 
 vocab_size = np.max(anDataConst) + 1 
 
@@ -147,43 +150,46 @@ for iFold in range(1):
     iLoop, (train_index, test_index) = lKF[iFold]
 
     anDataConstTrain = anDataConst[train_index]
-    anZeroDiffTrain = anZeroDiff[train_index]
-
-    anSnipIDxTrain = np.empty((train_index.shape[0], num_snip_per_row), dtype = int)
-    anSnipIDxTrain[:, 0] = train_index
-    anSnipIDxTrain[:, 0] *= num_snip_per_row
-
-    for i in range(1, num_snip_per_row):
-        anSnipIDxTrain[:, i] = anSnipIDxTrain[:, i-1] + 1
-    """c"""
-
-    anSnipIDxTrain = anSnipIDxTrain.flatten(order = 'C')
-
-    anSnippetTrain = anSnippet[anSnipIDxTrain]
-    aSnippetSizeTrain = aSnippetSize[anSnipIDxTrain]
-
     anDataConstValid = anDataConst[test_index]
-    anZeroDiffValid = anZeroDiff[test_index]
 
-    anSnipIDxValid = np.empty((test_index.shape[0], num_snip_per_row), dtype = int)
-    anSnipIDxValid[:, 0] = test_index
-    anSnipIDxValid[:, 0] *= num_snip_per_row
 
-    for i in range(1, num_snip_per_row):
-        anSnipIDxValid[:, i] = anSnipIDxValid[:, i-1] + 1
-    """c"""
+    isAddNoise = False
 
-    anSnipIDxValid = anSnipIDxValid.flatten(order = 'C')
+    if isAddNoise:
 
-    anSnippetValid = anSnippet[anSnipIDxValid]
-    aSnippetSizeValid = aSnippetSize[anSnipIDxValid]
+        anSnipIDxTrain = np.empty((train_index.shape[0], num_snip_per_row), dtype = int)
+        anSnipIDxTrain[:, 0] = train_index
+        anSnipIDxTrain[:, 0] *= num_snip_per_row
+
+        for i in range(1, num_snip_per_row):
+            anSnipIDxTrain[:, i] = anSnipIDxTrain[:, i-1] + 1
+        """c"""
+
+        anSnipIDxTrain = anSnipIDxTrain.flatten(order = 'C')
+
+        anSnippetTrain = anSnippet[anSnipIDxTrain]
+        aSnippetSizeTrain = aSnippetSize[anSnipIDxTrain]
+  
+
+        anSnipIDxValid = np.empty((test_index.shape[0], num_snip_per_row), dtype = int)
+        anSnipIDxValid[:, 0] = test_index
+        anSnipIDxValid[:, 0] *= num_snip_per_row
+
+        for i in range(1, num_snip_per_row):
+            anSnipIDxValid[:, i] = anSnipIDxValid[:, i-1] + 1
+        """c"""
+
+        anSnipIDxValid = anSnipIDxValid.flatten(order = 'C')
+
+        anSnippetValid = anSnippet[anSnipIDxValid]
+        aSnippetSizeValid = aSnippetSize[anSnipIDxValid]
 
     encoder_inputs = Input(shape=(sentenceLength,), name="Encoder_input")
     target_inputs = Input(shape=(sentenceLength,), name="target_input")
 
-#    emb_obj = Embedding(output_dim=num_dim_out_emb, input_dim=vocab_size, name="Embedding", embeddings_constraint=unitnorm(axis=1))
+    emb_obj = Embedding(output_dim=emb.shape[1], input_dim=emb.shape[0], name="Embedding", embeddings_constraint=unitnorm(axis=1))
 
-    emb_obj = Embedding(emb.shape[0], emb.shape[1], weights=[emb], trainable=False)
+    #emb_obj = Embedding(emb.shape[0], emb.shape[1], weights=[emb], trainable=False)
 
     x = emb_obj (encoder_inputs)
 
@@ -243,15 +249,37 @@ for iFold in range(1):
         anDataTrain = anDataConstTrain.copy()
         anDataValid = anDataConstValid.copy()
 
-        for iShuffle in range(num_shuffles):
-            add_noise(anDataConstTrain, anDataTrain, value_area[train_index], anSnippetTrain, aSnippetSizeTrain)
-            add_noise(anDataConstValid, anDataValid, value_area[test_index], anSnippetValid, aSnippetSizeValid)
+        if isAddNoise:
+            for iShuffle in range(num_shuffles):
+                add_noise(anDataConstTrain, anDataTrain, value_area[train_index], anSnippetTrain, aSnippetSizeTrain)
+                add_noise(anDataConstValid, anDataValid, value_area[test_index], anSnippetValid, aSnippetSizeValid)
         """c"""
 
-        h = model.fit(batch_size=16, x = [anDataTrain,  anDataConstTrain], y = anZeroDiffTrain, validation_data = ([anDataValid,  anDataConstValid], anZeroDiffValid), epochs = 1, verbose = 1)
-           
+        num_train = anDataTrain.shape[0]
 
-        z_p = model.predict(x = [anDataValid,  anDataConstValid])
+        max_commit = 100000
+
+        n_commit_split = 1 + int (num_train / max_commit)
+
+        idxTrain = np.arange(0, anDataTrain.shape[0])
+        idxValid = np.arange(0, anDataValid.shape[0])
+
+        idxTrainSplit = np.array_split(idxTrain, n_commit_split, axis = 0)
+        idxValidSplit = np.array_split(idxValid, n_commit_split, axis = 0)
+
+        for ix in range(n_commit_split):
+            print(f"ix = {ix} of {n_commit_split}")
+            num_train = anDataTrain[idxTrainSplit[ix]].shape[0]
+            num_valid = anDataValid[idxValidSplit[ix]].shape[0]
+
+            assert anZeroDiff.shape[0] >= num_train
+            assert anZeroDiff.shape[0] >= num_valid
+
+            h = model.fit(batch_size=16, x = [anDataTrain[idxTrainSplit[ix]],  anDataConstTrain[idxTrainSplit[ix]]], y = anZeroDiff[:num_train], validation_data = ([anDataValid[idxValidSplit[ix]],  anDataConstValid[idxValidSplit[ix]]], anZeroDiff[:num_valid]), epochs = 1, verbose = 1)
+           
+        """c"""
+
+        z_p = model.predict(x = [anDataValid[idxValidSplit[8]],  anDataConstValid[idxValidSplit[8]]])
 
         mse = (z_p* z_p).mean()
 

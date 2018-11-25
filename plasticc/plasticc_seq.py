@@ -34,42 +34,14 @@ def get_binned_sequence(y, num_bins):
     y_s = np.sort(y)
     y_arg_sort = np.argsort(y)
 
-    elements_per_bin = int (.5 + num_elements/num_bins)
+    idx = np.arange(0,num_bins, num_bins/ num_elements)
 
-    idx_lo = []
-    idx_hi = []
+    # Rasterize
+    idx = idx.astype(int)
+    
+    y_cat_tot = np.empty(num_elements, dtype = int)
 
-    for b in range(num_bins):
-
-        idx_lo.append(b  * elements_per_bin)
-
-        if b == num_bins - 1:
-            idx_hi.append(num_elements)
-        else:
-            idx_hi.append( (b + 1) * elements_per_bin)
-
-
-    # Test bin count:
-
-    y_c = np.empty(y_s.shape, dtype = np.uint16)
-
-    for i, (a, b) in enumerate (zip (idx_lo, idx_hi)):
-
-        nElements = b - a
-
-        y_c[a:b] = i
-
-        print(f"{i}: {nElements}")
-
-
-    y_cat_tot = np.empty(y_c.shape, dtype = np.int32)
-    y_cat_tot[:] = np.nan
-
-    y_cat_tot[y_arg_sort] = y_c
-
-    assert np.isnan(y_cat_tot).sum() == 0, "np.isnan(y_cat_tot).sum() == 0"
-    assert np.min(y_cat_tot) == 0, "np.min(y_cat_tot) == 0"
-    assert np.max(y_cat_tot) == (num_bins - 1), "np.max(y_cat_tot) == (num_bins - 1)"
+    y_cat_tot[y_arg_sort] = idx
 
     return y_cat_tot
 
@@ -162,6 +134,35 @@ def pimpim(df, offset, length, slot_size, num_bins_y):
     t.append(timer())
 
     return out, t
+"""c"""
+
+
+def get_train_set(filename):
+    store = pd.HDFStore(filename)
+
+    # run length stop indices
+    df_idx = pd.read_hdf(store, 'idx')
+
+    idx = np.array(df_idx[0], dtype = np.int32)
+
+    idx = np.insert(idx, 0, 0)
+
+    begin_offset = idx[:-1]
+    lengths = np.diff(idx)
+
+    del df_idx
+    del idx
+
+    gc.collect()
+
+    assert begin_offset.shape[0] == lengths.shape[0]
+
+   
+    df = store.select('data', start = begin_offset[-7848] , stop = begin_offset[-1] + lengths[-1] )
+    df = df.reset_index(drop = True)
+
+    return df, begin_offset, lengths
+
 """c"""
 
 
@@ -288,13 +289,12 @@ np.set_printoptions(precision=2)
 np.set_printoptions(suppress=True)
 
 np.set_printoptions(edgeitems=10)
+np.set_printoptions(linewidth=200)
 np.core.arrayprint._line_width = 480
-
 
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 500)
 pd.set_option('display.max_colwidth', 500)
-
 
 slot_size = 5
 
@@ -315,8 +315,6 @@ for b in range(6):
 """c"""
 
 
-
-start = datetime.now()
 
 anData = np.zeros((num_objects,num_sequence_length), dtype = np.uint16)   
 
@@ -346,12 +344,6 @@ for ix in range(num_objects):
 
 
 
-end = datetime.now()
-
-dT = end - start
-dSeconds = dT.total_seconds()
-
-print(f"time: {dSeconds:.2f}s")
 
 # Values from 0 to value_area (excl) for all rows.
 value_area = np.clip(res_size, None, num_sequence_length)
