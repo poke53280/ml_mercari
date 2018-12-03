@@ -21,60 +21,6 @@ from sklearn.model_selection import KFold
 
 
 
-def add_noise(anDataConst, anData, value_area, anSnippet, aSnippetSize):
-
-    num_objects = anDataConst.shape[0]
-
-    sample_init_size = anSnippet.shape[1]
-
-
-    for iRow in range(num_objects):
-
-        iMin = 0
-        iMax = value_area[iRow] - sample_init_size
-
-        iOffset = np.random.choice(range(iMin, iMax + 1))
-
-        assert iOffset >= 0
-        assert iOffset + sample_init_size <= anDataConst.shape[1]
-
-        data_raw = anDataConst[iRow, iOffset: iOffset + sample_init_size]
-
-        iFirstBreakChar = 6 * num_bins_y
-
-        m = data_raw >= iFirstBreakChar
-
-        iCut = sample_init_size
-
-        if m.sum() > 0:
-            iCut = np.where(m)[0][0]
-
-        # Can replace values 0..iCut
-
-        iSnippetRow = np.random.randint(0, anSnippet.shape[0])
-
-        anSnippetData = anSnippet[iSnippetRow]
-        nSnippetSize = aSnippetSize[iSnippetRow]
-
-        nReplaceRun = np.amin([nSnippetSize, iCut])
-
-        anData[iRow, iOffset: iOffset + nReplaceRun] = anSnippetData[0:nReplaceRun]
-
-
-    m = anData == anDataConst
-
-    nEqual = m.sum()
-    nAll = anData.shape[0] * anData.shape[1]
-
-    nDiff = nAll - nEqual
-    rDiff = 100.0 * nDiff / nAll
-
-    print(f"add_noise diff elements: {rDiff:.1f}%")
-
-"""c"""
-
-
-
 ######## LOAD START
 
 
@@ -93,18 +39,10 @@ value_area = np.load(DATA_DIR + "value_area_all.npy")
 
 NCUT = 1000000
 
+num_emb_dim = 4
+
 anDataConst = anDataConst[:NCUT]
 value_area = value_area[:NCUT]
-
-gc.collect()
-
-# Load snippets
-
-anSnippet = np.load(DATA_DIR + "anSnippet_all.npy")
-aSnippetSize = np.load(DATA_DIR + "aSnippetSize_all.npy")
-
-anSnippet = anSnippet[:NCUT* num_snip_per_row]
-aSnippetSize = aSnippetSize[:NCUT* num_snip_per_row]
 
 gc.collect()
 
@@ -113,23 +51,7 @@ vocab_size = np.max(anDataConst) + 1
 sentenceLength = anDataConst.shape[1]
 num_rows = anDataConst.shape[0]
 
-ac = np.linspace(start = 0, stop = 1, num = 150)
-
-nBreaks = 1 + np.max(anDataConst) -  6 * num_bins_y
-
-ab = np.linspace(start = 0, stop = 1, num = nBreaks)
-
-emb = np.zeros((vocab_size, 7), dtype = np.float32)
-
-for b in range(6):
-    print(f"{b * 150} - {(b+1) * 150}")
-    emb[b * 150: (b+1) * 150, b] = ac
-
-"""c"""
-
-emb[6* 150: 6*150 + nBreaks, 6] = ab
-
-anZeroDiff = np.zeros( (num_rows, sentenceLength * 7), dtype = np.float32)
+anZeroDiff = np.zeros( (num_rows, sentenceLength * num_emb_dim), dtype = np.float32)
 
 num_folds = 9
 lRunFolds = list (range(num_folds))
@@ -153,50 +75,17 @@ for iFold in range(1):
     anDataConstValid = anDataConst[test_index]
 
 
-    isAddNoise = False
-
-    if isAddNoise:
-
-        anSnipIDxTrain = np.empty((train_index.shape[0], num_snip_per_row), dtype = int)
-        anSnipIDxTrain[:, 0] = train_index
-        anSnipIDxTrain[:, 0] *= num_snip_per_row
-
-        for i in range(1, num_snip_per_row):
-            anSnipIDxTrain[:, i] = anSnipIDxTrain[:, i-1] + 1
-        """c"""
-
-        anSnipIDxTrain = anSnipIDxTrain.flatten(order = 'C')
-
-        anSnippetTrain = anSnippet[anSnipIDxTrain]
-        aSnippetSizeTrain = aSnippetSize[anSnipIDxTrain]
-  
-
-        anSnipIDxValid = np.empty((test_index.shape[0], num_snip_per_row), dtype = int)
-        anSnipIDxValid[:, 0] = test_index
-        anSnipIDxValid[:, 0] *= num_snip_per_row
-
-        for i in range(1, num_snip_per_row):
-            anSnipIDxValid[:, i] = anSnipIDxValid[:, i-1] + 1
-        """c"""
-
-        anSnipIDxValid = anSnipIDxValid.flatten(order = 'C')
-
-        anSnippetValid = anSnippet[anSnipIDxValid]
-        aSnippetSizeValid = aSnippetSize[anSnipIDxValid]
-
     encoder_inputs = Input(shape=(sentenceLength,), name="Encoder_input")
     target_inputs = Input(shape=(sentenceLength,), name="target_input")
 
-    emb_obj = Embedding(output_dim=emb.shape[1], input_dim=emb.shape[0], name="Embedding", embeddings_constraint=unitnorm(axis=1))
-
-    #emb_obj = Embedding(emb.shape[0], emb.shape[1], weights=[emb], trainable=False)
+    emb_obj = Embedding(output_dim=num_emb_dim, input_dim=vocab_size, name="Embedding", embeddings_constraint=unitnorm(axis=1))
 
     x = emb_obj (encoder_inputs)
 
     x = Flatten() (x)
 
-    x = Dense(1400) (x)
-    x = Dense(1400) (x)
+    x = Dense(4) (x)
+    x = Dense(sentenceLength * num_emb_dim) (x)
     
 
     # 45 mins. on high noise. (shuffle 8)
@@ -231,6 +120,11 @@ for iFold in range(1):
 
     subtracted = Subtract()([x, t])
 
+
+
+    model_emb = Model(target_inputs, t)
+
+
     model = Model([encoder_inputs, target_inputs], subtracted)
 
     model.compile(loss='mse', optimizer='adam')
@@ -248,12 +142,6 @@ for iFold in range(1):
 
         anDataTrain = anDataConstTrain.copy()
         anDataValid = anDataConstValid.copy()
-
-        if isAddNoise:
-            for iShuffle in range(num_shuffles):
-                add_noise(anDataConstTrain, anDataTrain, value_area[train_index], anSnippetTrain, aSnippetSizeTrain)
-                add_noise(anDataConstValid, anDataValid, value_area[test_index], anSnippetValid, aSnippetSizeValid)
-        """c"""
 
         num_train = anDataTrain.shape[0]
 
@@ -279,16 +167,26 @@ for iFold in range(1):
            
         """c"""
 
-        z_p = model.predict(x = [anDataValid[idxValidSplit[8]],  anDataConstValid[idxValidSplit[8]]])
+        for ix in range(n_commit_split):
 
-        mse = (z_p* z_p).mean()
-
-        print(f"Valid set MSE = {mse:.4f}")
-
+            z_p = model.predict(x = [anDataValid[idxValidSplit[ix]],  anDataConstValid[idxValidSplit[ix]]])
+            mse = (z_p* z_p).mean()
+            print(f"Valid set MSE = {mse:.4f}")
+        """c"""
 
     """c"""
 """c"""
     
+
+
+z_emb = model_emb.predict(x = anDataValid[idxValidSplit[0]])
+
+
+w = emb_obj.get_weights()[0]
+
+
+w[0]
+
 
 
 anDataValid

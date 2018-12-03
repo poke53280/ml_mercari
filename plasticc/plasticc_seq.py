@@ -31,10 +31,11 @@ def get_binned_sequence(y, num_bins):
 
     num_elements = y.shape[0]
 
-    y_s = np.sort(y)
     y_arg_sort = np.argsort(y)
 
-    idx = np.arange(0,num_bins, num_bins/ num_elements)
+    idx = np.linspace(0, num_bins -1, num = num_elements)
+
+    assert idx.shape[0] == num_elements
 
     # Rasterize
     idx = idx.astype(int)
@@ -97,8 +98,6 @@ def pimpim(df, offset, length, slot_size, num_bins_y):
     colsum = np.nansum(out, axis = 0)
     m = colsum == 0
 
-    out[0, m] = num_bins_y * 6
-
     out[1, :] += (num_bins_y * 1)
     out[2, :] += (num_bins_y * 2)
     out[3, :] += (num_bins_y * 3)
@@ -106,8 +105,6 @@ def pimpim(df, offset, length, slot_size, num_bins_y):
     out[5, :] += (num_bins_y * 5)
 
     t.append(timer())
-   
-
 
     # !!! No zeroes/Padding value.
 
@@ -187,6 +184,9 @@ def get_first_items(nFirstItems, filename):
     assert begin_offset.shape[0] == lengths.shape[0]
 
     print(f"num items = {begin_offset.shape[0]}")
+
+    if nFirstItems == 0:
+        nFirstItems = begin_offset.shape[0]
 
     assert nFirstItems <= begin_offset.shape[0]
 

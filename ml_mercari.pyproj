@@ -143,6 +143,9 @@
     <Compile Include="p0\__init__.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="plasticc\plasticc_dense.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="plasticc\plasticc_seq.py">
       <SubType>Code</SubType>
     </Compile>
@@ -183,6 +186,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="plasticc\plasticc_stratify.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="plasticc\plasticc_tfrecord.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="plasticc\plasticc_viz.py">
