@@ -23,6 +23,214 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
 
+
+
+####################################################################################
+#
+#   generate_dense
+#
+#
+
+def generate_dense(df, num_objects, begin_offset, anLength, slot_size, num_sequence_length, num_bins_y):
+    
+    x_all = df.mjd.values.copy()
+    x_all = x_all - x_all.min()
+    p_all = df.passband.values
+    y_all = df.flux.values
+
+    # Get binned read out
+    y_read_out = np.empty(y_all.shape, dtype = np.uint16)
+
+
+    for b in range(6):
+        print(f"get_binned_sequence passband {b}/5...")
+        m = (p_all == b)
+        y_read_out[m] = get_binned_sequence(y_all[m], num_bins_y)
+
+    """c"""
+
+    anData = np.zeros((num_objects,6 * num_sequence_length), dtype = np.uint64)   
+
+    res_size = np.zeros(num_objects, dtype = np.uint16)
+
+    for i in range(num_objects):
+
+        if i % 10000 == 0:
+            print(f"Row {i} / {num_objects}")
+
+        offset = begin_offset[i]
+        length = anLength[i]
+
+        x = x_all[offset: offset + length].copy()
+
+        x = x - x.min()
+
+        p = p_all[offset: offset + length]
+
+        y_this_read_out = y_read_out[offset: offset + length]
+
+        num_bins_x = int (.5 + x.max()/slot_size)
+
+        bins = np.linspace(0,  x.max(), num_bins_x, endpoint = False)
+
+        digitized = np.digitize(x, bins)
+        digitized = digitized - 1
+
+        out = np.empty((6, num_bins_x), dtype = np.float64)
+
+        out[:, :] = np.nan
+
+        for b in range (6):
+
+            m = (p == b)
+
+            y_p = y_read_out[np.where(m)]
+            d_p = digitized[np.where(m)]
+
+            out[b, d_p] = y_p
+
+
+        colsum = np.nansum(out, axis = 0)
+        m = colsum == 0
+
+        out += 1
+
+        out[:, ~m] = np.nan_to_num(out[:, ~m])
+
+        num_vocab = num_bins_y + 1
+
+        out[1, :] *= num_vocab
+        out[2, :] *= (num_vocab * num_vocab)
+        out[3, :] *= (num_vocab * num_vocab * num_vocab)
+        out[4, :] *= (num_vocab * num_vocab * num_vocab * num_vocab)
+        out[5, :] *= (num_vocab * num_vocab * num_vocab * num_vocab * num_vocab)
+
+
+        out = np.sum(out, axis = 0)
+
+        out = out.flatten(order = 'F')
+
+        NO_DATA = num_vocab * num_vocab * num_vocab * num_vocab * num_vocab * num_vocab
+
+        m = np.isnan(out)
+
+        out[m] = NO_DATA
+
+
+        l, start, value = rle(out)
+
+        m = (value == NO_DATA)
+
+        l = l[m]
+
+        start = start[m]
+        out[start] += l
+
+        m = (out == NO_DATA)
+
+        out = out[~m]
+
+
+        out = out.astype(np.uint64)
+
+        res_size[i] = out.shape[0]
+
+        res = np.zeros(6 * num_sequence_length, dtype = np.int16)
+        res[:] = NO_DATA
+
+        iCopyElements = np.min([res.shape[0], out.shape[0]])
+
+        res[:iCopyElements] = out[:iCopyElements]
+        res[iCopyElements:] = 0
+
+        anData[i, 0:res.shape[0]] = res
+
+    return anData
+"""c"""
+
+
+
+
+
+def rasterize_data(df, num_objects, begin_offset, anLength, slot_size_d, num_sequence_length_d):
+
+    x_all = df.mjd.values.copy()
+    x_all = x_all - x_all.min()
+    p_all = df.passband.values
+    y_all = df.flux.values
+
+    y_std_scaled = np.empty(y_all.shape, dtype = np.float32)
+
+    s = StandardScaler(with_std=False)
+
+    for b in range(6):
+        print(f"{b}...")
+        m = (p_all == b)
+        y_std_scaled[m] = s.fit_transform(y_all[m].reshape(-1, 1)).flatten()
+
+    """c"""
+  
+
+    anData_d = np.zeros((num_objects, 6 * num_sequence_length_d), dtype = np.float32)
+
+    res_size_d = np.zeros(num_objects, dtype = np.uint16)
+
+    for i in range(num_objects):
+
+        if i % 10000 == 0:
+            print(f"Row {i} / {num_objects}")
+
+        offset = begin_offset[i]
+        length = anLength[i]
+
+        x = x_all[offset: offset + length].copy()
+
+        x = x - x.min()
+
+        p = p_all[offset: offset + length]
+
+        y_this_scaled = y_std_scaled[offset: offset + length]
+
+        num_bins_x = int (.5 + x.max()/slot_size_d)
+
+        bins = np.linspace(0,  x.max(), num_bins_x, endpoint = False)
+
+        digitized = np.digitize(x, bins)
+        digitized = digitized - 1
+
+        out_d = np.empty((6, num_bins_x), dtype = np.float32)
+
+        out_d[:, :] = np.nan
+
+        for b in range (6):
+
+            m = (p == b)
+            y_d = y_std_scaled[np.where(m)]
+            d_p = digitized[np.where(m)]
+            out_d[b, d_p] = y_d
+
+        out_d = np.nan_to_num(out_d)
+        out_d = out_d.flatten(order = 'F')
+
+        res_size_d[i] = out_d.shape[0]
+
+
+        res_d = np.zeros(6 * num_sequence_length_d, dtype = np.float32)
+
+        iCopyElements = np.min([res_d.shape[0], out_d.shape[0]])
+
+        res_d[:iCopyElements] = out_d[:iCopyElements]
+        res_d[iCopyElements:] = 0
+
+        anData_d[i, 0:res_d.shape[0]] = res_d
+
+    return anData_d
+
+"""c"""
+
+
+
+
 np.set_printoptions(precision=2)
 np.set_printoptions(suppress=True)
 
@@ -41,7 +249,7 @@ DATA_DIR = DATA_DIR_PORTABLE
 
 slot_size = 5
 num_sequence_length = 200
-num_bins_y = 100
+num_bins_y = 30
 
 # Load all:
 
@@ -57,115 +265,24 @@ df_meta_t = pd.read_csv(DATA_DIR + "test_set_metadata.csv")
 assert df_meta.shape[0] + df_meta_t.shape[0] == num_objects
 
 
-x_all = df.mjd.values
 
-x_all = x_all - x_all.min()
+data = generate_dense(df, 900000, begin_offset, anLength, slot_size, num_sequence_length, num_bins_y)
 
-p_all = df.passband.values
-
-y_all = df.flux.values
-
-y_read_out = np.empty(y_all.shape, dtype = np.uint16)
-y_std_scaled = np.empty(y_all.shape, dtype = np.float32)
-
-s = StandardScaler(with_std=False)
+np.save(DATA_DIR + "anData_all_3", data)
 
 
-for b in range(6):
-    m = (p_all == b)
-    y_read_out[m] = get_binned_sequence(y_all[m], num_bins_y)
-    y_std_scaled[m] = s.fit_transform(y_all[m].reshape(-1, 1)).flatten()
+# Get scaled read out for neural net.
 
-"""c"""
 
-anData = np.zeros((num_objects,6 * num_sequence_length), dtype = np.uint16)   
-anData_d = np.zeros((num_objects, 6 * num_sequence_length), dtype = np.float32)
-
-res_size = np.zeros(num_objects, dtype = np.uint16)
-
-for i in range(num_objects):
-
-    if i % 10000 == 0:
-        print(f"Row {i} / {num_objects}")
-
-    offset = begin_offset[i]
-    length = anLength[i]
-
-    x = x_all[offset: offset + length].copy()
-
-    x = x - x.min()
-
-    p = p_all[offset: offset + length]
-
-    y_this_read_out = y_read_out[offset: offset + length]
-
-    y_this_scaled = y_std_scaled[offset: offset + length]
-
-    num_bins_x = int (.5 + x.max()/slot_size)
-
-    bins = np.linspace(0,  x.max(), num_bins_x, endpoint = False)
-
-    digitized = np.digitize(x, bins)
-    digitized = digitized - 1
-
-    out = np.empty((6, num_bins_x), dtype = np.float32)
-    out_d = np.empty((6, num_bins_x), dtype = np.float32)
-
-    out[:, :] = np.nan
-    out_d[:, :] = np.nan
-
-    for b in range (6):
-
-        m = (p == b)
-
-        y_p = y_read_out[np.where(m)]
-        y_d = y_std_scaled[np.where(m)]
-        d_p = digitized[np.where(m)]
-
-        out[b, d_p] = y_p
-        out_d[b, d_p] = y_d
-
-    """c"""
-
-    out[1, :] += num_bins_y
-    out[2, :] += (2 * num_bins_y)
-    out[3, :] += (num_bins_y * 3)
-    out[4, :] += (num_bins_y * 4)
-    out[5, :] += (num_bins_y * 5)
+num_sequence_length_d = 90
+slot_size_d = 1
 
 
 
+data_d = rasterize_data(df, 300000, begin_offset, anLength, slot_size_d, num_sequence_length_d)
 
 
-    out += 1
-
-    out = np.nan_to_num(out)
-    out_d = np.nan_to_num(out_d)
-
-    out = out.flatten(order = 'F')
-    out_d = out_d.flatten(order = 'F')
-
-    res_size[i] = out.shape[0]
-
-
-    res = np.zeros(6 * num_sequence_length, dtype = np.int16)
-    res_d = np.zeros(6 * num_sequence_length, dtype = np.float32)
-
-    iCopyElements = np.min([res.shape[0], out.shape[0]])
-
-    res[:iCopyElements] = out[:iCopyElements]
-    res[iCopyElements:] = 0
-
-    res_d[:iCopyElements] = out_d[:iCopyElements]
-    res_d[iCopyElements:] = 0
-
-    anData[i, 0:res.shape[0]] = res
-    anData_d[i, 0:res.shape[0]] = res_d
-
-"""c"""
-
-np.save(DATA_DIR + "anData_all_2", anData)
-np.save(DATA_DIR + "anData_d_all_2", anData_d)
+np.save(DATA_DIR + "anData_d_all_3", data_d)
 
 
 
