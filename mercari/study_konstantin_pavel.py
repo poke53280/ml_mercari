@@ -88,7 +88,6 @@ def main():
     print('Valid RMSLE: {:.4f}'.format(np.sqrt(mean_squared_log_error(valid['price'], y_pred))))
 
 
-
 if __name__ == '__main__':
     main()
 

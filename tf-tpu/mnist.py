@@ -10,6 +10,11 @@
 #
 #
 #
+#
+# TODO PREDICT NUMBERS AND REVIEW RESULT
+#
+#
+
 
 # TODO Bring:
 # https://github.com/AvoncourtPartners/poems into TPU form.
@@ -19,6 +24,19 @@
 # http://karpathy.github.io/2015/05/21/rnn-effectiveness/
 #
 #
+
+############
+#
+# Update gcloud
+#
+#
+#gcloud components update
+#
+
+
+
+
+
 
 
 
@@ -140,6 +158,8 @@
 # UPLOAD CODE (*this* very file, mnist.py, and convert_to_records.py)
 #
 #
+# USERNAME often firstname_lastname
+#
 #(DESKTOP) gcloud compute scp .\mnist.py USERNAME@tpu-driver-eur:.
 #(DESKTOP) gcloud compute scp .\convert_to_records.py USERNAME@tpu-driver-eur:.
 #
@@ -173,6 +193,11 @@
 # mkdir output 
 # gsutil cp -r ${STORAGE_BUCKET}/output .
 #
+
+
+#DELETE OUTPUT IN BUCKET
+# gsutil rm ${STORAGE_BUCKET}/output/*
+
 #
 # MOVE OUTPUT FROM VM TO LOCAL:
 #
@@ -194,7 +219,7 @@
 #
 # (LOCAL) gcloud compute instances list
 # (LOCAL) gcloud compute instances stop tpu-driver-eur
-#
+# (LOCAL) gcloud compute instances start tpu-driver-eur
 #
 #
 # RUN LOCAL

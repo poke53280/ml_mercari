@@ -101,6 +101,9 @@
     <Compile Include="general\TimeSlotAllocator_example.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="general\txt_value_extractor.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="general\__init__.py">
       <SubType>Code</SubType>
     </Compile>
@@ -120,6 +123,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="mp\sort_ml.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="names.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="p0\p3.py">
@@ -198,6 +204,12 @@
     <Compile Include="porto_seguro\porto_seguro.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="quora\quora.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="rnn\text_gen.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="santander_3\1owl_EDA.py">
       <SubType>Code</SubType>
     </Compile>
@@ -273,6 +285,9 @@
     <Compile Include="tf-tpu\t2t_transformer_ende_tut.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="tf-tpu\tf_learn.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="tgs\starter.py">
       <SubType>Code</SubType>
     </Compile>
@@ -322,6 +337,8 @@
     <Folder Include="ga\" />
     <Folder Include="imageai\" />
     <Folder Include="mp\" />
+    <Folder Include="quora\" />
+    <Folder Include="rnn\" />
     <Folder Include="txt\" />
     <Folder Include="plasticc\" />
     <Folder Include="typing\" />
@@ -338,6 +355,7 @@
     <Content Include="ga\Refs.txt" />
     <Content Include="home_credit\read.txt" />
     <Content Include="mercari\Refs.txt" />
+    <Content Include="tf-tpu\textfile.txt" />
     <Content Include="toxic\Refs.txt" />
   </ItemGroup>
   <ItemGroup>

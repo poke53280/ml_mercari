@@ -49,9 +49,7 @@ def generate_dense(df, num_objects, begin_offset, anLength, slot_size, num_seque
 
     """c"""
 
-    anData = np.zeros((num_objects,6 * num_sequence_length), dtype = np.uint64)   
-
-    res_size = np.zeros(num_objects, dtype = np.uint16)
+    anData = np.zeros((num_objects,num_sequence_length), dtype = np.uint64)   
 
     for i in range(num_objects):
 
@@ -133,9 +131,7 @@ def generate_dense(df, num_objects, begin_offset, anLength, slot_size, num_seque
 
         out = out.astype(np.uint64)
 
-        res_size[i] = out.shape[0]
-
-        res = np.zeros(6 * num_sequence_length, dtype = np.int16)
+        res = np.zeros(num_sequence_length, dtype = np.uint64)
         res[:] = NO_DATA
 
         iCopyElements = np.min([res.shape[0], out.shape[0]])
@@ -149,10 +145,13 @@ def generate_dense(df, num_objects, begin_offset, anLength, slot_size, num_seque
 """c"""
 
 
+####################################################################################
+#
+#   generate_target_data
+#
+#
 
-
-
-def rasterize_data(df, num_objects, begin_offset, anLength, slot_size_d, num_sequence_length_d):
+def generate_target_data(df, num_objects, begin_offset, anLength, num_sequence_length_d):
 
     x_all = df.mjd.values.copy()
     x_all = x_all - x_all.min()
@@ -160,20 +159,18 @@ def rasterize_data(df, num_objects, begin_offset, anLength, slot_size_d, num_seq
     y_all = df.flux.values
 
     y_std_scaled = np.empty(y_all.shape, dtype = np.float32)
-
-    s = StandardScaler(with_std=False)
+    x_std_scaled = np.empty(x_all.shape, dtype = np.float32)
 
     for b in range(6):
-        print(f"{b}...")
+        print(f"Scaling passband {b}/5...")
         m = (p_all == b)
-        y_std_scaled[m] = s.fit_transform(y_all[m].reshape(-1, 1)).flatten()
+        s_y = StandardScaler(with_std=False)
+        y_std_scaled[m] = s_y.fit_transform(y_all[m].reshape(-1, 1)).flatten()
 
-    """c"""
-  
+        s_x = StandardScaler(with_std=False)
+        x_std_scaled[m] = s_x.fit_transform(x_all[m].reshape(-1, 1)).flatten()
 
-    anData_d = np.zeros((num_objects, 6 * num_sequence_length_d), dtype = np.float32)
-
-    res_size_d = np.zeros(num_objects, dtype = np.uint16)
+    anData_d = np.zeros((num_objects, 6*2 * num_sequence_length_d), dtype = np.float32)
 
     for i in range(num_objects):
 
@@ -183,52 +180,33 @@ def rasterize_data(df, num_objects, begin_offset, anLength, slot_size_d, num_seq
         offset = begin_offset[i]
         length = anLength[i]
 
-        x = x_all[offset: offset + length].copy()
+        x_this_scaled = x_std_scaled[offset: offset + length].copy()
 
-        x = x - x.min()
+        x_this_scaled = x_this_scaled - x_this_scaled.min()
 
         p = p_all[offset: offset + length]
-
+        
         y_this_scaled = y_std_scaled[offset: offset + length]
 
-        num_bins_x = int (.5 + x.max()/slot_size_d)
-
-        bins = np.linspace(0,  x.max(), num_bins_x, endpoint = False)
-
-        digitized = np.digitize(x, bins)
-        digitized = digitized - 1
-
-        out_d = np.empty((6, num_bins_x), dtype = np.float32)
-
-        out_d[:, :] = np.nan
-
+        afRes = np.zeros((6*2, num_sequence_length_d), dtype = np.float32)
+        
         for b in range (6):
-
             m = (p == b)
             y_d = y_std_scaled[np.where(m)]
-            d_p = digitized[np.where(m)]
-            out_d[b, d_p] = y_d
+            x_d = x_this_scaled[np.where(m)]
 
-        out_d = np.nan_to_num(out_d)
-        out_d = out_d.flatten(order = 'F')
+            iCopy = np.min([x_d.shape[0], afRes.shape[1]])
 
-        res_size_d[i] = out_d.shape[0]
+            afRes[b * 2][:iCopy] = x_d[:num_sequence_length_d][:iCopy]
+            afRes[b * 2 + 1][:iCopy] = y_d[:num_sequence_length_d][:iCopy]
 
+           
+        anData_d[i] =  afRes.flatten(order = 'F')
 
-        res_d = np.zeros(6 * num_sequence_length_d, dtype = np.float32)
-
-        iCopyElements = np.min([res_d.shape[0], out_d.shape[0]])
-
-        res_d[:iCopyElements] = out_d[:iCopyElements]
-        res_d[iCopyElements:] = 0
-
-        anData_d[i, 0:res_d.shape[0]] = res_d
 
     return anData_d
 
 """c"""
-
-
 
 
 np.set_printoptions(precision=2)
@@ -247,11 +225,11 @@ DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
 DATA_DIR_BASEMENT = "D:\\XXX\\"
 DATA_DIR = DATA_DIR_PORTABLE
 
-slot_size = 5
-num_sequence_length = 200
-num_bins_y = 30
+slot_size = 3
+num_sequence_length = 300
+num_bins_y = 8
 
-# Load all:
+# Load all (0 is all):
 
 df, begin_offset, anLength = get_first_items(0, DATA_DIR + 'data.h5')
 
@@ -265,24 +243,34 @@ df_meta_t = pd.read_csv(DATA_DIR + "test_set_metadata.csv")
 assert df_meta.shape[0] + df_meta_t.shape[0] == num_objects
 
 
+data = generate_dense(df, num_objects, begin_offset, anLength, slot_size, num_sequence_length, num_bins_y)
 
-data = generate_dense(df, 900000, begin_offset, anLength, slot_size, num_sequence_length, num_bins_y)
+# Check max size
+np.max(data)
 
-np.save(DATA_DIR + "anData_all_3", data)
+num_bins_y ** 6
 
+2 ** 32 > 887503744
+
+data = data.astype(np.uint32)
+
+
+np.save(DATA_DIR + "anData_all_6", data)
+
+del data
+
+gc.collect()
 
 # Get scaled read out for neural net.
 
 
-num_sequence_length_d = 90
-slot_size_d = 1
+num_sequence_length_d = 100
 
 
+data_d = generate_target_data(df, num_objects, begin_offset, anLength, num_sequence_length_d)
 
-data_d = rasterize_data(df, 300000, begin_offset, anLength, slot_size_d, num_sequence_length_d)
 
-
-np.save(DATA_DIR + "anData_d_all_3", data_d)
+np.save(DATA_DIR + "anData_d_all_5", data_d)
 
 
 
@@ -330,30 +318,34 @@ DATA_DIR_PORTABLE = "C:\\plasticc_data\\"
 DATA_DIR_BASEMENT = "D:\\XXX\\"
 DATA_DIR = DATA_DIR_PORTABLE
 
-slot_size = 5
-num_sequence_length = 200
 
-anData = np.load(DATA_DIR + "anData_all_2.npy")
-anData_d = np.load(DATA_DIR + "anData_d_all_2.npy")
+
+anData = np.load(DATA_DIR + "anData_all_6.npy")
+
+num_sequence_length = anData.shape[1]
+
+
+anData_d = np.load(DATA_DIR + "anData_d_all_5.npy")
+
+num_output_length = anData_d.shape[1]
 
 
 num_objects = anData.shape[0]
 
-encoder_inputs = Input(shape=(num_sequence_length * 6,), name="Encoder_input")
+encoder_inputs = Input(shape=(num_sequence_length,), name="Encoder_input")
 
 vocab_size = np.max(anData) + 1
 
-emb_dim = 6
+emb_dim = 7
 
 emb_obj = Embedding(output_dim=emb_dim, input_dim=vocab_size, name="Embedding", trainable=True)
 
 x = emb_obj (encoder_inputs)
 
+x = Dense(100) (x)
 x = Flatten() (x)
 
-x = Dense(num_sequence_length * 6) (x)
-
-x = Dense(num_sequence_length * 6) (x)
+x = Dense(num_output_length) (x)
 
 model = Model(encoder_inputs, x)
 
@@ -362,7 +354,7 @@ optimizer = optimizers.Adam()
 model.compile(loss='mse', optimizer=optimizer)
 
 
-max_commit = 10000
+max_commit = 1000000
 
 
 num_folds = 9
@@ -392,7 +384,7 @@ idxValid = np.arange(0, anDataValid.shape[0])
 idxTrainSplit = np.array_split(idxTrain, n_commit_split, axis = 0)
 idxValidSplit = np.array_split(idxValid, n_commit_split, axis = 0)
 
-for ix in range(4, n_commit_split):
+for ix in range(0, n_commit_split):
     print(f"ix = {ix} of {n_commit_split}")
 
     num_train = anDataTrain[idxTrainSplit[ix]].shape[0]
@@ -402,7 +394,7 @@ for ix in range(4, n_commit_split):
                   x = anDataTrain[idxTrainSplit[ix]],
                   y = arYTrain[idxTrainSplit[ix]],
                   validation_data = (anDataValid[idxValidSplit[ix]], arYValid[idxValidSplit[ix]]),
-                  epochs = 3,
+                  epochs = 1,
                   verbose = 1)
     """c"""           
     
