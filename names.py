@@ -1,6 +1,8 @@
 
 import pandas as pd
 import regex as re
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.text import text_to_word_sequence
 
 DATA_DIR_PORTABLE = "c:\\names_data\\"
 DATA_DIR = DATA_DIR_PORTABLE
@@ -45,10 +47,19 @@ s = s.union(list (s1.values))
 
 zip_list = list (s)
 
-t = pd.Series(["Anders fra Skien sliter med ryggen. Sendt Hansen.", "Vera Henriksen bor i Kragerø", "Guro til aap"])
 
-from keras.preprocessing.text import Tokenizer
-from keras.preprocessing.text import text_to_word_sequence
+# FYLKER
+
+county_list = ['Nord-Trøndelag', 'Sør-Trøndelag', 'Østfold', 'Akershus', 'Oslo', 'Hedmark', 'Oppland', 'Buskerud', 'Vestfold', 'Telemark', 'Aust-Agder', 'Vest-Agder', 'Rogaland', 'Hordaland', 'Sogn og Fjordane',
+               'Møre og Romsdal', 'Nordland', 'Troms', 'Finmark', 'Trøndelag']
+
+county_list = [x.lower() for x in county_list]
+
+
+
+t = pd.Series(["Anders fra Skien sliter med ryggen. Sendt Hansen.", "Vera Henriksen bor i Kragerø i Telemark", "Guro til aap"])
+
+
 
 
 tokenizer = Tokenizer()
@@ -78,9 +89,12 @@ for k, v in d.items():
     elif k in lastname_list:
         print(f"Warning: {v} in last name list. Remapping")
         d_reverse[v] = "Nordmann"
+    elif k in county_list:
+        d_reverse[v] = "Småland"
     else:
         d_reverse[v] = k
 """c"""
+
 
 # Modify, print back out ---for samples only---
 

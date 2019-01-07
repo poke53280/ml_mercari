@@ -288,6 +288,9 @@
     <Compile Include="tf-tpu\tf_learn.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="tf-tpu\tf_multichunk.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="tgs\starter.py">
       <SubType>Code</SubType>
     </Compile>
@@ -355,7 +358,6 @@
     <Content Include="ga\Refs.txt" />
     <Content Include="home_credit\read.txt" />
     <Content Include="mercari\Refs.txt" />
-    <Content Include="tf-tpu\textfile.txt" />
     <Content Include="toxic\Refs.txt" />
   </ItemGroup>
   <ItemGroup>
