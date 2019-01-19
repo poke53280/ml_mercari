@@ -322,6 +322,9 @@
     <Compile Include="Train_Stemmer.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="txt\spacy_nlp.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="txt\txt.py">
       <SubType>Code</SubType>
     </Compile>

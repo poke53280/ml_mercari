@@ -1,30 +1,21 @@
 
 
 # 2T Fredag.
-# 3T Lørdag. + 1
+# 3T Lørdag. + 1  + 1   + 2 + 2 = 9timer
+ 
+
+
+# Todo: Incorporate into Infotrygd preprocessing from here:
+
+# 1. Interval extraction and masking.
+# 2. Phone number extranction and masking.
+# 3. Seperator conservation.
+# 4. Word correction
+# 5. GML/Stedsnavn-list imported.
 
 
 
 
-
-import spacy
-
-nlp = spacy.load("nb_dep_ud_sm")
-
-doc = nlp(u"Sliter med smerter i ryggen. Deltaker er sykmeldt.")
-
-for token in doc:
-    print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_,
-          token.shape_, token.is_alpha, token.is_stop)
-"""c"""
-
-
-##################################################################################
-#
-#
-#    Find 0103-020417
-#
-#
 
 import re
 import pandas as pd
@@ -135,13 +126,7 @@ df = pd.DataFrame({'in': input_full, 'out': res_input, 'start': res_start, 'leng
 """c"""
 
 
-
-
-
-
-
-
-##################### TLF
+##################### TLF ##############################
 
 
 def extract_tlf(l):
@@ -199,19 +184,6 @@ extract_tlf(l)
 
 ################################################################################
 
-from gensim.models.wrappers import FastText
-
-
-import numpy as np
-import pandas as pd
-
-DATA_DIR = "C:\\NORDBANK\\"
-
-df = pd.read_csv(DATA_DIR + 'wiki.no.vec', chunksize = 1000, delimiter = ' ')
-
-
-df_c = pd.DataFrame(df.get_chunk(1500))
-df_c = df_c.reset_index()
 
 
 # Vanlige ord
@@ -314,6 +286,182 @@ d_reverse = dict(zip(l_reverse_keys, l_reverse_values))
 data = recreate(d_reverse, seps, d_idx)
 
 data
+
+
+############################### SPELL CORRECTION ###########################
+
+import pandas as pd
+import numpy as np
+
+
+class TypoCheck:
+
+    _wordlist = []
+
+    def __init__(self, filename):
+        df = pd.read_csv(filename, skiprows=25, encoding = 'latin-1', error_bad_lines = False, sep = '\t', low_memory=False)
+        df.columns = ['A', 'B', 'C', 'D', 'E', 'F']
+        l = list (df.C)
+        s = set(l)
+        self._wordlist= list (s)
+
+
+    def exec(self, test):
+        if test in self._wordlist:
+            # print("Exact match")
+            return test
+
+        start_letters = test[:1]
+        
+        l = self._wordlist
+        result = [i for i in l if str(i).startswith(start_letters)]
+
+        score = []
+
+        n = 0
+        for x in result:
+            n = n + 1
+            s = dameraulevenshtein(test, x)
+            score.append(s)
+
+        anScore = np.array(score)
+
+        m = anScore <= 1
+
+        if m.sum() > 1:
+            # print("Multiple results, returning input")
+            return test
+
+        if m.sum() == 0:
+            # print("None close, returning input")
+            return test
+
+
+        iClose = np.where(m)[0][0]
+
+        return result[iClose]
+
+
+    def process(self, l):
+        l_clean = []
+        for x in l:
+            l_clean.append(self.exec(x))
+
+        return l_clean
+
+"""c"""
+
+t = TypoCheck(DATA_DIR + "\\ordbank_bm\\fullform_bm.txt")
+
+l = ['innsat', 'utemfor', 'utrollig', 'uvillje', 'ubetallelige', 'uvanelig', 'ufetimelig', 'uforenlig', 'utennforstående', 'umennskelig']
+
+t.process(l)
+
+
+# Check if close to sorted frequency list, before self.
+
+import networkx as nx
+import gc
+import xml.etree.ElementTree
+
+DATA_DIR = "c:\\NORDBANK"
+
+e = xml.etree.ElementTree.parse(DATA_DIR + "\\basisdata.gml").getroot()
+
+idx = 301
+
+e[idx][0].findall("{http://skjema.geonorge.no/SOSI/produktspesifikasjon/Stedsnavn/5.0}navneobjekttype")
+
+print(xml.etree.ElementTree.tostring(e[idx][0], encoding='utf8').decode('utf8'))
+
+
+
+
+
+def get_type(e, idx):
+    c = e[idx][0].findall("{http://skjema.geonorge.no/SOSI/produktspesifikasjon/Stedsnavn/5.0}navneobjekttype")
+    c = c[0]
+
+    return c.text
+"""c"""
+
+
+def get_name(e, idx):
+
+    # print(xml.etree.ElementTree.tostring(e[idx][0], encoding='utf8').decode('utf8'))
+
+    c = e[idx][0].findall("{http://skjema.geonorge.no/SOSI/produktspesifikasjon/Stedsnavn/5.0}stedsnavn")
+    c = c[0]
+    c = c[0]
+
+    c = c.findall("{http://skjema.geonorge.no/SOSI/produktspesifikasjon/Stedsnavn/5.0}skrivemåte")
+    c = c[0]
+    c = c[0]
+
+    c = c.findall("{http://skjema.geonorge.no/SOSI/produktspesifikasjon/Stedsnavn/5.0}langnavn")
+    c = c[0]
+
+    return c.text
+"""c"""
+
+idx = 0
+
+l_words = []
+l_type = []
+
+while True:
+    try:
+        n = get_name(e, idx)
+        assert len(n) > 0
+        l_words.append(n)
+
+        t = get_type(e, idx)
+        assert len(t) > 0
+        l_type.append(t)
+
+        idx = idx + 1
+    except IndexError:
+        print ("Out of range")
+        break
+        
+"""c"""
+
+t = tuple(zip (l_words, l_type))
+
+
+for w, t in zip (l_words, l_type):
+    if w == "Gamlebyen":
+        print (t)
+"""c"""
+
+
+# Losing a lot of the many - many.
+d = dict(zip (l_words, l_type))
+
+d['Gimsøy']
+
+wt[2220]
+
+len (l_words)
+
+s = set (l_words)
+
+l_words = list (s)
+
+len (l_words)
+
+import pandas as pd
+places = pd.Series(l_words)
+
+places.to_pickle(DATA_DIR + "\\stedsnavn.pkl")
+
+# Save point
+
+s = pd.read_pickle(DATA_DIR + "\\stedsnavn.pkl")
+
+"Gråten" in s.values
+
+
 
 
 
