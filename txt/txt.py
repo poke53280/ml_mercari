@@ -2,7 +2,7 @@
 
 # 2T Fredag.
 # 3T Lørdag. + 1  + 1   + 2 + 2 = 9timer
- 
+
 
 
 # Todo: Incorporate into Infotrygd preprocessing from here:
@@ -15,10 +15,9 @@
 
 
 
-
-
 import re
 import pandas as pd
+import numpy as np
 
 np.set_printoptions(precision=2)
 np.set_printoptions(suppress=True)
@@ -31,97 +30,138 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 500)
 pd.set_option('display.max_colwidth', 500)
 
-date_0_epoch = pd.to_datetime("211198", errors='raise', format="%d%m%y") - pd.to_datetime("010170", errors='raise', format="%d%m%y")
+date_0_epoch = (pd.to_datetime("211188", errors='raise', format="%d%m%y") - pd.to_datetime("010170", errors='raise', format="%d%m%y")).days
+date_1_epoch = (pd.to_datetime("221188", errors='raise', format="%d%m%y") - pd.to_datetime("010170", errors='raise', format="%d%m%y")).days
+date_2_epoch = (pd.to_datetime("291192", errors='raise', format="%d%m%y") - pd.to_datetime("010170", errors='raise', format="%d%m%y")).days
 
-nEpochBaseline = date_0_epoch.days
 
 input_full =[
     "Utenlandsopphold 1012-211288 , 1012-211388 og 0101-020192",
-    "Utenlandsopphold 1112-231288 godkjent,  i 1012-211388 men ikke 0101-020192",
-    "Utenlandsopphold 1012-211288 godkjent,  i 1g012-211388 0102-0f20192"
+    "Utenlandsopphold 221188-231288 godkjent,  fra 1012-211388 men ikke 0101-020192",
+    "Utenlandsopphold 1012-211288 godkjent,  fom 1g012-211388 0102-0f20192"
     ]
 
+input_baseline = [ date_0_epoch, date_1_epoch, date_2_epoch ]
 
-res_input = []
-res_start = []
-res_length = []
-res_status = []
-res_baseline = []
 
-for input in input_full:
 
-    t = re.findall(r"\b\d{4}[- ]\d{6}\b", input)
+df4 = extract_intervals (input_full, input_baseline, 4)
 
-    t_int_start = []
-    t_int_length = []
-    t_int_status = []
 
-    for idx, x in enumerate(t):
+df6 = extract_intervals (df4.out, input_baseline, 6)
 
-        ds = re.findall(r"\d+", x)
+df = pd.DataFrame({'in': input_full, 'out' : df6.out, 'start4' : df4.start4, 'length4' : df4.length4, 'baseline4' : df4.baseline4, 'status4': df4.status4, 'start6' : df6.start6, 'length6' : df6.length6, 'baseline6' : df6.baseline6, 'status6': df6.status6 }) 
 
-        startd4 = ds[0]
-        endd6 = ds[1]
 
-        startd6 = startd4 + endd6[-2:]
 
-        parseOK = True
+def extract_intervals(input_full, input_baseline, nFirst):
 
-        try:
-            epoch_day = pd.to_datetime("010170", errors='raise', format="%d%m%y")
-            t_from = pd.to_datetime(startd6, errors='raise', format="%d%m%y")
-            t_to = pd.to_datetime(endd6, errors='raise', format="%d%m%y")
+    assert nFirst == 4 or nFirst == 6
 
-        except ValueError:
-            parseOK = False
+    res_input = []
+    res_start = []
+    res_length = []
+    res_status = []
+    res_baseline = []
 
-        isPositiveDaysOK = False
+    marker = ""
 
-        if parseOK:
-            dDays = (t_to - t_from).days
-            isPositiveDaysOK = dDays > 0
 
-        if isPositiveDaysOK:
-            t_epoch_start = (t_from - epoch_day).days
-            t_int_start.append(str(t_epoch_start))
-            t_int_length.append(str(dDays))
-            t_int_status.append("True")
+    if nFirst == 4:
+        ex = re.compile(r"\b\d{4}[- ]\d{6}\b")
+        marker = "4"
+    else:
+        ex = re.compile(r"\b\d{6}[- ]\d{6}\b")
+        marker = "6"
 
-            day_start_relative = t_epoch_start - nEpochBaseline
+    iLine = 0
 
-            if day_start_relative >= 0:
-                representation = f"i{idx}ahead{day_start_relative}d_{dDays}d"
+
+    for input in input_full:
+
+        t = re.findall(ex, input)
+
+        t_int_start = []
+        t_int_length = []
+        t_int_status = []
+
+        for iHit, x in enumerate(t):
+
+            ds = re.findall(r"\d+", x)
+
+            start = ds[0]
+            endd6 = ds[1]
+
+            if nFirst == 4:
+                startd6 = start + endd6[-2:]
             else:
-                representation = f"i{idx}back{-day_start_relative}d_{dDays}d"
+                startd6 = start
 
-            input = input.replace(x, representation)
+            parseOK = True
+
+            try:
+                epoch_day = pd.to_datetime("010170", errors='raise', format="%d%m%y")
+                t_from = pd.to_datetime(startd6, errors='raise', format="%d%m%y")
+                t_to = pd.to_datetime(endd6, errors='raise', format="%d%m%y")
+
+            except ValueError:
+                parseOK = False
+
+            isPositiveDaysOK = False
+
+            if parseOK:
+                dDays = (t_to - t_from).days
+                isPositiveDaysOK = dDays > 0
+
+            if isPositiveDaysOK:
+                t_epoch_start = (t_from - epoch_day).days
+                t_int_start.append(str(t_epoch_start))
+                t_int_length.append(str(dDays))
+                t_int_status.append("True")
+
+                day_start_relative = t_epoch_start - input_baseline[iLine]
+
+
+                if day_start_relative >= 0:
+                    representation = f"i{marker}_{iHit}_pos_{day_start_relative}d_l_{dDays}d"
+                else:
+                    representation = f"i{marker}_{iHit}_neg_{-day_start_relative}d_l_{dDays}d"
+
+                input = input.replace(x, representation)
+
+            else:
+                t_int_start.append(str(0))
+                t_int_length.append(str(0))
+                t_int_status.append("False")
+                input = input.replace(x, f"i{marker}_{iHit}_err")
+
+
+        if len (t_int_status) > 0:
+            t_out_start = ", ".join(t_int_start)
+            t_out_length = ", ".join(t_int_length)
+            t_out_status = ", ".join(t_int_status)
 
         else:
-            t_int_start.append(str(0))
-            t_int_length.append(str(0))
-            t_int_status.append("False")
-            input = input.replace(x, f"i{idx}_err")
+            t_out_start = "None"
+            t_out_length = "None"
+            t_out_status = "None"
+
+        res_input.append(input)
+        res_start.append(t_out_start)
+        res_length.append(t_out_length)
+        res_status.append(t_out_status)
+
+        res_baseline.append(input_baseline[iLine])
+        iLine = iLine + 1
 
 
-    if len (t_int_status) > 0:
-        t_out_start = ", ".join(t_int_start)
-        t_out_length = ", ".join(t_int_length)
-        t_out_status = ", ".join(t_int_status)
-
+    if nFirst == 4:
+        df = pd.DataFrame({'in': input_full, 'out': res_input, 'start4': res_start, 'length4': res_length, 'baseline4': res_baseline, 'status4': res_status})
     else:
-        t_out_start = "None"
-        t_out_length = "None"
-        t_out_status = "None"
-
-    res_input.append(input)
-    res_start.append(t_out_start)
-    res_length.append(t_out_length)
-    res_status.append(t_out_status)
-
-    res_baseline.append(nEpochBaseline)
+        df = pd.DataFrame({'in': input_full, 'out': res_input, 'start6': res_start, 'length6': res_length, 'baseline6': res_baseline, 'status6': res_status})
 
 
-df = pd.DataFrame({'in': input_full, 'out': res_input, 'start': res_start, 'length': res_length, 'baseline': res_baseline, 'status': res_status})
+    return df
 
 """c"""
 
