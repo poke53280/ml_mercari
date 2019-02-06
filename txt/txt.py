@@ -1,8 +1,5 @@
 
 
-# 2T Fredag.
-# 3T Lørdag. + 1  + 1   + 2 + 2 = 9timer
-
 
 
 # Todo: Incorporate into Infotrygd preprocessing from here:
@@ -410,7 +407,13 @@ e = xml.etree.ElementTree.parse(DATA_DIR + "\\basisdata.gml").getroot()
 
 idx = 301
 
-e[idx][0].findall("{http://skjema.geonorge.no/SOSI/produktspesifikasjon/Stedsnavn/5.0}navneobjekttype")
+s = e[idx][0].findall("{http://skjema.geonorge.no/SOSI/produktspesifikasjon/Stedsnavn/5.0}oppdateringsdato")
+s[0].text
+
+s = e[idx][0].findall("{http://skjema.geonorge.no/SOSI/produktspesifikasjon/Stedsnavn/5.0}posisjon")
+
+
+
 
 print(xml.etree.ElementTree.tostring(e[idx][0], encoding='utf8').decode('utf8'))
 
@@ -503,5 +506,13 @@ s = pd.read_pickle(DATA_DIR + "\\stedsnavn.pkl")
 
 
 
+##################################################################################################
+
+e = xml.etree.ElementTree.parse(DATA_DIR + "\\Postnummeromrader.gml").getroot()
 
 
+
+idx = 11
+print(xml.etree.ElementTree.tostring(e[idx][0][4][0][0][0], encoding='utf8').decode('utf8'))
+
+e[idx][0][4]

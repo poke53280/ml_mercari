@@ -77,7 +77,13 @@
     <Compile Include="favorita\study_weiwei.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="find_uniques.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="ga\code.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="general\covariance_study.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="general\dataset.py">
@@ -323,6 +329,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Train_Stemmer.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Train_txt_mlp.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="txt\crf.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="txt\spacy_nlp.py">

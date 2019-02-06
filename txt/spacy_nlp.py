@@ -5,14 +5,23 @@ import spacy
 
 nlp = spacy.load("nb_dep_ud_sm")
 
-doc = nlp(u"Per søker om utenlandsopphold.")
+doc = nlp(u"bil lastebil trailer")
 
 for token in doc:
     print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_,
           token.shape_, token.is_alpha, token.is_stop)
 """c"""
+   
 
-doc = nlp(u"torsk laks tiger ddwqddd.")
+for token1 in doc:
+    for token2 in doc:
+        if token1 == token2:
+            pass
+        else:
+            print(token1.text, token2.text, token1.similarity(token2))
+"""c"""
+
+
 
 for token in doc:
     print(token.text, token.has_vector, token.vector_norm, token.is_oov)
@@ -34,8 +43,6 @@ for token in doc:
 for token in doc:
     print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_, token.shape_, token.is_alpha, token.is_stop)
 """c"""
-
-
 
 
 
