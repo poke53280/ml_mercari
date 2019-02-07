@@ -44,6 +44,9 @@
     <Compile Include="batch\ftrl_basic.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="crypto.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="cuda_train.py">
       <SubType>Code</SubType>
     </Compile>
