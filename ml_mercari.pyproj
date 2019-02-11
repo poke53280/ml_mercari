@@ -74,6 +74,9 @@
     <Compile Include="dae\__init__.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="delimitorkeeper.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Driver_SM.py">
       <SubType>Code</SubType>
     </Compile>
@@ -132,6 +135,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="imageai\main.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ml_mw\msmw.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="mp\dask.py">
@@ -364,6 +370,7 @@
     <Folder Include="ga\" />
     <Folder Include="imageai\" />
     <Folder Include="mp\" />
+    <Folder Include="ml_mw\" />
     <Folder Include="quora\" />
     <Folder Include="rnn\" />
     <Folder Include="txt\" />
