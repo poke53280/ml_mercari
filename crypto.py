@@ -22,46 +22,48 @@ def get_long_string():
 # numpy array
 
 
+
+
 key = get_random_bytes(16)
-cipher = AES.new(key, AES.MODE_CBC)
+
+iv = get_random_bytes(16)
+cipher = AES.new(key, AES.MODE_CBC, iv = iv)
 
 
 array_in = np.random.randint(0, 999999, 300 * 1000 * 1000)
 
 
-array_in_base64_str = base64.b64encode(array_in)
+array_in_bytes = array_in.tobytes()
 
-padded_data = pad(array_in_base64_str, cipher.block_size)
+padded_bytes = pad(array_in_bytes, cipher.block_size)
 
-txt_encrypted = cipher.encrypt(padded_data)
+ct_bytes = cipher.encrypt(padded_bytes)
 
-f = open("c:\\crypto_data\\output_numpy.bin", "wb")
+ct_txt = base64.b64encode(ct_bytes).decode('utf-8')
+iv_txt = base64.b64encode(cipher.iv).decode('utf-8')
 
-f.write(txt_encrypted)
-
-f.close()
-
-# ...
-
-f = open("c:\\crypto_data\\output_numpy.bin", "rb")
-
-from_file = f.read()
-
-f.close()
+dtype_txt = array_in.dtype.name
+shape_txt = array_in.shape
 
 
-cipher2 = AES.new(key, AES.MODE_CBC, cipher.iv)
+## ...
 
-back = cipher2.decrypt(from_file)
+ct_bytes_out = base64.b64decode(ct_txt)
+iv_bytes_out = base64.b64decode(iv_txt)
+
+
+
+
+cipher2 = AES.new(key, AES.MODE_CBC, iv_bytes_out)
+
+back = cipher2.decrypt(ct_bytes_out)
 
 
 unpadded_data = unpad(back, cipher.block_size)
 
 
-r = base64.decodestring(unpadded_data)
+q = np.frombuffer(unpadded_data, dtype = dtype_txt).reshape(shape_txt)
 
-
-q = np.frombuffer(r, dtype=np.int32)
 
 
 assert (q == array_in).all()
@@ -95,7 +97,7 @@ f.close()
 # ...
 
 
-f = open("c:\\crypto_data\\output_string.bint", "rb")
+f = open("c:\\crypto_data\\output_string.bin", "rb")
 
 from_file = f.read()
 
@@ -115,11 +117,6 @@ r = base64.decodestring(unpadded_data)
 s_txt_out = r.decode(encoding="utf-8")
 
 
-assert s_txt_out == string_in
-
-
-
-
-
+s_txt_out == string_in
 
 

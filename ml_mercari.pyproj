@@ -137,6 +137,9 @@
     <Compile Include="imageai\main.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="many_id.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="ml_mw\msmw.py">
       <SubType>Code</SubType>
     </Compile>
