@@ -1,8 +1,7 @@
 
 import numpy as np
 import pandas as pd
-
-
+import networkx as nx
 
 def add_single_elements(ix_a, _a, i_a0):
 
@@ -53,7 +52,6 @@ ix_a, _a = add_single_elements(ix_a, _a, i_ex0)
 
 #i_a0 = np.arange(0, 9, dtype = np.uint64)
 #i_a1 = np.arange(8, 8 + 9, dtype = np.uint64)
-
 
 i_a0 = np.random.randint(0, 50 * 1000 * 1000, 3 * 1000 * 1000)
 i_a1 = np.random.randint(0, 50 * 1000 * 1000, 3 * 1000 * 1000)
@@ -121,6 +119,12 @@ def add_pairs(ix_a, _a, i_a0, i_a1):
     to_res = g_min.copy()
 
 
+
+
+    # Todo: (Possible). g_max adjustment - sorted can scan and replace
+    # Todo: Can overwrite starting from index, no need to rewrite full array
+    # Todo: Possibly use index array for look ups. (Memory is not a problem).
+
     for i in range(g_min.shape[0]):
 
 
@@ -159,11 +163,8 @@ def add_pairs(ix_a, _a, i_a0, i_a1):
 
         m = ix_a == from_g
         ix_a[m] = to_g
-
-
     
     """c"""
-    
 
     # New groups can simply be formed by assigning the same unique group number to both
 
@@ -175,6 +176,14 @@ def add_pairs(ix_a, _a, i_a0, i_a1):
 
     ix_a[-num_basic:] = ix_a[- 2 * num_basic: -num_basic]
         
+    _a.shape
+    ix_a.shape
+    # Num elements: 5654509
+
+
+
+    np.unique(ix_a).shape
+    # Num groups: 2654509
         
         
     return ix_a, _a
@@ -183,12 +192,46 @@ def add_pairs(ix_a, _a, i_a0, i_a1):
 
 
 
-df_1 = pd.DataFrame({'id': ix_a, 'a': _a})
 
 
-df_1
 
-df_1.id.max()
+a = np.column_stack((i_a0, i_a1))
+
+G = nx.Graph()
+
+G.add_edges_from(a)
+G.add_nodes_from(i_ex0)
+
+a = nx.to_pandas_dataframe(G)
+# Number of nodes: 5654509
+
+
+
+
+nx.number_connected_components(G)
+# 2654509
+
+
+
+# Fast:
+
+l_out0 = []
+
+iCount = 100000
+
+for x in nx.connected_components(G):
+    l_out0.append(x)
+    iCount = iCount - 1
+    if iCount == 0:
+        break
+"""c"""
+
+# Slow 12.07 - stop after 8 minutes.
+sg = list(nx.connected_component_subgraphs(G))
+
+
+#d = nx.to_dict_of_lists(G)
+#nodes on keys, and some neighbours but not all on values (?)
 
 
 
