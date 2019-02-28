@@ -234,40 +234,40 @@
     <Compile Include="rnn\text_gen.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="santander_3\1owl_EDA.py">
+    <Compile Include="rnn\santander_3\1owl_EDA.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="santander_3\catboost.py">
+    <Compile Include="rnn\santander_3\catboost.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="santander_3\main.py">
+    <Compile Include="rnn\santander_3\main.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="santander_3\lgbm_svd.py">
+    <Compile Include="rnn\santander_3\lgbm_svd.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="santander_3\RowStatCollector.py">
+    <Compile Include="rnn\santander_3\RowStatCollector.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="santander_3\sparse_to_nn.py">
+    <Compile Include="rnn\santander_3\sparse_to_nn.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="santander_3\sparse_to_seq.py">
+    <Compile Include="rnn\santander_3\sparse_to_seq.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="santander_3\timeseries.py">
+    <Compile Include="rnn\santander_3\timeseries.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="santander_3\txt_regr.py">
+    <Compile Include="rnn\santander_3\txt_regr.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="santander_3\viz.py">
+    <Compile Include="rnn\santander_3\viz.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="santander_3\xxutils.py">
+    <Compile Include="rnn\santander_3\xxutils.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="santander_3\__init__.py">
+    <Compile Include="rnn\santander_3\__init__.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Synthpop_perf.py">
@@ -383,7 +383,7 @@
     <Folder Include="tgs\" />
     <Folder Include="p0\" />
     <Folder Include="porto_seguro\" />
-    <Folder Include="santander_3\" />
+    <Folder Include="rnn\santander_3\" />
     <Folder Include="talking\" />
     <Folder Include="toxic\" />
   </ItemGroup>
