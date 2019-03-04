@@ -180,20 +180,12 @@ def add_pairs(ix_a, _a, i_a0, i_a1):
     ix_a.shape
     # Num elements: 5654509
 
-
-
     np.unique(ix_a).shape
     # Num groups: 2654509
-        
         
     return ix_a, _a
 
 """c"""
-
-
-
-
-
 
 a = np.column_stack((i_a0, i_a1))
 
