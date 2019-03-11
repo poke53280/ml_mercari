@@ -1,4 +1,5 @@
 
+
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad
@@ -8,32 +9,22 @@ import base64
 import getpass
 
 
-
-
-
-
-
-def get_long_string():
-
-    string_val = "x" * 10
-    string_val2 = string_val * 100
-    string_val3 = "aa" + string_val2 * 100
-    string_val4 = "yy" + string_val3 * 100
-
-    return "anders" + string_val4[:3] + " anders" + string_val4 + "b" + string_val4 + "xx" + string_val4
-"""c"""
-
 # numpy array
 
+# 'Enter password'
 
-key = get_random_bytes(16)
+key = get_random_bytes(32)
 
 iv = get_random_bytes(16)
+
+
+# Encrypt array
+
 cipher = AES.new(key, AES.MODE_CBC, iv = iv)
 
+array_in = np.random.random_integers(0, 2**30, 300 * 1000 * 1000)
 
-array_in = np.random.randint(0, 999999, 300 * 1000 * 1000)
-
+dtype_0 = array_in.dtype
 
 array_in_bytes = array_in.tobytes()
 
@@ -44,15 +35,15 @@ ct_bytes = cipher.encrypt(padded_bytes)
 ct_txt = base64.b64encode(ct_bytes).decode('utf-8')
 iv_txt = base64.b64encode(cipher.iv).decode('utf-8')
 
-dtype_txt = array_in.dtype.name
-shape_txt = array_in.shape
+
+# Array encrypted and encoded. Store.
+print(f"{ct_txt[:30]}...{ct_txt[-30:]}")
 
 
-## ...
+# Back from encrypted string to decrypted array.
 
 ct_bytes_out = base64.b64decode(ct_txt)
 iv_bytes_out = base64.b64decode(iv_txt)
-
 
 
 
@@ -64,15 +55,38 @@ back = cipher2.decrypt(ct_bytes_out)
 unpadded_data = unpad(back, cipher.block_size)
 
 
-q = np.frombuffer(unpadded_data, dtype = dtype_txt).reshape(shape_txt)
+q = np.frombuffer(unpadded_data, dtype = dtype_0)
 
 
+if (q == array_in).all():
+    print("Round trip success")
+else:
+    print("Round-trip failure")
 
-assert (q == array_in).all()
+"""c"""
+
+
 
 ########################################################################################
 #
-# String
+#   get_long_string
+#
+
+def get_long_string():
+
+    string_val = "x" * 10
+    string_val2 = string_val * 100
+    string_val3 = "aa" + string_val2 * 100
+    string_val4 = "yy" + string_val3 * 100
+
+    return "anders" + string_val4[:3] + " anders" + string_val4 + "b" + string_val4 + "xx" + string_val4
+"""c"""
+
+
+
+########################################################################################
+#
+#   String
 #
 
 key = get_random_bytes(16)

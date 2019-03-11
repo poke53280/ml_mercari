@@ -221,10 +221,96 @@ for x in nx.connected_components(G):
 # Slow 12.07 - stop after 8 minutes.
 sg = list(nx.connected_component_subgraphs(G))
 
-
 #d = nx.to_dict_of_lists(G)
 #nodes on keys, and some neighbours but not all on values (?)
 
+###########################################################################
+
+import numpy as np
+
+mm = MultiIDMap()
+
+iTypeFID = 0
+iTypeAID = 1
+
+# Map a set of FIDs to a set of AIDs
+anFID = np.random.randint(0, 100, 10, dtype =np.uint64)
+anAID = np.random.randint(0, 100, 10, dtype =np.uint64)
+
+
+anFID_id = mm.convert_raw(anFID, iTypeFID)
+anAID_id = mm.convert_raw(anAID, iTypeAID)
+
+mm.get_raw_id(anFID_id)
+
+
+id = mm.convert_raw(np.array([8, 100, 72, 52], dtype =np.uint64), 0)
+
+mm.get_raw_id(id)
+mm.get_raw_type(id)
+
+# Map a set of FIDs to other FIDs
+
+
+
+class MultiIDMap:
+    
+    _raw_id = np.array([], dtype = np.uint64)
+    _raw_t = np.array([], dtype = np.uint8)
+    
+    def __init__(self):
+        pass
+
+    def add(self, id_in, id_type):
+        assert id_type <= np.iinfo(np.uint8).max
+        assert id_in.dtype == np.uint64
+
+        id_in_unique = np.unique(id_in)
+
+        # The numbers from distribution that we have already got:
+        m_t1 = self._raw_t == id_type
+
+        m = np.in1d(id_in_unique, self._raw_id[m_t1])
+
+        # Numbers to add as id_type:
+        self._raw_id = np.concatenate((self._raw_id, id_in_unique[~m]))
+
+        # Add to type array
+        self._raw_t = np.concatenate((self._raw_t, np.zeros(id_in_unique[~m].shape, dtype = np.uint8 ) + id_type))
+
+    def get_id(self, id_in, id_type):
+
+        m_t1 = self._raw_t == id_type
+
+        i_a_single_type = self._raw_id[m_t1]
+        i_a_idx = np.arange(self._raw_id.shape[0])[m_t1]
+
+        idx = np.argsort(i_a_single_type)
+
+        i_a_single_type = i_a_single_type[idx]
+        i_a_idx = i_a_idx[idx]
+
+        assert np.in1d(id_in, i_a_single_type).all()
+
+        find_all = np.searchsorted(i_a_single_type, id_in)
+
+        res_idx = i_a_idx[find_all]
+
+        assert (self._raw_id[res_idx] == id_in).all(), "Missing elements"
+
+        return res_idx
+
+    def convert_raw(self, id_in, id_type):
+        self.add(id_in, id_type)
+        return self.get_id(id_in, id_type)
+
+    def get_raw_id(self, id):
+        return self._raw_id[id]
+
+    def get_raw_type(self, id):
+        return self._raw_t[id]
+
+"""c"""
 
 
 

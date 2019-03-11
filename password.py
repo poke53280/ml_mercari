@@ -105,10 +105,10 @@ def get_chunked_password_with_chksum(txt, num_tokens_each_word):
 
 ###############################################################
 #
-# get_txt_password_from_cmdline
+#   get_txt_password_on_cmdline
 #
 
-def get_txt_password_from_cmdline():
+def get_txt_password_on_cmdline():
 
     num_chunks = int (input("Number of pieces:"))
 
@@ -159,10 +159,21 @@ def generate_password_cmdline():
 
 
 def get_mem_password_from_cmdline():
-    return get_mem_password_from_txt_password(get_txt_password_from_cmdline())
+    return get_mem_password_from_txt_password(get_txt_password_on_cmdline())
 
 
-# 1:6aukzysz 2:5ti4i5nj 3:d7mqj5xl 4:bvp5ddng 5:g3hkclbe 6:bwced2yy 7:fhfx77hb 8:uva====o
+# Todo: Ensure password chunk is from correct loc.
+
+
+# Generate password:
+
 generate_password_cmdline()
 
+# Don't save anywhere. Keep on paper
+# 1:yleqjzra 2:5jlm37ts 3:hynzgquc 4:a25iykjk 5:dvy7afuq 6:fpnanu6d 7:n6w3f6et 8:j5q====w
+
+
+# Password entry function:
+
 get_mem_password_from_cmdline()
+
