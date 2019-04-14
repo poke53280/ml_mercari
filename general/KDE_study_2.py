@@ -1,16 +1,37 @@
 
 
+
 import numpy as np
-from sklearn.neighbors.kde import KernelDensity
 
 import matplotlib.pyplot as plt
 import seaborn as sns; sns.set()
 
+from scipy.stats import norm
+
+
 import pandas as pd
 
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 500)
+pd.set_option('display.max_colwidth', 500)
+
+np.set_printoptions(precision=2)
+np.set_printoptions(suppress=True)
 
 
-def cluster_sm(b, e, kde, prob_threshold, L_threshold):
+b = np.array([1,10, 20, 30])
+e = np.array([2,11, 20, 31])
+
+
+
+b = np.array([1,10, 20, 30, 40, 50, 60, 70, 80])
+e = np.array([2,11, 21, 31, 41, 51, 61, 71, 81])
+
+
+
+
+
+def cluster_sm(b, e, L_threshold):
 
     sm = np.column_stack([b, e])
 
@@ -27,22 +48,26 @@ def cluster_sm(b, e, kde, prob_threshold, L_threshold):
     x_min = np.min(x)
     x_max = np.max(x)
 
-    kde.fit(x)
-
     x_d = np.array(range(x_min, x_max + 1))
 
-    logprob = kde.score_samples(x_d[:, None])
+    density = sum(norm(xi).pdf(x_d) for xi in x)
 
-    prob = np.exp(logprob)
+    plt.fill_between(x_d, density, alpha=0.5)
+    plt.plot(x, np.full_like(x, -0.01), '|k', markeredgewidth=1)
+    plt.show()
 
-    m = prob > prob_threshold
+
+    peak_max_single = np.max(norm(x[0]).pdf(x_d))
+
+    # Todo: Make scientific
+    m = density > (0.5 * peak_max_single)
 
     if m.sum() == 0:
         return (-1, -1, -1)
 
     x_s = x_d[m]
 
-    i_start = np.where(np.diff(x_d[m]) > 1)[0]
+    i_start = np.where(np.diff(x_s) > 1)[0]
 
     i_start = i_start + 1
     i_start = np.insert(i_start, 0, 0)
@@ -88,15 +113,13 @@ def cluster_sm(b, e, kde, prob_threshold, L_threshold):
 """c"""
 
 
-kde = KernelDensity(bandwidth= 1.0, kernel = 'gaussian')
-
 
 l = []
 
 id_min = 0
-id_max = 2000
+id_max = 5000
 
-n_entries = 10000
+n_entries = 20000
 
 for n in range(n_entries):
 
@@ -119,14 +142,13 @@ df.columns = ['id', 'begin', 'reg', 'end', 'ext']
 
 L_threshold = 7
 
-prob_threshold = 0.001
 
-df_res = generate(df, L_threshold, prob_threshold)
+df_res = generate(df, L_threshold)
 
 df_res
 
 
-def generate(df, L_threshold, prob_threshold):
+def generate(df, L_threshold):
 
     anID = np.unique(df.id.values)
 
@@ -137,11 +159,13 @@ def generate(df, L_threshold, prob_threshold):
     anB = np.empty_like(anBegin)
     anL = np.empty_like(anBegin)
 
+    print("Clustering...")
+
     for id in anID:
 
         m = df.id.values == id
 
-        b, e, l = cluster_sm(anBegin[m], anEnd[m], kde, prob_threshold, L_threshold)
+        b, e, l = cluster_sm(anBegin[m], anEnd[m], L_threshold)
 
         anB[m] = b
         anL[m] = l
@@ -150,6 +174,8 @@ def generate(df, L_threshold, prob_threshold):
     # Only keep information known at or before L_threshold days into leave.
     # That is registration date must be maximum beginning of leave + L_threshold days
 
+    print("Cutting...")
+
     m = (anL >= 0) & ((df.reg.values - anB) < L_threshold)
 
     df = df[m].reset_index(drop = True)
@@ -157,6 +183,11 @@ def generate(df, L_threshold, prob_threshold):
     y = anL[m] - L_threshold
 
     df = df.assign(Y = y)
+
+    print("Training set generated.")
+
+    print("Preprocessing...")
+
 
     anID = np.unique(df.id.values)
 
@@ -198,6 +229,8 @@ def generate(df, L_threshold, prob_threshold):
 
     anID = np.unique(df.id.values)
 
+    print("Merging on user. Creating time steps...")
+
     for id in anID:
         m = df.id.values == id
 
@@ -222,6 +255,8 @@ def generate(df, L_threshold, prob_threshold):
     t_Y = []
     t_s = []
 
+    print("Merging on user. Creating timeline...")
+
     for id in anID:
         m = df.id.values == id
 
@@ -237,6 +272,7 @@ def generate(df, L_threshold, prob_threshold):
         s = s.replace("'", "")
         s = s.replace("[", "")
         s = s.replace("]", "")
+        s = s.replace("\n", "")
 
         t_s.append(s)
         t_Y.append(df.Y[m].values[0])
@@ -247,8 +283,5 @@ def generate(df, L_threshold, prob_threshold):
 
     return df_res
 """c"""
-
-
-
 
 

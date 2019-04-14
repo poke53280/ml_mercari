@@ -1,5 +1,150 @@
 
 
+import numpy as np
+from keras.layers import Input
+from keras.layers import concatenate
+from keras.layers import BatchNormalization
+from keras.layers import Embedding
+from keras.layers import Dense
+from keras.layers import Flatten
+from keras.layers import Activation
+from keras.optimizers import Adam
+from keras.models import Model
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error
+
+from sklearn.model_selection import KFold
+
+def getXy():
+
+    nCols = 5
+    nRows = 40000
+
+    X = np.zeros((nRows, nCols), dtype = np.uint16)
+
+    for iRow in range(nRows):
+
+        input = "9 9 1 21 21 9 11 91 2 31 3 1"
+
+        a = np.fromstring(input, dtype=int, sep=' ')
+
+        a = a[:nCols]
+
+        apad = np.pad(a, (0, nCols - a.shape[0]), 'constant')
+
+        X[iRow] = apad
+
+    """c"""
+
+    y = np.zeros(shape = (nRows,), dtype = np.float32)
+    y[:] = -0.21
+
+    return X, y
+
+"""c"""
+
+def getRandomX():
+
+    X0_3 = np.random.randint(low = 0, high=25, size= (400000, 5))
+    X4 = np.random.uniform(low = 0, high=25, size= (400000, 1))
+
+    s = StandardScaler()
+    xs = np.squeeze(s.fit_transform(X4.reshape(-1, 1)))
+
+    return X0_3, xs
+"""c"""
+
+def getGroundTruth(X0_3, xs):
+    return (X0_3[:, 0] % 4) * 0.1 - (X0_3[:, 1] % 7) * 0.07 + (X0_3[:, 2] % 4) * 0.15 - (X0_3[:, 3] % 7) * 0.3 - .3 *xs
+"""c"""
+
+def rmse(predictions, targets):
+    return np.sqrt(mean_squared_error( predictions, targets ))
+"""c"""
+
+
+def get_model():
+    
+    # cat_MD cat_NAV cat_D cat_AG cat_OCC L B 
+
+    A0 = Input(shape=[1], name="category0")
+    B0 = Input(shape=[1], name="category1")
+    A1 = Input(shape=[1], name="category2")
+    B1 = Input(shape=[1], name="category3")
+    val4 = Input(shape=[1], name="value4")
+
+
+    MAX_CATEGORY = 25
+
+    embeddingF0 = Embedding(MAX_CATEGORY, 1)  
+    embeddingF1 = Embedding(MAX_CATEGORY, 1)
+   
+    emb_col0 = Flatten() ( embeddingF0(A0) )
+    emb_col1 = Flatten() ( embeddingF1(B0) )
+    emb_col2 = Flatten() ( embeddingF0(A1) )
+    emb_col3 = Flatten() ( embeddingF1(B1) )
+   
+
+    x = concatenate([emb_col0, emb_col1, emb_col2, emb_col3, val4])
+
+    x = BatchNormalization()(x)
+
+    x = Dense(8)(x)
+    x = Dense(8)(x)
+    x = Activation('relu')(x)
+    x = Dense(1, activation="linear") (x)
+
+    model = Model([A0, B0, A1, B1, val4],  x)
+
+    optimizer = Adam(.002)
+
+    model.compile(loss="mse", optimizer=optimizer)
+
+    return model
+"""c"""
+
+X, y = getXy()
+
+X0_3, xs = getRandomX()
+
+y = getGroundTruth(X0_3, xs)
+
+m = get_model()
+
+kf = KFold(n_splits = 10, random_state = 22)
+
+iFold = 0
+
+for train_index, valid_index in kf.split(y):
+
+    print(f"Fold# {iFold}")
+
+    y_train = y[train_index]
+    y_valid = y[valid_index]
+
+    X0_3_train = X0_3[train_index]
+    X0_3_valid = X0_3[valid_index]
+
+    xs_train = xs[train_index]
+    xs_valid = xs[valid_index]
+
+    l_X_train = [X0_3_train[:, 0], X0_3_train[:, 1], X0_3_train[:, 2], X0_3_train[:, 3], xs_train]
+    l_X_valid = [X0_3_valid[:, 0], X0_3_valid[:, 1], X0_3_valid[:, 2], X0_3_valid[:, 3], xs_valid]
+
+
+    epochs = 3
+
+    for ep in range(epochs):
+        h = m.fit( l_X_train, y_train, batch_size=128, epochs=1, verbose=10 )
+        y_p = m.predict(l_X_valid)
+        rmse(y_p, y_valid)
+
+    iFold = iFold + 1
+"""c"""
+
+
+
+
 #
 # https://machinelearningmastery.com/use-word-embedding-layers-deep-learning-keras/
 # https://jovianlin.io/keras-models-sequential-vs-functional/
@@ -35,7 +180,7 @@ import gc
 labels = np.array([1,1,1,1,1,0,0,0,0,0])
 
 docs = ['Well done!', 'Good work', 'Great effort', 'nice work', 'Excellent!',
-                'Weak', 'Poor effort!', 'not good', 'poor work', 'Could have done better.']
+        'Weak', 'Poor effort!', 'not good', 'poor work', 'Could have done better.']
 
 
 # 

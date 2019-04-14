@@ -92,6 +92,9 @@
     <Compile Include="ga\code.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="GeneralTree.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="general\covariance_study.py">
       <SubType>Code</SubType>
     </Compile>
@@ -102,6 +105,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="general\KDE_study.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="general\KDE_study_2.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="general\StemmerStage.py">
@@ -359,6 +365,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="typing\typing.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="xml_parse.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
