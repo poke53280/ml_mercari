@@ -111,7 +111,7 @@ y = getGroundTruth(X0_3, xs)
 
 m = get_model()
 
-kf = KFold(n_splits = 10, random_state = 22)
+kf = KFold(n_splits = 3, random_state = 22)
 
 iFold = 0
 
@@ -137,7 +137,7 @@ for train_index, valid_index in kf.split(y):
     for ep in range(epochs):
         h = m.fit( l_X_train, y_train, batch_size=128, epochs=1, verbose=10 )
         y_p = m.predict(l_X_valid)
-        rmse(y_p, y_valid)
+        print(f"RMSE = {rmse(y_p, y_valid)}")
 
     iFold = iFold + 1
 """c"""
