@@ -55,7 +55,7 @@ def getRandomX():
 """c"""
 
 def getGroundTruth(X0_3, xs):
-    return (X0_3[:, 0] % 4) * 0.1 - (X0_3[:, 1] % 7) * 0.07 + (X0_3[:, 2] % 4) * 0.15 - (X0_3[:, 3] % 7) * 0.3 - .3 *xs
+    return (X0_3[:, 0] % 4) * 0.1 - (X0_3[:, 1] % 4) * 0.07 + (X0_3[:, 2] % 4) * 0.15 - (X0_3[:, 3] % 7) * 0.3 - .3 *xs
 """c"""
 
 def rmse(predictions, targets):
@@ -67,25 +67,21 @@ def get_model():
     
     # cat_MD cat_NAV cat_D cat_AG cat_OCC L B 
 
-    A0 = Input(shape=[1], name="category0")
-    B0 = Input(shape=[1], name="category1")
-    A1 = Input(shape=[1], name="category2")
+    A0 = Input(shape=[3], name="category0")
     B1 = Input(shape=[1], name="category3")
     val4 = Input(shape=[1], name="value4")
 
 
     MAX_CATEGORY = 25
 
-    embeddingF0 = Embedding(MAX_CATEGORY, 1)  
+    embeddingF0 = Embedding(MAX_CATEGORY, 2)
     embeddingF1 = Embedding(MAX_CATEGORY, 1)
    
     emb_col0 = Flatten() ( embeddingF0(A0) )
-    emb_col1 = Flatten() ( embeddingF1(B0) )
-    emb_col2 = Flatten() ( embeddingF0(A1) )
     emb_col3 = Flatten() ( embeddingF1(B1) )
    
 
-    x = concatenate([emb_col0, emb_col1, emb_col2, emb_col3, val4])
+    x = concatenate([emb_col0, emb_col3, val4])
 
     x = BatchNormalization()(x)
 
@@ -94,12 +90,15 @@ def get_model():
     x = Activation('relu')(x)
     x = Dense(1, activation="linear") (x)
 
-    model = Model([A0, B0, A1, B1, val4],  x)
+    model = Model([A0, B1, val4],  x)
 
     optimizer = Adam(.002)
 
     model.compile(loss="mse", optimizer=optimizer)
 
+    
+    model.summary()
+    
     return model
 """c"""
 
@@ -128,8 +127,8 @@ for train_index, valid_index in kf.split(y):
     xs_train = xs[train_index]
     xs_valid = xs[valid_index]
 
-    l_X_train = [X0_3_train[:, 0], X0_3_train[:, 1], X0_3_train[:, 2], X0_3_train[:, 3], xs_train]
-    l_X_valid = [X0_3_valid[:, 0], X0_3_valid[:, 1], X0_3_valid[:, 2], X0_3_valid[:, 3], xs_valid]
+    l_X_train = [X0_3_train[:, 0:3], X0_3_train[:, 3], xs_train]
+    l_X_valid = [X0_3_valid[:, 0:3], X0_3_valid[:, 3], xs_valid]
 
 
     epochs = 3
