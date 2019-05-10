@@ -1,0 +1,74 @@
+
+<!DOCTYPE html>
+<html>
+<body>
+    <p style="font-family:'Courier New'">10.5.19. Sykefravær: Overgang fra 17 uker til 28 uker.</p>
+    <canvas id="myCanvas" width="400" height="400" style="border:1px solid #000000;"></canvas>
+</body>
+</html>
+<script>
+
+    var c = document.getElementById("myCanvas");
+    var ctx = c.getContext("2d");
+    var xSize = c.width
+    var ySize = c.height
+
+    ctx.strokeStyle = "#000000"
+
+    ctx.moveTo(xSize/2, 0);
+    ctx.lineTo(xSize / 2, ySize);
+
+    ctx.moveTo(0, ySize / 2);
+    ctx.lineTo(xSize, ySize/2)
+
+    ctx.stroke(); 
+
+    ctx.font = "80px Courier New";
+
+    var tp = 423
+    var tn = 269
+    var fp = 148
+    var fn = 159
+
+    var pad = 25
+    var smallpad = 15
+
+   
+    ctx.fillStyle = "#00ff00"; 
+    ctx.fillText(tp, pad, pad + ySize / 4);
+    ctx.fillText(tn, pad + xSize / 2, pad + 3 * ySize / 4)
+
+    ctx.fillStyle = "#ff0000"; 
+    ctx.fillText(fp, pad + xSize / 2, pad + ySize / 4);
+    ctx.fillText(fn, pad, pad + 3 * ySize / 4)
+   
+    ctx.font = "15px Courier New";
+    ctx.fillStyle = "#00ff00"; 
+    ctx.fillText("\"Langt\" (Korrekt)", smallpad, smallpad);
+
+    ctx.fillStyle = "#ff0000"; 
+    ctx.fillText("\"Langt\" (Feil)", smallpad + xSize / 2, smallpad);
+
+    ctx.fillStyle = "#ff0000";
+    ctx.fillText("\"Kort\" (Feil)", smallpad, smallpad + ySize / 2);
+
+    ctx.fillStyle = "#00ff00";
+    ctx.fillText("\"Kort\" (Korrekt)", smallpad + xSize / 2, smallpad + ySize / 2);
+
+    ctx.font = "15px Courier New";
+    ctx.fillStyle = "#000000";
+
+    // Guesswork
+    ctx.fillText("335", smallpad, ySize / 2 - smallpad);
+    ctx.fillText("237", smallpad + xSize / 2, ySize / 2 - smallpad);
+    ctx.fillText("248", smallpad, ySize - smallpad);
+    ctx.fillText("181", smallpad + xSize / 2, ySize - smallpad);
+
+    // Correct
+    ctx.fillStyle = "#FFAA00";
+    ctx.fillText("582", xSize/2 - 3 * smallpad, ySize / 2 - smallpad);
+    ctx.fillText("417", xSize - 3 * smallpad, ySize - smallpad);
+
+</script>
+
+
