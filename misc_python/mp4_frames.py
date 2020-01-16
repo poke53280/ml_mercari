@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+sns.set()
 from scipy import signal
 
 import matplotlib.animation as animation
@@ -49,9 +50,15 @@ def m_desc(m):
     return zRes
 """c"""
 
-sns.set()
 
-print(cv2.__version__)
+
+
+
+
+####################################################################################
+#
+#   detect_faces
+#
 
 
 def detect_faces(vidcap):

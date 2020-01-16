@@ -12,6 +12,7 @@
     <Name>ml_mercari</Name>
     <RootNamespace>ml_mercari</RootNamespace>
     <InterpreterId>Global|ContinuumAnalytics|Anaconda36-64</InterpreterId>
+    <SuppressConfigureTestFrameworkPrompt>true</SuppressConfigureTestFrameworkPrompt>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -146,6 +147,20 @@
     <Compile Include="many_id.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="misc_python\coins.py" />
+    <Compile Include="misc_python\dae.py" />
+    <Compile Include="misc_python\dask_tests.py" />
+    <Compile Include="misc_python\eastern_cycle.py" />
+    <Compile Include="misc_python\feature_selection.py" />
+    <Compile Include="misc_python\fft.py" />
+    <Compile Include="misc_python\groupby_tut.py" />
+    <Compile Include="misc_python\manifold.py" />
+    <Compile Include="misc_python\mp4_frames.py" />
+    <Compile Include="misc_python\ocr.py" />
+    <Compile Include="misc_python\ocr_adv.py" />
+    <Compile Include="misc_python\prob_start.py" />
+    <Compile Include="misc_python\PythonApplication2.py" />
+    <Compile Include="misc_python\sampler.py" />
     <Compile Include="ml_mw\msmw.py">
       <SubType>Code</SubType>
     </Compile>
@@ -381,6 +396,7 @@
     <Folder Include="dae\" />
     <Folder Include="ga\" />
     <Folder Include="imageai\" />
+    <Folder Include="misc_python\" />
     <Folder Include="mp\" />
     <Folder Include="ml_mw\" />
     <Folder Include="quora\" />
