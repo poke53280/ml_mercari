@@ -8,33 +8,12 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from tqdm.notebook import tqdm
 
-import pathlib
-
-# See github.com/timesler/facenet-pytorch:
 from facenet_pytorch import MTCNN
 
 import pandas as pd
-pd.set_option('display.max_rows', 500)
-pd.set_option('display.max_columns', 500)
-pd.set_option('display.width', 1000)
 
 
-p = pathlib.Path(r'C:\Users\T149900\Downloads\deepfake-detection-challenge\train_sample_videos')
 
-assert p.is_dir()
-
-file_list = []
-
-for x in p.iterdir():
-    if x.is_file() and x.suffix == '.mp4':
-        file_list.append(x)
-
-
-device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-print(f'Running on device: {device}')
-
-
-filename = file_list[13]
 
 
 # Load face detector

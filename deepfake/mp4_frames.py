@@ -11,6 +11,142 @@ from scipy import signal
 import matplotlib.animation as animation
 
 from mtcnn.mtcnn import MTCNN
+from sklearn.metrics import mean_squared_error
+import pathlib
+import torch
+import random
+
+
+def get_sample_point(l_feature, delta):
+    p = random.choice(l_feature)
+    x = p[0] + np.random.choice(2 * delta) - delta
+    y = p[1] + np.random.choice(2 * delta) - delta
+    return (x, y)
+
+
+
+####################################################################################
+#
+#   sample_new
+#
+#
+#   Todo: make use of features for more relevant sampling
+
+def sample_new(video, anFeatures):
+    num_samples = 30000
+
+    length = video.shape[0]
+    height = video.shape[1]
+    width = video.shape[2]
+
+    sample_length = 16
+    sample_height = 1
+    sample_width = 1
+
+    data = np.zeros((num_samples, sample_length * sample_height * sample_width, 3))
+
+    sample_length_start = np.random.choice(length - sample_length)
+
+    sample_length_end = sample_length_start + 16
+
+    l_feature_start = anFeatures[sample_length_start]
+    l_feature_end   = anFeatures[sample_length_end]
+
+    p0 = get_sample_point(l_feature_start, 3)
+    p1 = get_sample_point(l_feature_end, 3)
+
+    # Get 3d line
+
+    # See sampler.py
+
+
+
+
+
+####################################################################################
+#
+#   sample_basic
+#
+
+
+def sample_basic(video, anFeatures):
+
+    num_samples = 30000
+
+    length = video.shape[0]
+    height = video.shape[1]
+    width = video.shape[2]
+
+    sample_length = 16
+    sample_height = 1
+    sample_width = 1
+
+    data = np.zeros((num_samples, sample_length * sample_height * sample_width, 3))
+
+    for i in range(num_samples):
+
+        if i % 10000 == 0:
+            print (i)
+        sample_length_start = np.random.choice(length - sample_length)
+        sample_start_height = np.random.choice(height - sample_height)
+        sample_start_width = np.random.choice(width - sample_width)
+
+        data_v = video[sample_length_start:sample_length_start + sample_length, sample_start_height:sample_start_height + sample_height, sample_start_width:sample_start_width + sample_width]
+        data_v = data_v.reshape(-1, 3)
+
+        data[i] = data_v
+
+    data = data / 255
+
+    return data
+
+
+
+####################################################################################
+#
+#   attic
+#
+#   Non-running code to fuzzy sample lines
+
+def attic():
+
+    # Area around point 4 x 4
+
+    w = 8
+    x0 = 421
+    y0 = 287
+
+    im0 = l_image[0]
+    im1 = l_image[1]
+
+    dx = 15
+    dy = 15
+
+    adx = np.arange(-dx, dx + 1, 1)
+    ady = np.arange(-dy, dy + 1, 1)
+
+    l_dx = []
+    l_dy = []
+    l_mse = []
+
+    for dx in adx:
+        for dy in ady:
+
+            w2 = int(w/2)
+
+            p0 = im0[x0 - w2:x0 + w2, y0 - w2: y0 + w2]
+            p1 = im1[x0 + dx - w2:x0 + w2 + dx, y0 + dy - w2: y0 + w2+ dy]
+
+            mse = mean_squared_error(p0.ravel(), p1.ravel())
+            l_dx.append(dx)
+            l_dy.append(dy)
+            l_mse.append(mse)
+
+    df_e = pd.DataFrame({'dx' : l_dx, 'dy': l_dy, 'mse' : l_mse})
+
+    df_e = df_e.sort_values(by = 'mse')
+
+    return df
 
 
 ####################################################################################
@@ -51,17 +187,12 @@ def m_desc(m):
 """c"""
 
 
-
-
-
-
 ####################################################################################
 #
-#   detect_faces
+#   read_image_and_features
 #
 
-
-def detect_faces(vidcap):
+def read_image_and_features(vidcap):
     
     length = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
     width  = int(vidcap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -70,118 +201,12 @@ def detect_faces(vidcap):
 
     nFrame = length
     iFrame = 0
-
-    
-    left_eye = []
-    right_eye = []
-    nose = []
-    left_mouth = []
-    right_mount = []
-    confidence = []
 
     detector = MTCNN()
 
-    l_image = []
-
-    for iFrame in range (4):
-
-        print(f"Processing {iFrame}...")
-
-        success,image = vidcap.read()
-
-        l_image.append(image)
-        
-        faces = detector.detect_faces(image)
-
-
-
-        if len(faces) > 0:
-            f = faces[0]
-            left_eye.append(f['keypoints']['left_eye'])
-            right_eye.append(f['keypoints']['right_eye'])
-            nose.append(f['keypoints']['nose'])
-            left_mouth.append(f['keypoints']['mouth_left'])
-            right_mount.append(f['keypoints']['mouth_right'])
-            confidence.append(f['confidence'])
-
-        for x in faces:
-            print (x['confidence'])
-
-
-    df = pd.DataFrame({'confidence' : confidence, 'left_eye' : left_eye, 'right_eye' : right_eye, 'nose' : nose, 'left_mouth' : left_mouth, 'right_mouth' : right_mount})
-
-    from sklearn.metrics import mean_squared_error
-
-    # Area around point 4 x 4
-
-    w = 8
-    x0 = 421
-    y0 = 287
-
-    im0 = l_image[0]
-    im1 = l_image[1]
-
-    dx = 15
-    dy = 15
-
-    adx = np.arange(-dx, dx + 1, 1)
-    ady = np.arange(-dy, dy + 1, 1)
-
-    l_dx = []
-    l_dy = []
-    l_mse = []
-
-    for dx in adx:
-        for dy in ady:
-
-            w2 = int(w/2)
-
-            p0 = im0[x0 - w2:x0 + w2, y0 - w2: y0 + w2]
-            p1 = im1[x0 + dx - w2:x0 + w2 + dx, y0 + dy - w2: y0 + w2+ dy]
-
-            mse = mean_squared_error(p0.ravel(), p1.ravel())
-            l_dx.append(dx)
-            l_dy.append(dy)
-            l_mse.append(mse)
-
-    df_e = pd.DataFrame({'dx' : l_dx, 'dy': l_dy, 'mse' : l_mse})
-
-    df_e = df_e.sort_values(by = 'mse')
-
-
-
-
-    return df
-
-
-vidcap = cv2.VideoCapture("C:\\Users\\T149900\\source\\repos\\PythonApplication2\\PythonApplication2\\aagfhgtpmv.mp4")
-
-df = detect_faces(vidcap)
-vidcap.release()
-
-
-
-
-
-####################################################################################
-#
-#   generate_frame_lines
-#
-
-
-def generate_frame_lines(vidcap):
-
-    length = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
-    width  = int(vidcap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps    = vidcap.get(cv2.CAP_PROP_FPS)
-
-    nFrame = length
-    iFrame = 0
-
-
     video = np.zeros((length, height, width, 3), dtype = np.uint8)
 
+    l_p_image = []
 
     for iFrame in range (nFrame):
 
@@ -189,183 +214,133 @@ def generate_frame_lines(vidcap):
 
         success,image = vidcap.read()
 
-
-        
-
-
-        assert success, "Failed to read frame"
-
-        (img_y, img_x, img_d) = image.shape
-
         video[iFrame] = image
 
+        faces = detector.detect_faces(image)
 
-    num_samples = 30000
+        l_p = []
 
-    sample_length = 16
-    sample_height = 1
-    sample_width = 1
+        for f in faces:
+            if f['confidence'] < 0.8:
+                continue
 
-    data = np.zeros((num_samples, sample_length * sample_height * sample_width, 3))
+            l_p.append(f['keypoints']['left_eye'])
+            l_p.append(f['keypoints']['right_eye'])
+            l_p.append(f['keypoints']['nose'])
+            l_p.append(f['keypoints']['mouth_left'])
+            l_p.append(f['keypoints']['mouth_right'])
 
-    for i in range(num_samples):
+        l_p_image.append(l_p)
 
-        if i % 10000 == 0:
-            print (i)
-        sample_length_start = np.random.choice(length - sample_length)
-        sample_start_height = np.random.choice(height - sample_height)
-        sample_start_width = np.random.choice(width - sample_width)
-
-        data_v = video[sample_length_start:sample_length_start + sample_length, sample_start_height:sample_start_height + sample_height, sample_start_width:sample_start_width + sample_width]
-        data_v = data_v.reshape(-1, 3)
-
-        data[i] = data_v
-
-    data = data / 255
-
-    return data
+    return (video, l_p_image)
 
 
 
-vidcap = cv2.VideoCapture("C:\\Users\\T149900\\source\\repos\\PythonApplication2\\PythonApplication2\\aagfhgtpmv.mp4")
 
-detect_faces(vidcap)
 
-data0 = generate_frame_lines(vidcap)
+pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 1000)
+
+
+p = pathlib.Path(r'C:\Users\T149900\Downloads\deepfake-detection-challenge\train_sample_videos')
+
+assert p.is_dir()
+
+file_list = []
+
+for x in p.iterdir():
+    if x.is_file() and x.suffix == '.mp4':
+        file_list.append(x)
+
+
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+print(f'Running on device: {device}')
+
+
+vidcap = cv2.VideoCapture(str(file_list[13]))
+
+video, anFeatures = read_image_and_features(vidcap)
+
 vidcap.release()
 
-
-vidcap = cv2.VideoCapture("C:\\Users\\T149900\\source\\repos\\PythonApplication2\\PythonApplication2\\axfhbpkdlc.mp4")
-data1 = generate_chunks(vidcap)
-
-vidcap = cv2.VideoCapture("C:\\Users\\T149900\\source\\repos\\PythonApplication2\\PythonApplication2\\bdgipnyobr.mp4")
-data2 = generate_chunks(vidcap)
-
-data = np.vstack([data0, data1, data2])
+data0 = generate_frame_lines(video, anFeatures)
 
 
+vidcap = cv2.VideoCapture(str(file_list[19]))
+
+video, anFeatures = read_image_and_features(vidcap)
+
+vidcap.release()
+
+data1 = generate_frame_lines(video, anFeatures)
 
 
+sequence = np.vstack([data0, data1])
+
+np.random.shuffle(sequence)
+
+num_train = 50000
+num_test = sequence.shape[0] - num_train
 
 
+test_sequence = sequence[num_train:num_train + num_test]
+test_sequence = test_sequence.reshape((test_sequence.shape[0], test_sequence.shape[1], 3))
 
 
-# https://www.tensorflow.org/tutorials/quickstart/advanced
+sequence = sequence[:num_train]
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-import tensorflow as tf
-
-from tensorflow.keras.layers import Dense, Flatten, Conv2D
-from tensorflow.keras import Model
+num_samples = sequence.shape[0]
+num_timesteps = sequence.shape[1]
 
 
-from tensorflow.keras.initializers import Constant
+# reshape input into [samples, timesteps, features]
+sequence = sequence.reshape((num_samples, num_timesteps, 3))
 
 
-
-from datetime import datetime
-
-
-logdir = "C:\\Users\\T149900\\source\\repos\\PythonApplication2\\PythonApplication2\\" + datetime.now().strftime("%Y%m%d-%H%M%S")
-writer = tf.summary.create_file_writer(logdir)
+# define model
+model = Sequential()
 
 
-mnist = tf.keras.datasets.mnist
+model.add(LSTM(1024, activation='relu', input_shape=(num_timesteps, 3)))
+model.add(RepeatVector(num_timesteps))
+model.add(LSTM(1024, activation='relu', return_sequences=True))
 
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
-x_train, x_test = x_train / 255.0, x_test / 255.0
+#model.add(Dense(512))
+#model.add(Dense(128))
 
-# Add a channels dimension
-x_train = x_train[..., tf.newaxis]
-x_test = x_test[..., tf.newaxis]
-
-
-train_ds = tf.data.Dataset.from_tensor_slices((x_train, y_train)).shuffle(10000).batch(32)
-
-test_ds = tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(32)
-
-class MyModel(Model):
-  def __init__(self):
-    super(MyModel, self).__init__()
-    self.conv1 = Conv2D(32, 3, activation='relu')
-    self.flatten = Flatten()
-    self.d1 = Dense(128, activation='relu')
-
-    self.d2 = Dense(10, activation='softmax', kernel_initializer = Constant(value = 0.7))
-
-  def call(self, x):
-    x = self.conv1(x)
-    x = self.flatten(x)
-    x = self.d1(x)
-    return self.d2(x)
-
-# Create an instance of the model
-model = MyModel()
+model.add(TimeDistributed(Dense(3)))
+model.compile(optimizer='adam', loss='mse')
 
 
-loss_object = tf.keras.losses.SparseCategoricalCrossentropy()
-
-optimizer = tf.keras.optimizers.Adam()
-
-
-train_loss = tf.keras.metrics.Mean(name='train_loss')
-train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')
-
-test_loss = tf.keras.metrics.Mean(name='test_loss')
-test_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='test_accuracy')
-
-
-
-@tf.function
-def train_step(images, labels):
-  with tf.GradientTape() as tape:
-    predictions = model(images)
-    loss = loss_object(labels, predictions)
-  gradients = tape.gradient(loss, model.trainable_variables)
-  optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-
-  train_loss(loss)
-  train_accuracy(labels, predictions)
-
-
-@tf.function
-def test_step(images, labels):
-  predictions = model(images)
-  t_loss = loss_object(labels, predictions)
-
-  test_loss(t_loss)
-  test_accuracy(labels, predictions)
+# fit model
+model.fit(sequence, sequence, epochs=2, verbose=1)
 
 
 
 
-with writer.as_default():
-    tf.summary.scalar   ('train_acc', train_accuracy.result()*100,      step = 0)
-    tf.summary.histogram('model.d2' , model.d2.get_weights()[1],  step= 0
+y_test = model.predict(test_sequence)
 
-EPOCHS = 5
+from sklearn.metrics import mean_squared_error
 
-for epoch in range(EPOCHS):
-  # Reset the metrics at the start of the next epoch
-  train_loss.reset_states()
-  train_accuracy.reset_states()
-  test_loss.reset_states()
-  test_accuracy.reset_states()
+y_test = y_test.reshape(-1)
+test_sequence = test_sequence.reshape(-1)
 
-  for images, labels in train_ds:
-    train_step(images, labels)
+data_mse = mean_squared_error(y_test, test_sequence)
 
-  for test_images, test_labels in test_ds:
-    test_step(test_images, test_labels)
+y_random = np.random.uniform(size = test_sequence.shape)
 
-  with writer.as_default():
-    tf.summary.scalar   ('train_acc', train_accuracy.result()*100,      step = epoch +1)
-    tf.summary.histogram('model.d2' , model.d2.get_weights()[1],  step=epoch +1)
+y_random = y_random.reshape((num_test, 16, 3))
 
+y_random_predict = model.predict(y_random)
 
+y_random_predict = y_random_predict.reshape(-1)
+y_random = y_random.reshape(-1)
 
-  template = 'Epoch {}, Loss: {}, Accuracy: {}, Test Loss: {}, Test Accuracy: {}'
+ran_mse = mean_squared_error(y_random, y_random_predict)
 
-  print(template.format(epoch+1, train_loss.result(), train_accuracy.result()*100, test_loss.result(), test_accuracy.result()*100))
+data_mse = data_mse * 1000
+ran_mse =ran_mse * 1000
 
+data_mse
+ran_mse
