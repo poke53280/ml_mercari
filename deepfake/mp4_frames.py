@@ -17,6 +17,12 @@ import torch
 import random
 
 
+####################################################################################
+#
+#   get_sample_point
+#
+#
+
 def get_sample_point(l_feature, delta):
     p = random.choice(l_feature)
     x = p[0] + np.random.choice(2 * delta) - delta
@@ -24,13 +30,42 @@ def get_sample_point(l_feature, delta):
     return (x, y)
 
 
+####################################################################################
+#
+#   get_line
+#
+#
+
+def get_line(p0, p1):
+
+    dp = p1 - p0
+    dp = np.abs(dp)
+
+    num_steps = np.max(dp)
+
+    # t element of [0, 1]
+
+    step_size = 1 / num_steps
+
+    ai = np.arange(start = 0, stop = 1 + step_size, step = step_size)
+
+    ai_t = np.tile(ai, 3).reshape(-1, ai.shape[0])
+
+
+    p = (p1 - p0).reshape(3, -1) * ai_t
+
+    p = p + p0.reshape(3, -1)
+
+    p = np.round(p)
+
+    return p
+
 
 ####################################################################################
 #
 #   sample_new
 #
 #
-#   Todo: make use of features for more relevant sampling
 
 def sample_new(video, anFeatures):
     num_samples = 30000
@@ -45,21 +80,39 @@ def sample_new(video, anFeatures):
 
     data = np.zeros((num_samples, sample_length * sample_height * sample_width, 3))
 
-    sample_length_start = np.random.choice(length - sample_length)
+    for i in range(num_samples):
 
-    sample_length_end = sample_length_start + 16
+        if i % 1000 == 0:
+            print (i)
 
-    l_feature_start = anFeatures[sample_length_start]
-    l_feature_end   = anFeatures[sample_length_end]
+        sample_length_start = np.random.choice(length - sample_length)
 
-    p0 = get_sample_point(l_feature_start, 3)
-    p1 = get_sample_point(l_feature_end, 3)
+        sample_length_end = sample_length_start + 16
 
-    # Get 3d line
+        l_feature_start = anFeatures[sample_length_start]
+        l_feature_end   = anFeatures[sample_length_end]
 
-    # See sampler.py
+        p0_2d = get_sample_point(l_feature_start, 3)
+        p1_2d = get_sample_point(l_feature_end, 3)
 
+        p0 = np.array([p0_2d[0], p0_2d[1], sample_length_start])
+        p1 = np.array([p1_2d[0], p1_2d[1], sample_length_end])
 
+        l = get_line(p0, p1)
+
+        assert l.shape[1] >= 16
+
+        l = np.swapaxes(l, 0, 1)
+
+        l = l[:16]
+        l = l.astype(np.int32)
+
+        l_x = l[:, 0]
+        l_y = l[:, 1]
+        l_z = l[:, 2]
+
+        data[i] = video[l_z, l_y, l_x]
+    return data
 
 
 
@@ -247,36 +300,54 @@ p = pathlib.Path(r'C:\Users\T149900\Downloads\deepfake-detection-challenge\train
 
 assert p.is_dir()
 
+metadata = p / "metadata.json" 
+
+txt = metadata.read_text()
+
+import json
+
+txt_parsed = json.loads(txt)
+
+l_files = list (txt_parsed.keys())
+
+l_real_files = []
+
+for x in l_files:
+    zLabel = txt_parsed[x]['label']
+    print (txt_parsed[x]['label'])
+    if zLabel == "REAL":
+        l_real_files.append(x)
+
+
 file_list = []
 
-for x in p.iterdir():
-    if x.is_file() and x.suffix == '.mp4':
-        file_list.append(x)
-
+for x in l_real_files:
+    fullpath = p / x
+    assert fullpath.is_file()
+    file_list.append(fullpath)
 
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 print(f'Running on device: {device}')
 
 
-vidcap = cv2.VideoCapture(str(file_list[13]))
+l_data = []
 
-video, anFeatures = read_image_and_features(vidcap)
+for x in file_list:
+    print (x)
 
-vidcap.release()
+    vidcap = cv2.VideoCapture(str(x))
 
-data0 = generate_frame_lines(video, anFeatures)
+    video, anFeatures = read_image_and_features(vidcap)
 
+    vidcap.release()
 
-vidcap = cv2.VideoCapture(str(file_list[19]))
+    data = sample_new(video, anFeatures)
 
-video, anFeatures = read_image_and_features(vidcap)
-
-vidcap.release()
-
-data1 = generate_frame_lines(video, anFeatures)
+    l_data.append(data)
 
 
-sequence = np.vstack([data0, data1])
+
+sequence = np.vstack(l_data)
 
 np.random.shuffle(sequence)
 

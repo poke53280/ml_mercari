@@ -3,31 +3,6 @@
 import numpy as np
 
 
-def get_line(p0, p1):
-
-    dp = p1 - p0
-    dp = np.abs(dp)
-
-    num_steps = np.max(dp)
-
-    # t element of [0, 1]
-
-    step_size = 1 / num_steps
-
-    ai = np.arange(start = 0, stop = 1 + step_size, step = step_size)
-
-    ai_t = np.tile(ai, 3).reshape(-1, ai.shape[0])
-
-
-    p = (p1 - p0).reshape(3, -1) * ai_t
-
-    p = p + p0.reshape(3, -1)
-
-    p = np.round(p)
-
-    return p
-
-
 
 # input 'video'
 
