@@ -68,7 +68,7 @@ def get_line(p0, p1):
 #
 
 def sample_new(video, anFeatures):
-    num_samples = 30000
+    num_samples = 100000
 
     length = video.shape[0]
     height = video.shape[1]
@@ -92,6 +92,9 @@ def sample_new(video, anFeatures):
         l_feature_start = anFeatures[sample_length_start]
         l_feature_end   = anFeatures[sample_length_end]
 
+        if (len(l_feature_start) == 0) or (len(l_feature_end) == 0):
+            continue
+
         p0_2d = get_sample_point(l_feature_start, 3)
         p1_2d = get_sample_point(l_feature_end, 3)
 
@@ -112,94 +115,9 @@ def sample_new(video, anFeatures):
         l_z = l[:, 2]
 
         data[i] = video[l_z, l_y, l_x]
-    return data
-
-
-
-####################################################################################
-#
-#   sample_basic
-#
-
-
-def sample_basic(video, anFeatures):
-
-    num_samples = 30000
-
-    length = video.shape[0]
-    height = video.shape[1]
-    width = video.shape[2]
-
-    sample_length = 16
-    sample_height = 1
-    sample_width = 1
-
-    data = np.zeros((num_samples, sample_length * sample_height * sample_width, 3))
-
-    for i in range(num_samples):
-
-        if i % 10000 == 0:
-            print (i)
-        sample_length_start = np.random.choice(length - sample_length)
-        sample_start_height = np.random.choice(height - sample_height)
-        sample_start_width = np.random.choice(width - sample_width)
-
-        data_v = video[sample_length_start:sample_length_start + sample_length, sample_start_height:sample_start_height + sample_height, sample_start_width:sample_start_width + sample_width]
-        data_v = data_v.reshape(-1, 3)
-
-        data[i] = data_v
-
-    data = data / 255
 
     return data
 
-
-
-####################################################################################
-#
-#   attic
-#
-#   Non-running code to fuzzy sample lines
-
-def attic():
-
-    # Area around point 4 x 4
-
-    w = 8
-    x0 = 421
-    y0 = 287
-
-    im0 = l_image[0]
-    im1 = l_image[1]
-
-    dx = 15
-    dy = 15
-
-    adx = np.arange(-dx, dx + 1, 1)
-    ady = np.arange(-dy, dy + 1, 1)
-
-    l_dx = []
-    l_dy = []
-    l_mse = []
-
-    for dx in adx:
-        for dy in ady:
-
-            w2 = int(w/2)
-
-            p0 = im0[x0 - w2:x0 + w2, y0 - w2: y0 + w2]
-            p1 = im1[x0 + dx - w2:x0 + w2 + dx, y0 + dy - w2: y0 + w2+ dy]
-
-            mse = mean_squared_error(p0.ravel(), p1.ravel())
-            l_dx.append(dx)
-            l_dy.append(dy)
-            l_mse.append(mse)
-
-    df_e = pd.DataFrame({'dx' : l_dx, 'dy': l_dy, 'mse' : l_mse})
-
-    df_e = df_e.sort_values(by = 'mse')
-
-    return df
 
 
 ####################################################################################
@@ -263,8 +181,6 @@ def read_image_and_features(vidcap):
 
     for iFrame in range (nFrame):
 
-        print(f"Processing {iFrame}...")
-
         success,image = vidcap.read()
 
         video[iFrame] = image
@@ -288,7 +204,41 @@ def read_image_and_features(vidcap):
     return (video, l_p_image)
 
 
+####################################################################################
+#
+#   sample_data
+#
 
+def sample_data(file_list):
+
+    l_data = []
+
+    for x in file_list:
+        print (x)
+
+        vidcap = cv2.VideoCapture(str(x))
+
+        video, anFeatures = read_image_and_features(vidcap)
+
+        vidcap.release()
+
+        data = sample_new(video, anFeatures)
+
+        nonzero = np.count_nonzero(data, axis = 1)
+
+        m0 = nonzero[:, 0] == 0
+        m1 = nonzero[:, 1] == 0
+        m2 = nonzero[:, 2] == 0
+
+        m = m0 & m1 & m2
+
+        print(m_desc(m))
+
+        data = data[~m]
+        data = data / 255.0
+
+        l_data.append(data)
+    return np.vstack(l_data)
 
 
 pd.set_option('display.max_rows', 500)
@@ -311,47 +261,47 @@ txt_parsed = json.loads(txt)
 l_files = list (txt_parsed.keys())
 
 l_real_files = []
+l_fake_files = []
 
 for x in l_files:
     zLabel = txt_parsed[x]['label']
     print (txt_parsed[x]['label'])
     if zLabel == "REAL":
         l_real_files.append(x)
+    if zLabel == "FAKE":
+        l_fake_files.append(x)
+    
 
 
-file_list = []
+real_list = []
 
 for x in l_real_files:
     fullpath = p / x
     assert fullpath.is_file()
-    file_list.append(fullpath)
+    real_list.append(fullpath)
+
+fake_list = []
+
+for x in l_fake_files:
+    fullpath = p / x
+    assert fullpath.is_file()
+    fake_list.append(fullpath)
+
+
 
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 print(f'Running on device: {device}')
 
 
-l_data = []
+sequence = sample_data(real_list[:10])
 
-for x in file_list:
-    print (x)
+outfile = p / "real_data.npy"
+np.save(outfile, sequence)
 
-    vidcap = cv2.VideoCapture(str(x))
-
-    video, anFeatures = read_image_and_features(vidcap)
-
-    vidcap.release()
-
-    data = sample_new(video, anFeatures)
-
-    l_data.append(data)
-
-
-
-sequence = np.vstack(l_data)
 
 np.random.shuffle(sequence)
 
-num_train = 50000
+num_train = int (0.7 * sequence.shape[0])
 num_test = sequence.shape[0] - num_train
 
 
@@ -369,16 +319,23 @@ num_timesteps = sequence.shape[1]
 sequence = sequence.reshape((num_samples, num_timesteps, 3))
 
 
+from keras.models import Sequential
+from keras.layers import LSTM
+from keras.layers import Dense
+from keras.layers import RepeatVector
+from keras.layers import TimeDistributed
+from keras.utils import plot_model
+
+
 # define model
 model = Sequential()
 
-
-model.add(LSTM(1024, activation='relu', input_shape=(num_timesteps, 3)))
+model.add(LSTM(2048, activation='relu', input_shape=(num_timesteps, 3)))
 model.add(RepeatVector(num_timesteps))
-model.add(LSTM(1024, activation='relu', return_sequences=True))
+model.add(LSTM(2048, activation='relu', return_sequences=True))
 
-#model.add(Dense(512))
-#model.add(Dense(128))
+model.add(Dense(512))
+model.add(Dense(128))
 
 model.add(TimeDistributed(Dense(3)))
 model.compile(optimizer='adam', loss='mse')
