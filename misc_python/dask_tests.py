@@ -1,38 +1,31 @@
 
-import dask
-import time
+from distributed import Client
+from time import sleep
+import random
+
+def inc(x):
+    sleep(random.random() / 10)
+    print ("inc")
+    return x + 1
+
+def dec(x):
+    sleep(random.random() / 10)
+    return x - 1
+
+def add(x, y):
+    sleep(random.random() / 10)
+    return x + y
 
 
-def funcA(x, y):
-    print(x, y)
-    time.sleep(10)
-    return x + 3
+if __name__ == '__main__':
 
+    client = Client()
 
-def funcB(x, y):
-    print(x, y)
-    time.sleep(5)
-    return x + 9
+    incs = client.map(inc, range(100))
+    decs = client.map(dec, range(100))
+    adds = client.map(add, incs, decs)
+    total = client.submit(sum, adds)
 
-
-l_res = []
-
-l_res.append(dask.delayed(funcA)(9, 17))
-l_res.append(dask.delayed(funcB)(11, 11))
-
-tot_res = dask.compute(*l_res)
-
-
-#     df = df.assign(**dict(zip (l_categorical, tot_res)))
-
-
-
-
-
-
-
-
-
-
-
+    del incs, decs, adds
+    total.result()
 
