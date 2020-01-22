@@ -15,7 +15,6 @@ import pandas as pd
 
 
 
-
 # Load face detector
 mtcnn = MTCNN(margin=14, keep_all=True, factor=0.5, device=device, post_process=False).eval()
 
