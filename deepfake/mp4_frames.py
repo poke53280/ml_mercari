@@ -70,10 +70,9 @@ def get_line(p0, p1):
 #
 #
 
-def sample_video(video_real, l_video_fake, anFeatures):
+def sample_video(video_real, video_fake, anFeatures):
 
-    for video_fake in l_video_fake:
-        assert video_real.shape == video_fake.shape
+    assert video_real.shape == video_fake.shape
 
     num_samples = 100000
 
@@ -85,8 +84,8 @@ def sample_video(video_real, l_video_fake, anFeatures):
     sample_height = 1
     sample_width = 1
 
-    data_real = np.zeros((num_samples, sample_length * sample_height * sample_width, 3))
-    data_fake = np.zeros((num_samples, sample_length * sample_height * sample_width, 3))
+    data_real = np.zeros((num_samples, sample_length * sample_height * sample_width, 3), dtype = np.uint8)
+    data_fake = np.zeros((num_samples, sample_length * sample_height * sample_width, 3), dtype = np.uint8)
 
     for i in range(num_samples):
 
@@ -124,9 +123,6 @@ def sample_video(video_real, l_video_fake, anFeatures):
 
         sample_real = video_real[l_z, l_y, l_x]
 
-        # assumes at least one fake
-        video_fake = random.choice(l_video_fake)
-
         sample_fake = video_fake[l_z, l_y, l_x]
 
         m = sample_real == sample_fake
@@ -134,12 +130,10 @@ def sample_video(video_real, l_video_fake, anFeatures):
 
         nAll = m.shape[0]
         nFake = nAll - m.sum()
-        rFake = nFake / nAll
         
-        if rFake > 0.3:
+        if nFake > 0:
             data_fake[i] = sample_fake
-
-        data_real[i] = sample_real
+            data_real[i] = sample_real
 
     return data_real, data_fake
 
@@ -266,50 +260,50 @@ def read_image_and_features(vidcap):
 def sample_full_chunk(dir, d, num_data_threshold):
 
 
-    l_data_real = []
-    l_data_fake = []
+    l_data = []
 
     num_real_data = 0
 
     while num_real_data < num_data_threshold:
 
-        x = random.choice(list (d.keys()))
+        l_keys = list (d.keys())
 
-        print (x)
-        l_fake = d[x]
-        x = dir / x
+        x_real = random.choice(l_keys)
 
-        l_fake = [dir / x for x in l_fake]
+        if len(d[x_real]) == 0:
+            continue
 
-        vidcap = cv2.VideoCapture(str(x))
+        l_fakes = list (d[x_real])
 
-        video, anFeatures = read_image_and_features(vidcap)
+        x_fake = random.choice(l_fakes)
+
+        x_real = dir / x_real
+        assert x_real.is_file()
+
+        x_fake = dir / x_fake
+        assert x_fake.is_file()
+        
+        vidcap = cv2.VideoCapture(str(x_real))
+
+        video_real, anFeatures = read_image_and_features(vidcap)
 
         vidcap.release()
 
-        l_fake_video = []
+        vidcap = cv2.VideoCapture(str(x_fake))
 
-        # For mem reasons
-        if len(l_fake) > 3:
-            l_fake_3 = random.sample(l_fake, k = 3)
-        else:
-            l_fake_3 = l_fake
+        video_fake = read_image(vidcap)
 
-        for fake in l_fake_3:
+        vidcap.release()
 
-            vidcap = cv2.VideoCapture(str(fake))
+        if video_real.shape != video_fake.shape:
+            continue
 
-            video_fake = read_image(vidcap)
+        data_real, data_fake = sample_video(video_real, video_fake, anFeatures)
 
-            vidcap.release()
+        m = get_zero_rows(data_real)
 
-            l_fake_video.append(video_fake)
-
-
-        data_real, data_fake = sample_video(video, l_fake_video, anFeatures)
-
-        data_real = clean_sample_data(data_real)
-        data_fake = clean_sample_data(data_fake)
+        data_real = data_real[~m]
+        data_fake = data_fake[~m]
 
         l_data_real.append(data_real)
         l_data_fake.append(data_fake)
@@ -324,10 +318,10 @@ def sample_full_chunk(dir, d, num_data_threshold):
 
 ####################################################################################
 #
-#   clean_sample_data
+#   get_zero_rows
 #
 
-def clean_sample_data(data):
+def get_zero_rows(data):
     nonzero = np.count_nonzero(data, axis = 1)
 
     m0 = nonzero[:, 0] == 0
@@ -336,11 +330,9 @@ def clean_sample_data(data):
 
     m = m0 & m1 & m2
 
-    print(m_desc(m))
+    print(f"Discarding zero rows: {m_desc(m)}")
 
-    data = data[~m]
-    data = data / 255.0
-    return data
+    return m
 
 
 ####################################################################################
@@ -385,9 +377,9 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
 
-iPart = 21
+iPart = 0
 
-dir = pathlib.Path(f"C:\\Users\\T149900\\Downloads\\dfdc_train_part_21\\dfdc_train_part_{iPart}")
+dir = pathlib.Path(f"C:\\Users\\T149900\\Downloads\\dfdc_train_part_{iPart:02}\\dfdc_train_part_{iPart}")
 
 assert dir.is_dir()
 
@@ -413,35 +405,17 @@ s = set (d.keys())
 
 num_originals = len (s)
 
-rSplit = 0.3
+for x in range(3):
 
-num_splitA = int (num_originals * rSplit + .5)
-num_splitB = num_originals - num_splitA
+    aiVideo, anData = sample_full_chunk(dir, d, 200000)
 
-assert num_originals == num_splitA + num_splitB
+    out = f"data_{x:03}.npy"
 
-keys_splitA = set (random.sample(s, k = num_splitA))
-keys_splitB = s - keys_splitA
+    print(f"Saving {out} ...")
 
-d_A = {}
-d_B = {}
+    np.save(dir / out, anDataFake)
 
-for x in list (keys_splitA):
-    d_A[x] = d[x]
-
-for x in list (keys_splitB):
-    d_B[x] = d[x]
+    
 
 
-for x in range(10):
-
-    anDataReal, anDataFake = sample_full_chunk(dir, d_A, 1000000)
-
-    np.save(dir / f"real_data_A_{x:03}.npy", anDataReal)
-    np.save(dir / f"fake_data_A_{x:03}.npy", anDataFake)
-
-    anDataReal, anDataFake = sample_full_chunk(p, d_B, 1000000)
-
-    np.save(dir / f"real_data_B_{x:03}.npy", anDataReal)
-    np.save(dir / f"fake_data_B_{x:03}.npy", anDataFake)
 
