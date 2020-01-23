@@ -17,26 +17,19 @@ import torch
 import random
 import json
 
-from keras.models import Sequential
-from keras.layers import LSTM
-from keras.layers import Dense
-from keras.layers import RepeatVector
-from keras.layers import TimeDistributed
-from keras.utils import plot_model
-
-
-
-
 ####################################################################################
 #
 #   get_sample_point
 #
 #
 
-def get_sample_point(l_feature, delta):
+def get_sample_point(l_feature, width, height, delta):
     p = random.choice(l_feature)
     x = p[0] + np.random.choice(2 * delta) - delta
     y = p[1] + np.random.choice(2 * delta) - delta
+    x = np.max([x, 0])
+    x = np.min([x, width - 1])
+
     return (x, y)
 
 
@@ -102,7 +95,7 @@ def sample_video(video_real, l_video_fake, anFeatures):
 
         sample_length_start = np.random.choice(length - sample_length)
 
-        sample_length_end = sample_length_start + 16
+        sample_length_end = sample_length_start + (16 - 1)   # inclusive
 
         l_feature_start = anFeatures[sample_length_start]
         l_feature_end   = anFeatures[sample_length_end]
@@ -110,8 +103,8 @@ def sample_video(video_real, l_video_fake, anFeatures):
         if (len(l_feature_start) == 0) or (len(l_feature_end) == 0):
             continue
 
-        p0_2d = get_sample_point(l_feature_start, 3)
-        p1_2d = get_sample_point(l_feature_end, 3)
+        p0_2d = get_sample_point(l_feature_start, width, height, 3)
+        p1_2d = get_sample_point(l_feature_end, width, height, 3)
 
         p0 = np.array([p0_2d[0], p0_2d[1], sample_length_start])
         p1 = np.array([p1_2d[0], p1_2d[1], sample_length_end])
@@ -131,6 +124,7 @@ def sample_video(video_real, l_video_fake, anFeatures):
 
         sample_real = video_real[l_z, l_y, l_x]
 
+        # assumes at least one fake
         video_fake = random.choice(l_video_fake)
 
         sample_fake = video_fake[l_z, l_y, l_x]
@@ -269,7 +263,7 @@ def read_image_and_features(vidcap):
 #   sample_full_chunk
 #
 
-def sample_full_chunk(p, d, num_data_threshold):
+def sample_full_chunk(dir, d, num_data_threshold):
 
 
     l_data_real = []
@@ -283,9 +277,9 @@ def sample_full_chunk(p, d, num_data_threshold):
 
         print (x)
         l_fake = d[x]
-        x = p / x
+        x = dir / x
 
-        l_fake = [p / x for x in l_fake]
+        l_fake = [dir / x for x in l_fake]
 
         vidcap = cv2.VideoCapture(str(x))
 
@@ -296,7 +290,12 @@ def sample_full_chunk(p, d, num_data_threshold):
         l_fake_video = []
 
         # For mem reasons
-        for fake in l_fake[:3]:
+        if len(l_fake) > 3:
+            l_fake_3 = random.sample(l_fake, k = 3)
+        else:
+            l_fake_3 = l_fake
+
+        for fake in l_fake_3:
 
             vidcap = cv2.VideoCapture(str(fake))
 
@@ -319,7 +318,7 @@ def sample_full_chunk(p, d, num_data_threshold):
 
         print(f"Data collection {num_real_data}/ {num_data_threshold}")
 
-    return np.vstack(data_real), np.vstack(data_fake)
+    return np.vstack(l_data_real), np.vstack(l_data_fake)
 
 
 
@@ -386,9 +385,14 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
 
-p = pathlib.Path(r'C:\Users\T149900\Downloads\dfdc_train_part_00\dfdc_train_part_0')
+iPart = 21
 
-l_real_files, l_fake_files, l_original_files = read_metadata(p)
+dir = pathlib.Path(f"C:\\Users\\T149900\\Downloads\\dfdc_train_part_21\\dfdc_train_part_{iPart}")
+
+assert dir.is_dir()
+
+
+l_real_files, l_fake_files, l_original_files = read_metadata(dir)
 
 d = {}
 
@@ -403,84 +407,41 @@ for pair in t:
     assert pair[0] in d
     d[pair[0]].append(pair[1])
 
+# Test, train split
 
-anDataReal, anDataFake = sample_full_chunk(p, d, 300000)
+s = set (d.keys())
 
+num_originals = len (s)
 
-device = 'cpu'
+rSplit = 0.3
 
+num_splitA = int (num_originals * rSplit + .5)
+num_splitB = num_originals - num_splitA
 
-sequence = anDataReal
+assert num_originals == num_splitA + num_splitB
 
-outfile = p / "real_data.npy"
-np.save(outfile, sequence)
+keys_splitA = set (random.sample(s, k = num_splitA))
+keys_splitB = s - keys_splitA
 
+d_A = {}
+d_B = {}
 
-np.random.shuffle(sequence)
+for x in list (keys_splitA):
+    d_A[x] = d[x]
 
-num_train = int (0.7 * sequence.shape[0])
-num_test = sequence.shape[0] - num_train
-
-
-test_sequence = sequence[num_train:num_train + num_test]
-test_sequence = test_sequence.reshape((test_sequence.shape[0], test_sequence.shape[1], 3))
-
-
-sequence = sequence[:num_train]
-
-num_samples = sequence.shape[0]
-num_timesteps = sequence.shape[1]
+for x in list (keys_splitB):
+    d_B[x] = d[x]
 
 
-# reshape input into [samples, timesteps, features]
-sequence = sequence.reshape((num_samples, num_timesteps, 3))
+for x in range(10):
 
+    anDataReal, anDataFake = sample_full_chunk(dir, d_A, 1000000)
 
+    np.save(dir / f"real_data_A_{x:03}.npy", anDataReal)
+    np.save(dir / f"fake_data_A_{x:03}.npy", anDataFake)
 
+    anDataReal, anDataFake = sample_full_chunk(p, d_B, 1000000)
 
+    np.save(dir / f"real_data_B_{x:03}.npy", anDataReal)
+    np.save(dir / f"fake_data_B_{x:03}.npy", anDataFake)
 
-# define model
-model = Sequential()
-
-model.add(LSTM(2048, activation='relu', input_shape=(num_timesteps, 3)))
-model.add(RepeatVector(num_timesteps))
-model.add(LSTM(2048, activation='relu', return_sequences=True))
-
-model.add(Dense(512))
-model.add(Dense(128))
-
-model.add(TimeDistributed(Dense(3)))
-model.compile(optimizer='adam', loss='mse')
-
-
-# fit model
-model.fit(sequence, sequence, epochs=2, verbose=1)
-
-
-
-
-y_test = model.predict(test_sequence)
-
-from sklearn.metrics import mean_squared_error
-
-y_test = y_test.reshape(-1)
-test_sequence = test_sequence.reshape(-1)
-
-data_mse = mean_squared_error(y_test, test_sequence)
-
-y_random = np.random.uniform(size = test_sequence.shape)
-
-y_random = y_random.reshape((num_test, 16, 3))
-
-y_random_predict = model.predict(y_random)
-
-y_random_predict = y_random_predict.reshape(-1)
-y_random = y_random.reshape(-1)
-
-ran_mse = mean_squared_error(y_random, y_random_predict)
-
-data_mse = data_mse * 1000
-ran_mse =ran_mse * 1000
-
-data_mse
-ran_mse
