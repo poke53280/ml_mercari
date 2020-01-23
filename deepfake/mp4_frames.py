@@ -16,6 +16,9 @@ import pathlib
 import torch
 import random
 import json
+import time
+
+
 
 ####################################################################################
 #
@@ -257,8 +260,9 @@ def read_image_and_features(vidcap):
 #   sample_full_chunk
 #
 
-def sample_full_chunk(dir, d, num_data_threshold):
+def sample_full_chunk(iPart, l_d, num_data_threshold):
 
+    dir = get_part_dir(iPart)
 
     l_data = []
 
@@ -266,14 +270,16 @@ def sample_full_chunk(dir, d, num_data_threshold):
 
     while num_real_data < num_data_threshold:
 
-        l_keys = list (d.keys())
+        idx_key = np.random.choice(len(l_d))
 
-        x_real = random.choice(l_keys)
+        current = l_d[idx_key]
 
-        if len(d[x_real]) == 0:
+        x_real = current[0]
+
+        l_fakes = current[1]
+
+        if len(l_fakes) == 0:
             continue
-
-        l_fakes = list (d[x_real])
 
         x_fake = random.choice(l_fakes)
 
@@ -305,14 +311,39 @@ def sample_full_chunk(dir, d, num_data_threshold):
         data_real = data_real[~m]
         data_fake = data_fake[~m]
 
-        l_data_real.append(data_real)
-        l_data_fake.append(data_fake)
+        assert data_real.shape[0] == data_fake.shape[0]
+
+        num_data = data_real.shape[0]
+
+        if num_data == 0:
+            continue
+
+        anPart = np.empty(num_data, dtype = np.uint8)
+        anPart[:] = iPart
+
+        anVidLo = np.empty(num_data, dtype = np.uint8)
+        anVidLo[:] = (idx_key % 256)
+        
+        anVidHi = np.empty(num_data, dtype = np.uint8)
+        anVidHi[:] = (idx_key // 256)
+
+        data_real = data_real.reshape(data_real.shape[0], -1)
+        data_fake = data_fake.reshape(data_fake.shape[0], -1)
+
+
+        data = np.hstack([anPart.reshape(-1, 1), anVidLo.reshape(-1, 1), anVidHi.reshape(-1, 1), data_real, data_fake])
+        # Back
+        #data_back = data_real_flat.reshape(-1, 16, 3)
+
+        l_data.append(data)
 
         num_real_data = num_real_data + data_real.shape[0]
 
         print(f"Data collection {num_real_data}/ {num_data_threshold}")
 
-    return np.vstack(l_data_real), np.vstack(l_data_fake)
+    """c"""
+
+    return np.vstack(l_data)
 
 
 
@@ -340,9 +371,9 @@ def get_zero_rows(data):
 #   read_metadata
 #
 
-def read_metadata(p):
+def read_metadata(iPart):
     
-    assert p.is_dir()
+    p = get_part_dir(iPart)
 
     metadata = p / "metadata.json" 
 
@@ -368,52 +399,77 @@ def read_metadata(p):
             l_original_files.append(txt_parsed[x]['original'])
 
 
-    return l_real_files, l_fake_files, l_original_files
+    
+    d = {}
 
+    for x in l_original_files:
+        d[x] = []
+
+    assert len (l_fake_files) == len (l_original_files)
+
+    t = list (zip (l_original_files, l_fake_files))
+
+    for pair in t:
+        assert pair[0] in d
+        d[pair[0]].append(pair[1])            
+            
+
+    l_keys = list(d.keys())
+    l_keys.sort()
+
+    l_d = []
+
+    for x in l_keys:
+        l_d.append((x, d[x]))
+
+    return l_d
+
+
+input_dir = pathlib.Path(f"C:\\Users\\T149900\\Downloads")
+assert input_dir.is_dir()
+
+output_dir = pathlib.Path(f"C:\\Users\\T149900\\vid_out")
+assert output_dir.is_dir()
+
+####################################################################################
+#
+#   get_part_dir
+#
+
+def get_part_dir(iPart):
+    s = input_dir / f"dfdc_train_part_{iPart:02}\\dfdc_train_part_{iPart}"
+    assert s.is_dir()
+
+    return s
 
 
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
+def sample_main(num_runs):
+  
+    for x in range(num_runs):
 
-iPart = 0
+        iPart = np.random.choice([0, 6, 7, 18, 28])
 
-dir = pathlib.Path(f"C:\\Users\\T149900\\Downloads\\dfdc_train_part_{iPart:02}\\dfdc_train_part_{iPart}")
+        print(f"Sampling from part {iPart}...")
 
-assert dir.is_dir()
+        l_d = read_metadata(iPart)
 
+        anData = sample_full_chunk(iPart, l_d, 90000)
 
-l_real_files, l_fake_files, l_original_files = read_metadata(dir)
+        timestr = time.strftime("%m%d_%H%M%S")
 
-d = {}
+        zA = random.choice(string.ascii_lowercase)
+        zB = random.choice(string.ascii_lowercase)
+        zC = random.choice(string.ascii_lowercase)
 
-for x in l_original_files:
-    d[x] = []
+        out = f"data_p{iPart}_{zA}{zB}{zC}_{timestr}.npy"
 
-assert len (l_fake_files) == len (l_original_files)
+        print(f"Saving {out} ...")
 
-t = list (zip (l_original_files, l_fake_files))
-
-for pair in t:
-    assert pair[0] in d
-    d[pair[0]].append(pair[1])
-
-# Test, train split
-
-s = set (d.keys())
-
-num_originals = len (s)
-
-for x in range(3):
-
-    aiVideo, anData = sample_full_chunk(dir, d, 200000)
-
-    out = f"data_{x:03}.npy"
-
-    print(f"Saving {out} ...")
-
-    np.save(dir / out, anDataFake)
+        np.save(output_dir / out, anData)
 
     
 
