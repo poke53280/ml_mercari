@@ -1,5 +1,12 @@
 
 
+
+import os
+
+# os.system('pip install -q /kaggle/input/mtcnnpackage/mtcnn-0.1.0-py3-none-any.whl')
+!pip install /kaggle/input/mtcnnpackage/mtcnn-0.1.0-py3-none-any.whl
+
+       
 import cv2
 import numpy as np
 import pandas as pd
@@ -9,7 +16,8 @@ from sklearn.metrics import mean_squared_error
 import pathlib
 import random
 import json
-import time
+import time        
+        
 
 
 ####################################################################################
@@ -254,31 +262,6 @@ def m_print(p, m):
 
 ###################################################################################
 #
-#   read_image
-#
-
-def read_image(vidcap):
-    length = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
-    width  = int(vidcap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps    = vidcap.get(cv2.CAP_PROP_FPS)
-
-    nFrame = length
-    iFrame = 0
-
-    video = np.zeros((length, height, width, 3), dtype = np.uint8)
-
-    for iFrame in range (nFrame):
-
-        success,image = vidcap.read()
-
-        video[iFrame] = image
-
-    return video
-
-
-###################################################################################
-#
 #   read_image_and_features
 #
 
@@ -326,219 +309,56 @@ def read_image_and_features(vidcap):
     return (video, l_p_image)
 
 
-####################################################################################
+
+###############################################################################
 #
-#   sample_full_chunk
+#    read_test_files
+#
 #
 
-def sample_full_chunk(iPart, l_d, num_data_threshold):
+def read_test_files(input_dir):
 
-    dir = get_part_dir(iPart)
+    l_files = [x for x in input_dir.iterdir() if x.suffix == ".mp4"]
 
     l_data = []
 
-    num_real_data = 0
+    for idx_key, x in enumerate(l_files):
 
-    while num_real_data < num_data_threshold:
-
-        idx_key = np.random.choice(len(l_d))
-
-        current = l_d[idx_key]
-
-        x_real = current[0]
-
-        l_fakes = current[1]
-
-        if len(l_fakes) == 0:
-            continue
-
-        x_fake = random.choice(l_fakes)
-
-        x_real = dir / x_real
-        assert x_real.is_file()
-
-        x_fake = dir / x_fake
-        assert x_fake.is_file()
-        
-        vidcap = cv2.VideoCapture(str(x_real))
-
-        video_real, anFeatures = read_image_and_features(vidcap)
-
+        print (x)
+        vidcap = cv2.VideoCapture(str(x))
+        video, anFeatures = read_image_and_features(vidcap)
         vidcap.release()
 
-        vidcap = cv2.VideoCapture(str(x_fake))
 
-        video_fake = read_image(vidcap)
+        data = sample_video(video, None, anFeatures, 100000)
 
-        vidcap.release()
-
-        if video_real.shape != video_fake.shape:
-            continue
-
-        data_real, data_fake = sample_video(video_real, video_fake, anFeatures, 100000)
-
-        m = get_zero_rows(data_real)
-
-        assert (~m).all()
-
-        assert data_real.shape[0] == data_fake.shape[0]
-
-        num_data = data_real.shape[0]
-
-        assert num_data == 100000
-
-        anPart = np.empty(num_data, dtype = np.uint8)
-        anPart[:] = iPart
-
-        anVidLo = np.empty(num_data, dtype = np.uint8)
+        assert data.shape[0] == 100000
+       
+        anVidLo = np.empty(100000, dtype = np.uint8)
         anVidLo[:] = (idx_key % 256)
         
-        anVidHi = np.empty(num_data, dtype = np.uint8)
+        anVidHi = np.empty(100000, dtype = np.uint8)
         anVidHi[:] = (idx_key // 256)
 
-        data_real = data_real.reshape(data_real.shape[0], -1)
-        data_fake = data_fake.reshape(data_fake.shape[0], -1)
+        data = data.reshape(data.shape[0], -1)
 
-
-        data = np.hstack([anPart.reshape(-1, 1), anVidLo.reshape(-1, 1), anVidHi.reshape(-1, 1), data_real, data_fake])
+        data_line = np.hstack([anVidLo.reshape(-1, 1), anVidHi.reshape(-1, 1), data])
 
         l_data.append(data)
-
-        num_real_data = num_real_data + data_real.shape[0]
-
-        print(f"Data collection {num_real_data}/ {num_data_threshold}")
-
-    """c"""
 
     return np.vstack(l_data)
 
 
 
-####################################################################################
-#
-#   get_zero_rows
-#
-
-def get_zero_rows(data):
-    nonzero = np.count_nonzero(data, axis = 1)
-
-    m0 = nonzero[:, 0] == 0
-    m1 = nonzero[:, 1] == 0
-    m2 = nonzero[:, 2] == 0
-
-    m = m0 & m1 & m2
-
-    print(f"Discarding zero rows: {m_desc(m)}")
-
-    return m
-
-
-####################################################################################
-#
-#   read_metadata
-#
-
-def read_metadata(iPart):
-    
-    p = get_part_dir(iPart)
-
-    metadata = p / "metadata.json" 
-
-    assert metadata.is_file()
-
-    txt = metadata.read_text()
-
-    txt_parsed = json.loads(txt)
-
-    l_files = list (txt_parsed.keys())
-
-    l_real_files = []
-    l_fake_files = []
-    l_original_files = []
-
-
-    for x in l_files:
-        zLabel = txt_parsed[x]['label']
-        if zLabel == "REAL":
-            l_real_files.append(x)
-        if zLabel == "FAKE":
-            l_fake_files.append(x)
-            l_original_files.append(txt_parsed[x]['original'])
-
-
-    
-    d = {}
-
-    for x in l_original_files:
-        d[x] = []
-
-    assert len (l_fake_files) == len (l_original_files)
-
-    t = list (zip (l_original_files, l_fake_files))
-
-    for pair in t:
-        assert pair[0] in d
-        d[pair[0]].append(pair[1])            
-            
-
-    l_keys = list(d.keys())
-    l_keys.sort()
-
-    l_d = []
-
-    for x in l_keys:
-        l_d.append((x, d[x]))
-
-    return l_d
-
-
-input_dir = pathlib.Path(f"C:\\Users\\T149900\\Downloads")
+input_dir = pathlib.Path("/kaggle/input/deepfake-detection-challenge/test_videos")
 assert input_dir.is_dir()
 
-output_dir = pathlib.Path(f"C:\\Users\\T149900\\vid_out")
-assert output_dir.is_dir()
+data = read_test_files(input_dir)
 
-####################################################################################
-#
-#   get_part_dir
-#
-
-def get_part_dir(iPart):
-    s = input_dir / f"dfdc_train_part_{iPart:02}\\dfdc_train_part_{iPart}"
-    assert s.is_dir()
-
-    return s
+np.save("samples.npy")
 
 
-pd.set_option('display.max_rows', 500)
-pd.set_option('display.max_columns', 500)
-pd.set_option('display.width', 1000)
-
-def sample_main(num_runs):
-  
-    for x in range(num_runs):
-
-        iPart = np.random.choice([0, 6, 7, 18, 28])
-
-        print(f"Sampling from part {iPart}...")
-
-        l_d = read_metadata(iPart)
-
-        anData = sample_full_chunk(iPart, l_d, 90000)
-
-        timestr = time.strftime("%m%d_%H%M%S")
-
-        zA = random.choice(string.ascii_lowercase)
-        zB = random.choice(string.ascii_lowercase)
-        zC = random.choice(string.ascii_lowercase)
-
-        out = f"data_p{iPart}_{zA}{zB}{zC}_{timestr}.npy"
-
-        print(f"Saving {out} ...")
-
-        np.save(output_dir / out, anData)
-
-    
+print("done.")
 
 
 

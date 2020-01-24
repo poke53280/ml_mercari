@@ -80,6 +80,9 @@
     <Compile Include="deepfake\facenet.py" />
     <Compile Include="deepfake\frame_compare.py" />
     <Compile Include="deepfake\image_p.py" />
+    <Compile Include="deepfake\kernel.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\models.py" />
     <Compile Include="deepfake\mp4_frames.py" />
     <Compile Include="deepfake\sampler.py" />
