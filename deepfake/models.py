@@ -75,7 +75,7 @@ seq_id = np.searchsorted(unique_id, id)
 
 # Train and test
 
-m = seq_id % 10 < 2
+m = seq_id % 10 < 1
 
 m_desc(m)
 
@@ -94,8 +94,8 @@ num_timesteps = sequence.shape[1]
 
 # define model
 model = Sequential()
-#model.add(LSTM(2048, activation='relu', return_sequences=True, input_shape=(num_timesteps, 3)))
-#model.add(LSTM(512, activation='relu', return_sequences=True))
+# model.add(LSTM(2048, activation='relu', return_sequences=True, input_shape=(num_timesteps, 3)))
+model.add(LSTM(512, activation='relu', return_sequences=True))
 model.add(LSTM(128, activation='relu', return_sequences=True))
 model.add(LSTM(8, activation='relu'))
 
@@ -103,8 +103,8 @@ model.add(RepeatVector(num_timesteps))
 
 model.add(LSTM(8, activation='relu', return_sequences=True))
 model.add(LSTM(128, activation='relu', return_sequences=True))
-#model.add(LSTM(512, activation='relu', return_sequences=True))
-#model.add(LSTM(2048, activation='relu', return_sequences=True))
+model.add(LSTM(512, activation='relu', return_sequences=True))
+# model.add(LSTM(2048, activation='relu', return_sequences=True))
 model.add(TimeDistributed(Dense(3)))
 model.compile(optimizer='adam', loss='mse')
 

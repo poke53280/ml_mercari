@@ -17,6 +17,7 @@ import torch
 import random
 import json
 import time
+import string
 
 
 
@@ -139,8 +140,6 @@ def sample_video(video_real, video_fake, anFeatures):
             data_real[i] = sample_real
 
     return data_real, data_fake
-
-
 
 
 ####################################################################################
@@ -426,10 +425,10 @@ def read_metadata(iPart):
 
 
 input_dir = pathlib.Path(f"C:\\Users\\T149900\\Downloads")
-assert input_dir.is_dir()
+assert input_dir.is_dir(), f"input dir {input_dir} not existing"
 
 output_dir = pathlib.Path(f"C:\\Users\\T149900\\vid_out")
-assert output_dir.is_dir()
+assert output_dir.is_dir(), f"output dir {output_dir} not existing"
 
 ####################################################################################
 #
@@ -451,13 +450,13 @@ def sample_main(num_runs):
   
     for x in range(num_runs):
 
-        iPart = np.random.choice([0, 6, 7, 18, 28])
+        iPart = np.random.choice([21])
 
         print(f"Sampling from part {iPart}...")
 
         l_d = read_metadata(iPart)
 
-        anData = sample_full_chunk(iPart, l_d, 90000)
+        anData = sample_full_chunk(iPart, l_d, 900000)
 
         timestr = time.strftime("%m%d_%H%M%S")
 
