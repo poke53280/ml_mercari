@@ -61,7 +61,9 @@
 #
 # CREATE VM DISK
 #
+# gcloud compute disk-types list
 # gcloud compute disks create tmpt2t --size 200 --type pd-ssd
+# disks create tmpt2t --size 1500 --type pd-standard
 #
 # gcloud compute instances attach-disk tpu-driver-eur --disk tmpt2t 
 #

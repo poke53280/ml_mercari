@@ -73,6 +73,12 @@ unique_id = np.unique(id)
 
 seq_id = np.searchsorted(unique_id, id)
 
+print(f"num real/fake lines: {anData.shape[0]}")
+print(f"num parts sampled from: {np.unique(anPart).shape[0]}")
+print(f"num videos: {np.unique(seq_id).shape[0]}")
+print(f"num lines pr video: {anData.shape[0]/ np.unique(seq_id).shape[0]:.0f}")
+
+
 # Train and test
 
 m = seq_id % 10 < 1
@@ -86,6 +92,11 @@ test_sequence_fake = anFake[m]
 sequence = preprocess_input(sequence)
 test_sequence_real = preprocess_input(test_sequence_real)
 test_sequence_fake = preprocess_input(test_sequence_fake)
+
+
+print(f"num videos train set: {np.unique(seq_id[~m]).shape[0]}")
+print(f"num videos test set: {np.unique(seq_id[m]).shape[0]}")
+
 
 np.random.shuffle(sequence)
 
@@ -113,12 +124,29 @@ model.compile(optimizer='adam', loss='mse')
 # fit model
 model.fit(sequence, sequence, epochs=2, verbose=1)
 
+# Output keras version
+
+
+# save model
+from keras.models import load_model
+
+p = pathlib.Path(f"C:\\Users\\T149900\\mod_out")
+assert p.is_dir()
+
+model.save(p / 'my_model.h5')
+# del model  # deletes the existing model
+
+# returns a compiled model
+# identical to the previous one
+model = load_model(p / 'my_model.h5')
+
 # create random sequence as baseline
 y_random = np.random.uniform(size = test_sequence_real.shape)
 y_random = y_random.reshape((-1, 16, 3))
 
-reconstruction_error(model, sequence)
-reconstruction_error(model, y_random)
+
+reconstruction_error(model, sequence[:20000])
+reconstruction_error(model, y_random[:20000])
 reconstruction_error(model, test_sequence_real)
 reconstruction_error(model, test_sequence_fake)
 

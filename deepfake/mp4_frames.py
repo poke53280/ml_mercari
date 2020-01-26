@@ -1,5 +1,16 @@
 
 
+# sudo apt-get install -y libsm6 libxext6 libxrender-dev
+
+# pip install opencv-python
+# pip install tensorflow
+# pip install keras
+# pip install mtcnn
+# pip install dask
+# pip install dask distributed --upgrade
+
+
+
 import cv2
 import numpy as np
 import pandas as pd
@@ -11,6 +22,10 @@ import random
 import json
 import time
 import string
+import os
+import argparse
+from multiprocessing import Pool
+
 
 
 ####################################################################################
@@ -150,8 +165,8 @@ def sample_video(video_real, video_fake, anFeatures, num_samples):
 
     while iCollected < num_samples:
 
-        if iCollected % 10000 == 0:
-            print (f"{iCollected}/ {num_samples}")
+        if iCollected % 50000 == 0:
+            print (f"Sampling progress {iCollected}/ {num_samples}")
 
         l = sample_line(length, height, width, sample_length, anFeatures)
 
@@ -253,10 +268,10 @@ def m_print(p, m):
 
 ###################################################################################
 #
-#   read_image
+#   read_video
 #
 
-def read_image(vidcap):
+def read_video(vidcap):
     length = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
     width  = int(vidcap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -278,33 +293,25 @@ def read_image(vidcap):
 
 ###################################################################################
 #
-#   read_image_and_features
+#   detect_features
 #
 
-def read_image_and_features(vidcap):
-    
-    length = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
-    width  = int(vidcap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps    = vidcap.get(cv2.CAP_PROP_FPS)
+def detect_features(video):
 
-    nFrame = length
+    time0 = time.time()
     iFrame = 0
+    nFrame = video.shape[0]
 
     detector = MTCNN()
-
-    video = np.zeros((length, height, width, 3), dtype = np.uint8)
 
     l_p_image = []
 
     for iFrame in range (nFrame):
 
-        if iFrame % 50 == 0:
-            print(f"Processing {iFrame}/{nFrame}")
+        #if iFrame % 50 == 0:
+        print(f"Processing {iFrame}/{nFrame}")
 
-        success,image = vidcap.read()
-
-        video[iFrame] = image
+        image = video[iFrame]  
 
         faces = detector.detect_faces(image)
 
@@ -322,36 +329,51 @@ def read_image_and_features(vidcap):
 
         l_p_image.append(l_p)
 
-    return (video, l_p_image)
+
+    time1 = time.time()
+    dtime = time1 - time0
+    print(f"Detection processing time: {dtime}s")
+
+    return l_p_image
+    
 
 
 ####################################################################################
 #
-#   sample_full_chunk
+#   sample_from_part
 #
 
-def sample_full_chunk(iPart, l_d, num_data_threshold):
+def sample_from_part(iPart, lines_per_video):
+
+    l_d = read_metadata(iPart)
+
+    print(f"Sampling from part {iPart}. {len(l_d)} original video(s). Sampling {lines_per_video} from each")
 
     dir = get_part_dir(iPart)
 
     l_data = []
 
-    num_real_data = 0
+    num_lines = 0
 
-    while num_real_data < num_data_threshold:
+    for idx_key in range(len(l_d)):
 
-        idx_key = np.random.choice(len(l_d))
+        print(f"Processing original video {idx_key +1} of {len(l_d)}")
 
         current = l_d[idx_key]
+
+        print(f"    original {current[0]}")
 
         x_real = current[0]
 
         l_fakes = current[1]
 
         if len(l_fakes) == 0:
+            print("No fakes. Skipping.")
             continue
 
         x_fake = random.choice(l_fakes)
+
+        print(f"    num fakes: {len(l_fakes)}. Using fake {x_fake}")
 
         x_real = dir / x_real
         assert x_real.is_file()
@@ -360,21 +382,23 @@ def sample_full_chunk(iPart, l_d, num_data_threshold):
         assert x_fake.is_file()
         
         vidcap = cv2.VideoCapture(str(x_real))
-
-        video_real, anFeatures = read_image_and_features(vidcap)
+        
+        video_real = read_video(vidcap)
 
         vidcap.release()
 
+        anFeatures = detect_features(video_real)
+
         vidcap = cv2.VideoCapture(str(x_fake))
 
-        video_fake = read_image(vidcap)
+        video_fake = read_video(vidcap)
 
         vidcap.release()
 
         if video_real.shape != video_fake.shape:
             continue
 
-        data_real, data_fake = sample_video(video_real, video_fake, anFeatures, 100000)
+        data_real, data_fake = sample_video(video_real, video_fake, anFeatures, lines_per_video)
 
         m = get_zero_rows(data_real)
 
@@ -384,7 +408,7 @@ def sample_full_chunk(iPart, l_d, num_data_threshold):
 
         num_data = data_real.shape[0]
 
-        assert num_data == 100000
+        assert num_data == lines_per_video
 
         anPart = np.empty(num_data, dtype = np.uint8)
         anPart[:] = iPart
@@ -401,16 +425,16 @@ def sample_full_chunk(iPart, l_d, num_data_threshold):
 
         data = np.hstack([anPart.reshape(-1, 1), anVidLo.reshape(-1, 1), anVidHi.reshape(-1, 1), data_real, data_fake])
 
+        num_lines = num_lines + data.shape[0]
+
+        print(f"    done original {current[0]}. Lines collected: {data.shape[0]}. Collected in total: {num_lines}")
+
         l_data.append(data)
-
-        num_real_data = num_real_data + data_real.shape[0]
-
-        print(f"Data collection {num_real_data}/ {num_data_threshold}")
+        
 
     """c"""
 
     return np.vstack(l_data)
-
 
 
 ####################################################################################
@@ -426,8 +450,6 @@ def get_zero_rows(data):
     m2 = nonzero[:, 2] == 0
 
     m = m0 & m1 & m2
-
-    print(f"Discarding zero rows: {m_desc(m)}")
 
     return m
 
@@ -491,11 +513,24 @@ def read_metadata(iPart):
     return l_d
 
 
-input_dir = pathlib.Path(f"C:\\Users\\T149900\\Downloads")
-assert input_dir.is_dir(), f"input dir {input_dir} not existing"
 
-output_dir = pathlib.Path(f"C:\\Users\\T149900\\vid_out")
-assert output_dir.is_dir(), f"output dir {output_dir} not existing"
+
+####################################################################################
+#
+#   get_output_dir
+#
+
+def get_output_dir():
+    isLocal = os.name == 'nt'
+    if isLocal:
+        output_dir = pathlib.Path(f"C:\\Users\\T149900\\vid_out")
+        assert output_dir.is_dir(), f"output dir {output_dir} not existing"
+    else:
+        output_dir = pathlib.Path("/mnt/disks/tmp_mnt/data/vid_out")
+        assert output_dir.is_dir(), f"output dir {output_dir} not existing"
+
+    return output_dir
+
 
 ####################################################################################
 #
@@ -503,41 +538,138 @@ assert output_dir.is_dir(), f"output dir {output_dir} not existing"
 #
 
 def get_part_dir(iPart):
-    s = input_dir / f"dfdc_train_part_{iPart:02}\\dfdc_train_part_{iPart}"
-    assert s.is_dir()
+
+
+    isLocal = os.name == 'nt'
+
+    if isLocal:
+        input_dir = pathlib.Path(f"C:\\Users\\T149900\\Downloads")
+        s = input_dir / f"dfdc_train_part_{iPart:02}" / f"dfdc_train_part_{iPart}"
+        
+    else:
+        input_dir = pathlib.Path("/mnt/disks/tmp_mnt/data")
+        s = input_dir / f"dfdc_train_part_{iPart}"
+
+    if s.is_dir():
+        pass
+    else:
+        print(str(s))
+        assert s.is_dir(), f"{s} not a directory"
 
     return s
 
 
-pd.set_option('display.max_rows', 500)
-pd.set_option('display.max_columns', 500)
-pd.set_option('display.width', 1000)
+####################################################################################
+#
+#   process_part
+#
 
-def sample_main(num_runs):
-  
-    for x in range(num_runs):
+def process_part(iPart):
+    print(f"Sampling from part {iPart}...")
 
-        iPart = np.random.choice([21])
+    lines_per_video = 100000
 
-        print(f"Sampling from part {iPart}...")
+    anData = sample_from_part(iPart, lines_per_video)
 
-        l_d = read_metadata(iPart)
+    timestr = time.strftime("%m%d_%H%M%S")
 
-        anData = sample_full_chunk(iPart, l_d, 900000)
+    zA = random.choice(string.ascii_lowercase)
+    zB = random.choice(string.ascii_lowercase)
+    zC = random.choice(string.ascii_lowercase)
 
-        timestr = time.strftime("%m%d_%H%M%S")
+    out = f"data_p{iPart}_{zA}{zB}{zC}_{timestr}.npy"
 
-        zA = random.choice(string.ascii_lowercase)
-        zB = random.choice(string.ascii_lowercase)
-        zC = random.choice(string.ascii_lowercase)
+    print(f"Saving {out} ...")
 
-        out = f"data_p{iPart}_{zA}{zB}{zC}_{timestr}.npy"
+    output_dir = get_output_dir()
 
-        print(f"Saving {out} ...")
+    np.save(output_dir / out, anData)
 
-        np.save(output_dir / out, anData)
+    print(f"Done part {iPart}")
 
+
+
+def chunked_detect():
+    iPart = 2
+    l_d = read_metadata(iPart)
+
+    current = l_d[0][0]
+
+    x_real =  get_part_dir(iPart) / current
+
+    assert x_real.is_file()
+
+    print ("Reading video")
+    vidcap = cv2.VideoCapture(str(x_real))
+        
+    video_real = read_video(vidcap)
+
+    vidcap.release()
+
+    num_frames = video_real.shape[0]
+
+    chunk_size = 1
+
+    num_chunks = num_frames//chunk_size + 1 * (num_frames % chunk_size != 0)
+
+    needed_pad = num_chunks * chunk_size - num_frames
+
+    if needed_pad > 0:
+
+        video_last = video_real[-1]
+        video_pad = np.stack([video_last for x in range(needed_pad)], axis=0)
+        video_real = np.vstack([video_real, video_pad])
+
+    aS = np.split(video_real, num_chunks)
+
+    l_chunk = []
+
+    for x in range(num_chunks):
+        chunk = aS[x]
+        print(chunk.shape)
+
+        l_c = []
+
+        for i in range (chunk_size):
+            l_c.append(video_real[i])
+
+        chunk_out = np.hstack(l_c)
+
+        l_chunk.append(chunk_out)
+
+    video_chunk = np.stack(l_chunk)
+
+   
+    detect_features(video_chunk)
+
+    # CPU
+    # chunk size 16 230 secs
+    # chunk size 64  336
+    # chunk size  1   231
     
+    with Pool(8) as p:
+        anFeatures = p.map(detect_features, [video_real[0:50], video_real[100:200], video_real[200:]])
 
+    print (anFeatures)
+
+
+
+
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--part", "-p", help="parts to sample from", required = True)
+
+    args = parser.parse_args()
+
+    _= get_output_dir()
+
+    iPart = int(args.part)
+    mp_detect()
+
+
+#    with Pool(2) as p:
+#        print(p.map(process_part, [0, 1]))
 
 
