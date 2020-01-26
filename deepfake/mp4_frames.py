@@ -6,8 +6,6 @@
 # pip install tensorflow
 # pip install keras
 # pip install mtcnn
-# pip install dask
-# pip install dask distributed --upgrade
 
 
 
@@ -165,8 +163,8 @@ def sample_video(video_real, video_fake, anFeatures, num_samples):
 
     while iCollected < num_samples:
 
-        if iCollected % 50000 == 0:
-            print (f"Sampling progress {iCollected}/ {num_samples}")
+        #if iCollected % 50000 == 0:
+        #    print (f"Sampling progress {iCollected}/ {num_samples}")
 
         l = sample_line(length, height, width, sample_length, anFeatures)
 
@@ -309,7 +307,7 @@ def detect_features(video):
     for iFrame in range (nFrame):
 
         #if iFrame % 50 == 0:
-        print(f"Processing {iFrame}/{nFrame}")
+        #print(f"Processing {iFrame}/{nFrame}")
 
         image = video[iFrame]  
 
@@ -588,6 +586,10 @@ def process_part(iPart):
     print(f"Done part {iPart}")
 
 
+####################################################################################
+#
+#   process_part
+#
 
 def chunked_detect():
     iPart = 2
@@ -653,9 +655,10 @@ def chunked_detect():
     print (anFeatures)
 
 
-
-
-
+####################################################################################
+#
+#   main
+#
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -666,7 +669,7 @@ if __name__ == '__main__':
     _= get_output_dir()
 
     iPart = int(args.part)
-    mp_detect()
+    process_part(iPart)
 
 
 #    with Pool(2) as p:
