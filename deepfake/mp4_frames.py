@@ -1,13 +1,34 @@
 
+# Install on gcloud
+# Deep learning, tf1.15, nvidia boot image
 
+
+#sudo apt-get install liblzma-dev
+#Then configure && make && make install
+
+# Python:
+# https://tecadmin.net/install-python-3-7-on-ubuntu-linuxmint/
+
+
+# sudo pip3.7 install --upgrade pip
+# sudo pip3.7 install opencv-python
 # sudo apt-get install -y libsm6 libxext6 libxrender-dev
 
-# pip install opencv-python
-# pip install tensorflow
-# pip install keras
-# pip install mtcnn
+
+# sudo pip3.7 install torch torchvision
 
 
+# sudo pip3.7 install mtcnn
+
+# sudo pip3.7 install pandas
+
+# sudo pip3.7 install --upgrade setuptools
+# sudo pip3.7 install tensorflow-gpu==1.15
+
+# sudo pip3.7 install sklearn
+
+
+# export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 
 import cv2
 import numpy as np
@@ -588,7 +609,7 @@ def process_part(iPart):
 
 ####################################################################################
 #
-#   process_part
+#   chunked_detect
 #
 
 def chunked_detect():
