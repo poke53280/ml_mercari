@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pathlib
 import cv2
+import datetime
 
 from mp4_frames import get_part_dir
 from mp4_frames import read_metadata
@@ -17,6 +18,17 @@ from mp4_frames import read_video
 from mp4_frames import detect_features
 from mtcnn.mtcnn import MTCNN
 
+from image_grid import get_grid2D
+from image_grid import get_bb_from_centers
+
+from haar_cascade import HaarCascade
+
+
+
+#################################################################################
+#
+#   BlazeBlock
+#
 
 class BlazeBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1):
@@ -55,6 +67,11 @@ class BlazeBlock(nn.Module):
 
         return self.act(self.convs(h) + x)
 
+
+#################################################################################
+#
+#   BlazeFace
+#
 
 class BlazeFace(nn.Module):
     """The BlazeFace face detection model from MediaPipe.
@@ -423,45 +440,50 @@ def overlap_similarity(box, other_boxes):
 
 
 
-gpu = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+#################################################################################
+#
+#   blaze_chunked
+#
+
+def blaze_chunked(image, l_c, sample_size):
+    width = image.shape[0]
+    height = image.shape[1]
+   
+
+    l_bb = get_bb_from_centers(l_c, sample_size)
+
+    nDetections = 0
+
+    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    for bb in l_bb:
+        im_min_x = bb[0]
+        im_max_x = bb[1]
+        im_min_y = bb[2]
+        im_max_y = bb[3]
+
+        img = image_rgb[im_min_x:im_max_x, im_min_y: im_max_y, :]
+
+        img = cv2.resize(img, (128, 128))
+
+        detections = net.predict_on_image(img)
+        nDetections = nDetections + detections.shape[0]
+
+        #for d in detections:
+        #    confidence = d[-1]
+        #    print(f"({im_min_x}, {im_min_y}), ({im_max_x}, {im_max_y}): {confidence:.2}")
+
+    if nDetections > 0:
+        print(f"blaze_chunked: {nDetections}")
 
 
+#################################################################################
+#
+#   blaze_after_mtcnn
+#
 
-weight_path = pathlib.Path(f"C:\\Users\\T149900\\Documents\\GitHub\\ml_mercari\\deepfake")
-
-assert weight_path.is_dir()
-
-net = BlazeFace().to(gpu)
-net.load_weights(weight_path / "blazeface.pth")
-net.load_anchors(weight_path / "anchors.npy")
-
-# Optionally change the thresholds:
-net.min_score_thresh = 0.75
-net.min_suppression_threshold = 0.3
-
-iPart = 0
-
-dir = get_part_dir(iPart)
-
-l_d = read_metadata(iPart)
-
-current = l_d[0][0]
-
-
-vidcap = cv2.VideoCapture(str(dir / current))
-        
-video_real = read_video(vidcap)
-
-vidcap.release()
-
-
-num_frames = video_real.shape[0]
-
-
-
-
-
-def blaze_on_frame(image, mtcnn_detector):
+def blaze_after_mtcnn(image, mtcnn_detector):
 
     width = image.shape[0]
     height = image.shape[1]
@@ -544,14 +566,139 @@ def blaze_on_frame(image, mtcnn_detector):
             print(f"blazeface confidence: {confidence_score}")
 
 
+#################################################################################
+#
+#   get_region_diff
+#
+
+def get_region_diff(image0, image1, l_c, sample_size):
+    width = image0.shape[0]
+    height = image0.shape[1]
+   
+
+    l_bb = get_bb_from_centers(l_c, sample_size)
+
+    l_diff = []
+
+    for bb in l_bb:
+        im_min_x = bb[0]
+        im_max_x = bb[1]
+        im_min_y = bb[2]
+        im_max_y = bb[3]
+
+        img0 = image0[im_min_x:im_max_x, im_min_y: im_max_y, :]
+        img1 = image1[im_min_x:im_max_x, im_min_y: im_max_y, :]
+
+        m = img0.ravel() == img1.ravel()
+
+        rDiff = (1 - m.sum() / m.shape)[0]
+        l_diff.append(rDiff)
 
 
-mtcnn_detector = MTCNN()
+    return l_diff
+
+
+#################################################################################
+#
+#   main
+#
+
+if __name__ == '__main__':
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--part", "-p", help="parts to sample from", required = True)
+
+    args = parser.parse_args()
+
+    _= get_output_dir()
+
+    iPart = int(args.part)
+
+
+    gpu = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    
+    weight_path = pathlib.Path(f"C:\\Users\\T149900\\Documents\\GitHub\\ml_mercari\\deepfake")
+
+    assert weight_path.is_dir()
+
+    net = BlazeFace().to(gpu)
+    net.load_weights(weight_path / "blazeface.pth")
+    net.load_anchors(weight_path / "anchors.npy")
+
+    net.min_score_thresh = 0.75
+    net.min_suppression_threshold = 0.3
+
+dir = get_part_dir(iPart)
+
+l_d = read_metadata(iPart)
+
+current = l_d[0][0]
+fake    = l_d[0][1][0]
+
+
+vidcap = cv2.VideoCapture(str(dir / current))
+video_real = read_video(vidcap)
+vidcap.release()
+
+vidcap = cv2.VideoCapture(str(dir / fake))
+video_fake = read_video(vidcap)
+vidcap.release()
+
+
+num_frames = video_real.shape[0]
+
+
+
+
+# mtcnn_detector = MTCNN()
+
+
+num_x = 4
+num_y = 2
+
+width = video_real.shape[1]
+height = video_real.shape[2]
+sample_size = 300
+
+l_c = get_grid2D(width, height, sample_size, num_x, num_y)
+
+
 
 for i in range(num_frames):
-    print(f"Frame {i}")
-    blaze_on_frame(video_real[i], mtcnn_detector)
+    print(f"---------------------- Frame {i} -----------------------------")
+    # blaze_after_mtcnn(video_real[i], mtcnn_detector)
+    blaze_chunked(video_real[i], l_c, sample_size)
+
+
+h = HaarCascade()
+
+start = datetime.datetime.now()
+
+
+for i in range(num_frames):
+    print(f"---------------------- Frame {i} -----------------------------")
+    # blaze_after_mtcnn(video_real[i], mtcnn_detector)
+    faces = h.detect(video_real[i])
+
+end   = datetime.datetime.now()
+
+dT = (end - start).seconds
+
+print(f"Processing time haar cascade: {dT}s")
+    
 
 
 
+
+l_diff = []
+
+for i in range(num_frames):
+    print(f"---------------------- Frame {i} -----------------------------")
+    # blaze_after_mtcnn(video_real[i], mtcnn_detector)
+    anDiff = np.array(get_region_diff(video_real[i], video_fake[i], l_c, sample_size))
+    l_diff.append(anDiff)
+
+
+anDiff = np.vstack(l_diff)
 

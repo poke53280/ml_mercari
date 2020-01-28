@@ -42,6 +42,22 @@ def get_grid2D(width, height, sample_size, num_x, num_y):
         for y in c_y:
             l_c.append((x, y))
 
+    
+
+    return l_c
+
+
+####################################################################################
+#
+#   get_bb_from_centers
+#
+
+def get_bb_from_centers(l_c, sample_size):
+    assert sample_size % 2 == 0
+    half_size = sample_size // 2
+
+    l_bb = []
+
     for c in l_c:
         x_min = c[0] - half_size
         x_max = c[0] + half_size
@@ -49,10 +65,12 @@ def get_grid2D(width, height, sample_size, num_x, num_y):
         y_max = c[1] + half_size
 
         assert x_max - x_min == sample_size
-        assert y_max - y_min == sample_size
-
-    return l_c
-
+        assert y_max - y_min == sample_size                    
+        
+        l_bb.append((x_min, x_max, y_min, y_max))
+                        
+                        
+    return l_bb
 
 
 

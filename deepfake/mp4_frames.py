@@ -4,7 +4,7 @@
 
 
 #sudo apt-get install liblzma-dev
-#Then configure && make && make install
+
 
 # Python:
 # https://tecadmin.net/install-python-3-7-on-ubuntu-linuxmint/
@@ -28,13 +28,15 @@
 # sudo pip3.7 install sklearn
 
 
+# sudo apt-get install unzip
+
 # export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 
 import cv2
 import numpy as np
 import pandas as pd
 
-from mtcnn.mtcnn import MTCNN
+#from mtcnn.mtcnn import MTCNN
 from sklearn.metrics import mean_squared_error
 import pathlib
 import random
@@ -44,6 +46,8 @@ import string
 import os
 import argparse
 from multiprocessing import Pool
+from haar_cascade import HaarCascade
+import datetime
 
 
 
@@ -354,7 +358,102 @@ def detect_features(video):
     print(f"Detection processing time: {dtime}s")
 
     return l_p_image
+
+
+####################################################################################
+#
+#   get_feature_from_part
+#
+
+def get_feature_from_part(iPart, if_detector):
     
+    l_d = read_metadata(iPart)
+    dir = get_part_dir(iPart)
+
+    num_videos = len(l_d)
+    #num_videos = 2
+
+    print(f"Face detection on part {iPart}. {len(l_d)} original video(s). Processing {num_videos} videos in part")
+
+    acc_features = []
+   
+    
+    
+    for idx_key in range(num_videos):
+
+        current = l_d[idx_key]
+
+        print(f"{current[0]}: {idx_key +1} of {len(l_d)}")
+
+        x_real = current[0]
+
+        x_real = dir / x_real
+        assert x_real.is_file()
+
+        vidcap = cv2.VideoCapture(str(x_real))
+        
+        video_real = read_video(vidcap)
+
+        num_frames = video_real.shape[0]
+
+        vidcap.release()
+
+        start_processing = datetime.datetime.now()
+
+        l_features = if_detector(video_real)
+
+        end_processing = datetime.datetime.now()
+
+        delta_processing = (end_processing - start_processing).total_seconds()
+
+        assert len (l_features) == num_frames
+
+        nSuccess = np.array(l_features).sum()
+
+        rSuccess = 100.0 * nSuccess / num_frames
+
+        print (f"Video time: {delta_processing}s. Success rate {rSuccess}%")
+        
+        acc_features.append(l_features)
+
+    return acc_features
+
+
+
+####################################################################################
+#
+#   if_detector_empty
+#
+
+def if_detector_empty(video_real):
+
+    l_f = []
+
+    for i in range(video_real.shape[0]):
+        l_f.append(0)            
+
+    return l_f
+
+
+####################################################################################
+#
+#   if_detector_haar
+#
+
+def if_detector_haar(video_real):
+
+    h = HaarCascade(get_code_dir())
+
+    l_f = []
+
+    for i in range(video_real.shape[0]):
+        faces = h.detect(video_real[i])
+        if len(faces) > 0:
+            l_f.append(1)
+        else:
+            l_f.append(0)
+
+    return l_f
 
 
 ####################################################################################
@@ -536,6 +635,26 @@ def read_metadata(iPart):
 
 ####################################################################################
 #
+#   get_code_dir
+#
+
+def get_code_dir():
+    isLocal = os.name == 'nt'
+    if isLocal:
+        path = pathlib.Path("C:\\Users\\T149900\\Documents\\GitHub\\ml_mercari\\deepfake")
+        
+    else:
+        path = pathlib.Path("/mnt/disks/tmp_mnt/data")
+    
+    assert path.is_dir(), f"output dir {output_dir} not existing"       
+
+    return path
+
+
+
+
+####################################################################################
+#
 #   get_output_dir
 #
 
@@ -676,24 +795,30 @@ def chunked_detect():
     print (anFeatures)
 
 
+
+def process_chunk(iPart):
+    return get_feature_from_part(iPart, if_detector_haar)
+
 ####################################################################################
 #
 #   main
 #
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--part", "-p", help="parts to sample from", required = True)
+    #parser = argparse.ArgumentParser()
+    #parser.add_argument("--part", "-p", help="parts to sample from", required = True)
 
-    args = parser.parse_args()
+    #args = parser.parse_args()
 
-    _= get_output_dir()
+    #_= get_output_dir()
 
-    iPart = int(args.part)
-    process_part(iPart)
+    #iPart = int(args.part)
+
+    # l_F = get_feature_from_part(iPart, if_detector_empty)
+
+    with Pool(7) as p:
+        anFeatures = p.map(process_chunk, [0, 1, 2, 3, 4, 5, 6])
 
 
-#    with Pool(2) as p:
-#        print(p.map(process_part, [0, 1]))
-
+    # l_F = get_feature_from_part(iPart, if_detector_haar)
 
