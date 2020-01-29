@@ -79,6 +79,9 @@
     <Compile Include="deepfake\blazeface_driver.py" />
     <Compile Include="deepfake\dae_lstm.py" />
     <Compile Include="deepfake\dae_smdata.py" />
+    <Compile Include="deepfake\easy_face.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\facenet.py" />
     <Compile Include="deepfake\frame_compare.py" />
     <Compile Include="deepfake\haar_cascade.py" />
@@ -88,9 +91,11 @@
     <Compile Include="deepfake\kernel.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="deepfake\line_sampler.py" />
     <Compile Include="deepfake\models.py" />
     <Compile Include="deepfake\mp4_frames.py" />
     <Compile Include="deepfake\sampler.py" />
+    <Compile Include="deepfake\__init__.py" />
     <Compile Include="delimitorkeeper.py">
       <SubType>Code</SubType>
     </Compile>

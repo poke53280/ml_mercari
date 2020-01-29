@@ -50,7 +50,6 @@ from haar_cascade import HaarCascade
 import datetime
 
 
-
 ####################################################################################
 #
 #   get_sample_point
@@ -362,6 +361,48 @@ def detect_features(video):
 
 ####################################################################################
 #
+#   get_any_real_and_fake_video_from_part
+#
+
+def get_any_real_and_fake_video_from_part(iPart):
+    l_d = read_metadata(iPart)
+    dir = get_part_dir(iPart)
+
+    num_videos = len(l_d)
+
+    idx_key = np.random.choice(num_videos)
+    
+    current = l_d[idx_key]
+
+    x_real = current[0]
+
+    x_real = dir / x_real
+    assert x_real.is_file()
+
+    vidcap = cv2.VideoCapture(str(x_real))
+        
+    video_real = read_video(vidcap)
+
+    vidcap.release()
+
+    l_fakes = current[1]
+
+    x_fake = random.choice(l_fakes)
+
+    x_fake = dir / x_fake
+    assert x_fake.is_file()
+
+    vidcap = cv2.VideoCapture(str(x_fake))
+        
+    video_fake = read_video(vidcap)
+
+    vidcap.release()
+
+    return video_real, video_fake
+
+
+####################################################################################
+#
 #   get_feature_from_part
 #
 
@@ -394,9 +435,10 @@ def get_feature_from_part(iPart, if_detector):
         
         video_real = read_video(vidcap)
 
-        num_frames = video_real.shape[0]
-
         vidcap.release()
+
+        num_frames = video_real.shape[0]
+       
 
         start_processing = datetime.datetime.now()
 

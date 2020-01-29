@@ -20,7 +20,7 @@ def get_grid1D(width, sample_size, num):
 
     overlap_length = (anC[0] + half_size) - (anC[1] - half_size)
 
-    print(f"Overlap: {overlap_length}")
+    # print(f"Overlap: {overlap_length}")
 
     return anC
 
@@ -47,12 +47,37 @@ def get_grid2D(width, height, sample_size, num_x, num_y):
     return l_c
 
 
+
 ####################################################################################
 #
-#   get_bb_from_centers
+#   get_grid3D
 #
 
-def get_bb_from_centers(l_c, sample_size):
+def get_grid3D(width, height, depth, num_x, num_y, num_z, sample_size):
+
+    c_x = get_grid1D(width, sample_size, num_x)
+    c_y = get_grid1D(height, sample_size, num_y)
+    c_z = get_grid1D(depth, sample_size, num_z)
+
+    l_c = []
+
+    for x in c_x:
+        for y in c_y:
+                for z in c_z:
+                    l_c.append((x, y, z))
+
+    
+
+    return l_c
+
+
+
+####################################################################################
+#
+#   get_bb_from_centers_2D
+#
+
+def get_bb_from_centers_2D(l_c, sample_size):
     assert sample_size % 2 == 0
     half_size = sample_size // 2
 
@@ -74,12 +99,36 @@ def get_bb_from_centers(l_c, sample_size):
 
 
 
+####################################################################################
+#
+#   get_bb_from_centers_3D
+#
 
-width = 1920
-height = 1080
-sample_size = 400
-num_x = 10
-num_y = 5
+def get_bb_from_centers_3D(l_c, sample_size):
+    assert sample_size % 2 == 0
+    half_size = sample_size // 2
 
-get_grid2D(width, height, sample_size, num_x, num_y)
+    l_bb = []
+
+    for c in l_c:
+        x_min = c[0] - half_size
+        x_max = c[0] + half_size
+        y_min = c[1] - half_size
+        y_max = c[1] + half_size
+        z_min = c[2] - half_size
+        z_max = c[2] + half_size
+
+        assert x_max - x_min == sample_size
+        assert y_max - y_min == sample_size      
+        assert z_max - z_min == sample_size 
+        
+        l_bb.append((x_min, x_max, y_min, y_max, z_min, z_max))
+                        
+                        
+    return l_bb
+
+
+
+
+
 
