@@ -10,7 +10,7 @@ import cv2
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 
-from image_grid import get_grid3D
+from image_grid import get_grid3D_overlap
 from image_grid import get_bb_from_centers_3D
 
 import numpy as np
@@ -117,14 +117,13 @@ def show_full(image_real, image_fake):
 
 def get_sampling_cubes(video_real, video_fake):
 
+    assert video_real.shape == video_fake.shape
 
     video_d = np.sum((video_real-video_fake)**2,axis=3)
 
-    sample_size = 30
+    l_c = get_grid3D_overlap(video_d.shape[0], video_d.shape[1], video_d.shape[2], 32, 1.3)
 
-    l_c = get_grid3D(video_d.shape[0], video_d.shape[1], video_d.shape[2], 100, 100, 100, sample_size)
-
-    l_bb = get_bb_from_centers_3D(l_c, sample_size)
+    l_bb = get_bb_from_centers_3D(l_c, 32)
 
     l_mean = []
 
@@ -139,8 +138,7 @@ def get_sampling_cubes(video_real, video_fake):
         l_mean.append(np.mean(video_d[im_min_x:im_max_x, im_min_y: im_max_y, im_min_z: im_max_z]))
 
 
-    df = pd.DataFrame({'c': l_c, 'l_mean' : l_mean})
-
+    df = pd.DataFrame({'c': l_c, 'mse' : l_mean})
 
     x = df.c.map(lambda x: x[0])
     y = df.c.map(lambda x: x[1])
@@ -149,26 +147,6 @@ def get_sampling_cubes(video_real, video_fake):
     df = df.assign(x = x, y = y, z = z)
 
     df = df.drop('c', axis = 1)
-
-    anMean = np.array(df.l_mean)
-
-    q999 = np.quantile(anMean, 0.999)
-
-    m999 = df.l_mean > q999
-
-    q001 = np.quantile(anMean, 0.001)
-    m001 = df.l_mean <= q001
-
-    df = df.assign(s = 0)
-    s = df.s.copy()
-
-    s[m001] = 0
-    s[m999] = 1
-    df = df.assign(s = s)
-
-    df = df[m001 | m999]
-
-    df = df.drop('l_mean', axis = 1)
 
     return df
 

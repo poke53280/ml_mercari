@@ -784,6 +784,7 @@ def chunked_detect():
     assert x_real.is_file()
 
     print ("Reading video")
+
     vidcap = cv2.VideoCapture(str(x_real))
         
     video_real = read_video(vidcap)
