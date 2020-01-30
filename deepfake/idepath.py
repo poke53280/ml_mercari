@@ -15,7 +15,9 @@ import numpy as np
 
 path_work = Path("C:\\Users\\T149900\\Documents\\GitHub")
 
-path = path_work
+path_home = Path("C:\\Users\\T149900\\source\\repos")
+
+path = path_home
 
 assert path.is_dir()
 

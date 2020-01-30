@@ -1,12 +1,5 @@
 
-#
-#
-#   https://machinelearningmastery.com/lstm-autoencoders/
-#
-#
 
-
-# lstm autoencoder recreate sequence
 from numpy import array
 from keras.models import Sequential
 from keras.layers import LSTM
@@ -14,92 +7,154 @@ from keras.layers import Dense
 from keras.layers import RepeatVector
 from keras.layers import TimeDistributed
 from keras.utils import plot_model
-
+from keras.callbacks import Callback
 import numpy as np
+from sklearn.metrics import mean_squared_error
 
-num_train = 1000000 - 300000
-num_test = 300000
-
-
-10 mill loss 0.0021  32 - 32    two hours(?)
-
-500,000   loss: 0.0064   1024 - 1024   5 hours (?)
-
-sequenceR = np.load("C:\\Users\\T149900\\source\\repos\\sm_data\\sm_data\\data_16.npy")
-
-sequenceR = sequenceR[:num_train + num_test]
-
-sequenceG = sequenceR.copy()
-sequenceB = sequenceR.copy()
+from mp4_frames import get_output_dir
+import datetime
 
 
-sequence = np.stack([sequenceR, sequenceG, sequenceB], axis = -1)
 
-del sequenceR
-del sequenceG
-del sequenceB
+def load_part(iPart):
+    output_dir = get_output_dir()
+    assert output_dir.is_dir()
+    l_npy = []
+    l_orig = []
 
-np.random.shuffle(sequence)
+    for x in output_dir.iterdir():
+        prefix = f"lines_p_{iPart}_"
+        if x.suffix == '.npy' and x.stem.startswith(prefix):
+
+            original_name = x.stem.split(prefix, 1)[1]
+
+            # TODO, add original name to every sampled line
+            assert len (original_name) > 5
+            l_npy.append(np.load(x))
+            l_orig.append(original_name)
+
+    anData = np.concatenate(l_npy)
+    return anData, l_orig
 
 
-test_sequence = sequence[num_train:num_train + num_test]
-test_sequence = test_sequence.reshape((test_sequence.shape[0], test_sequence.shape[1], 3))
+####################################################################################
+#
+#   preprocess_input
+#
+
+def preprocess_input(data):
+    data = (data.astype(np.float32) - 256/2.0) / (256/2.0)
+    return data
 
 
-sequence = sequence[:num_train]
+####################################################################################
+#
+#   reconstruction_error
+#
+
+def reconstruction_error(model, data):
+    data_p = model.predict(data)
+    rms = mean_squared_error(data_p.reshape(-1), data.reshape(-1))
+    return rms
+
+
+class MyCustomCallback(Callback):
+
+  def on_train_batch_begin(self, batch, logs=None):
+    print('Training: batch {} begins at {}'.format(batch, datetime.datetime.now().time()))
+
+
+anTrain10, l_orig = load_part(10)
+anTrain23 = load_part(23)
+anTrain0 = load_part(0)
+
+
+anTrain = np.concatenate([anTrain10, anTrain23, anTrain0])
+
+np.random.shuffle(anTrain)
+
+anTest = load_part(24)
+
+anTrain = preprocess_input(anTrain)
+anTest = preprocess_input(anTest)
+
+# Real part only
+
+sequence = anTrain[:, :16, :]
+
+test_sequence_real  = anTest[:, :16, :]
+test_sequence_fake  = anTest[:, 16:, :]
+
 
 num_samples = sequence.shape[0]
 num_timesteps = sequence.shape[1]
 
 
-# reshape input into [samples, timesteps, features]
-sequence = sequence.reshape((num_samples, num_timesteps, 3))
-
-
-
-# define model
 model = Sequential()
+#model.add(LSTM(2048, activation='relu', return_sequences=True, input_shape=(num_timesteps, 3)))
+#model.add(LSTM(256, activation='relu', return_sequences=True))
+model.add(LSTM(32, activation='relu', return_sequences=True, input_shape=(num_timesteps, 3)))
+model.add(LSTM(8, activation='relu'))
 
-
-model.add(LSTM(1024, activation='relu', input_shape=(num_timesteps, 3)))
 model.add(RepeatVector(num_timesteps))
-model.add(LSTM(1024, activation='relu', return_sequences=True))
 
-#model.add(Dense(512))
-#model.add(Dense(128))
+model.add(LSTM(8, activation='relu', return_sequences=True))
+model.add(LSTM(32, activation='relu', return_sequences=True))
+#model.add(LSTM(256, activation='relu', return_sequences=True))
+#model.add(LSTM(2048, activation='relu', return_sequences=True))
 
 model.add(TimeDistributed(Dense(3)))
 model.compile(optimizer='adam', loss='mse')
 
+model.summary()
+
 
 # fit model
-model.fit(sequence, sequence, epochs=2, verbose=1)
+model.fit(sequence[:100000], sequence[:100000], epochs=1, batch_size=2048, verbose=1, callbacks = [MyCustomCallback()])
+
+
+# Test: On each sampled original (real and fake sampling data)
+#           Predict on a set of real lines.
+#           Predict on a set of fake lines.
 
 
 
-y_test = model.predict(test_sequence)
+y_test_real = model.predict(test_sequence_real[:1000]).reshape(-1)
+mse_real = mean_squared_error(y_test_real[:1000], test_sequence_real.reshape(-1)[:1000])
 
-from sklearn.metrics import mean_squared_error
+y_test_fake = model.predict(test_sequence_fake[:1000]).reshape(-1)
+mse_fake = mean_squared_error(y_test_fake[:1000], test_sequence_fake.reshape(-1)[:1000])
 
-y_test = y_test.reshape(-1)
-test_sequence = test_sequence.reshape(-1)
 
-data_mse = mean_squared_error(y_test, test_sequence)
+mse_real
+mse_fake
 
-y_random = np.random.uniform(size = test_sequence.shape)
+test_sequence_real[:1000]
+test_sequence_fake[:1000]
 
-y_random = y_random.reshape((num_test, 16, 3))
 
-y_random_predict = model.predict(y_random)
 
-y_random_predict = y_random_predict.reshape(-1)
-y_random = y_random.reshape(-1)
+model.save(p / 'my_model.h5')
+# del model  # deletes the existing model
 
-ran_mse = mean_squared_error(y_random, y_random_predict)
+# returns a compiled model
+# identical to the previous one
+model = load_model(p / 'my_model.h5')
 
-data_mse = data_mse * 1000
-ran_mse =ran_mse * 1000
+# create random sequence as baseline
+y_random = np.random.uniform(size = test_sequence_real.shape)
+y_random = y_random.reshape((-1, 16, 3))
 
-data_mse
-ran_mse
+
+reconstruction_error(model, sequence[:20000])
+reconstruction_error(model, y_random[:20000])
+reconstruction_error(model, test_sequence_real)
+reconstruction_error(model, test_sequence_fake)
+
+
+
+
+
+
+
 
