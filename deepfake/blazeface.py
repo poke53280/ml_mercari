@@ -566,37 +566,6 @@ def blaze_after_mtcnn(image, mtcnn_detector):
             print(f"blazeface confidence: {confidence_score}")
 
 
-#################################################################################
-#
-#   get_region_diff
-#
-
-def get_region_diff(image0, image1, l_c, sample_size):
-    width = image0.shape[0]
-    height = image0.shape[1]
-   
-
-    l_bb = get_bb_from_centers(l_c, sample_size)
-
-    l_diff = []
-
-    for bb in l_bb:
-        im_min_x = bb[0]
-        im_max_x = bb[1]
-        im_min_y = bb[2]
-        im_max_y = bb[3]
-
-        img0 = image0[im_min_x:im_max_x, im_min_y: im_max_y, :]
-        img1 = image1[im_min_x:im_max_x, im_min_y: im_max_y, :]
-
-        m = img0.ravel() == img1.ravel()
-
-        rDiff = (1 - m.sum() / m.shape)[0]
-        l_diff.append(rDiff)
-
-
-    return l_diff
-
 
 #################################################################################
 #
@@ -629,21 +598,21 @@ if __name__ == '__main__':
     net.min_score_thresh = 0.75
     net.min_suppression_threshold = 0.3
 
-dir = get_part_dir(iPart)
+    dir = get_part_dir(iPart)
 
-l_d = read_metadata(iPart)
+    l_d = read_metadata(iPart)
 
-current = l_d[0][0]
-fake    = l_d[0][1][0]
+    current = l_d[0][0]
+    fake    = l_d[0][1][0]
 
 
-vidcap = cv2.VideoCapture(str(dir / current))
-video_real = read_video(vidcap)
-vidcap.release()
+    vidcap = cv2.VideoCapture(str(dir / current))
+    video_real = read_video(vidcap)
+    vidcap.release()
 
-vidcap = cv2.VideoCapture(str(dir / fake))
-video_fake = read_video(vidcap)
-vidcap.release()
+    vidcap = cv2.VideoCapture(str(dir / fake))
+    video_fake = read_video(vidcap)
+    vidcap.release()
 
 
 num_frames = video_real.shape[0]

@@ -13,6 +13,9 @@ from multiprocessing import Pool
 from image_grid import get_grid3D_overlap
 from image_grid import get_bb_from_centers_3D
 
+from image_grid import Get3d  countinue
+
+
 import numpy as np
 import pandas as pd
 
@@ -39,7 +42,6 @@ def dataframe_exists(iPart, x_real):
 #
 
 def create_diff_video(video_real, video_fake, outfile):
-
 
     fourcc = cv2.VideoWriter_fourcc(*'FMP4')
 
@@ -121,13 +123,15 @@ def get_sampling_cubes(video_real, video_fake):
 
     video_d = np.sum((video_real-video_fake)**2,axis=3)
 
-    l_c = get_grid3D_overlap(video_d.shape[0], video_d.shape[1], video_d.shape[2], 32, 1.3)
+    l_bb = GetGrid3DCenters(video_d.shape[0], video_d.shape[1], video_d.shape[2], 32, 1.3)
 
-    l_bb = get_bb_from_centers_3D(l_c, 32)
 
     l_mean = []
 
     for bb in l_bb:
+
+        # CONTINUE: cube = Get
+
         im_min_x = bb[0]
         im_max_x = bb[1]
         im_min_y = bb[2]

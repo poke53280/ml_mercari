@@ -1,47 +1,20 @@
 
 
 
-
 from mp4_frames import get_output_dir
 from mp4_frames import get_part_dir
-from mp4_frames import read_video
+from mp4_frames import read_video_from_stem_and_ipart
 from mp4_frames import get_line
+from image_grid import _get_bb_from_centers_3D
+from image_grid import GetSubVolume3D
+
 
 import numpy as np
 import pandas as pd
 import cv2
 from multiprocessing import Pool
 
-####################################################################################
-#
-#   get_video_path_from_stem_and_ipart
-#
 
-def get_video_path_from_stem_and_ipart(stem, iPart):
-    video_dir = get_part_dir(iPart)
-    assert video_dir.is_dir()
-
-    filename = video_dir / f"{stem}.mp4"
-    assert filename.is_file()
-
-    return filename
-
-
-####################################################################################
-#
-#   read_video_from_stem_and_ipart
-#
-
-def read_video_from_stem_and_ipart(stem, iPart):
-    filename = get_video_path_from_stem_and_ipart(stem, iPart)
-
-    vidcap = cv2.VideoCapture(str(filename))
-    video = read_video(vidcap)
-
-    vidcap.release()
-    assert video.shape[0] > 0
-
-    return video
 
 
 ####################################################################################
@@ -49,17 +22,15 @@ def read_video_from_stem_and_ipart(stem, iPart):
 #   load_sample_cubes
 #
 
-def load_sample_cubes(original, l_fakes, ac_x, ac_y, ac_z, iPart):
+def load_sample_cubes(original, l_fakes, l_ac, nCubeSize, iPart):
 
-    l_ac = list(zip(ac_x, ac_y, ac_z))
+    l_bb = _get_bb_from_centers_3D(l_ac, nCubeSize)
 
     l_video_file = []
-
     l_video_file.append(original)
     l_video_file.extend(l_fakes)
 
-
-    d = 32 // 2
+    d = nCubeSize // 2
 
     d_cubes = []
 
@@ -69,14 +40,9 @@ def load_sample_cubes(original, l_fakes, ac_x, ac_y, ac_z, iPart):
 
         l_cubes = []
 
-        for c in l_ac:
-            cx = c[0]
-            cy = c[1]
-            cz = c[2]
-    
-            cube = video[cx-d : cx+d, cy-d : cy + d, cz - d : cz + d]
-
-            assert cube.shape == (32, 32, 32, 3)
+        for bb in l_bb:
+            cube = GetSubVolume3D(video, bb)
+            assert cube.shape == (nCubeSize, nCubeSize, nCubeSize, 3)
 
             l_cubes.append(cube)
         
@@ -155,6 +121,8 @@ def sample_single_cube(r, anLines):
 
 def sample_from_part(iPart):
 
+    nCubeSize = 32
+
     output_dir = get_output_dir()
     video_dir = get_part_dir(iPart)
 
@@ -179,7 +147,7 @@ def sample_from_part(iPart):
     for df in l_df:
 
         original = df.original.iloc[0]
-        print (original)
+        print (f"Original: {original}")
 
         l_fakes = list (df.fake.value_counts().index)
 
@@ -197,7 +165,9 @@ def sample_from_part(iPart):
             ac_y = np.array(df_dense.y)[:10]
             ac_z = np.array(df_dense.z)[:10]
 
-            d = load_sample_cubes(original, [fake], ac_x, ac_y, ac_z, iPart)
+            l_ac = list(zip(ac_x, ac_y, ac_z))
+
+            d = load_sample_cubes(original, [fake], l_ac, nCubeSize, iPart)
 
             num_cubes = len (d[0])
 

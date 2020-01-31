@@ -15,6 +15,10 @@ from mp4_frames import get_output_dir
 import datetime
 
 
+####################################################################################
+#
+#   load_part
+#
 
 def load_part(iPart):
     output_dir = get_output_dir()
@@ -59,10 +63,16 @@ def reconstruction_error(model, data):
     return rms
 
 
+####################################################################################
+#
+#   MyCustomCallback
+#
+
 class MyCustomCallback(Callback):
 
   def on_train_batch_begin(self, batch, logs=None):
     print('Training: batch {} begins at {}'.format(batch, datetime.datetime.now().time()))
+
 
 
 anTrain10, _ = load_part(10)

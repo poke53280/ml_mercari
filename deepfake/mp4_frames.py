@@ -52,6 +52,41 @@ import datetime
 
 ####################################################################################
 #
+#   get_video_path_from_stem_and_ipart
+#
+
+def get_video_path_from_stem_and_ipart(stem, iPart):
+    video_dir = get_part_dir(iPart)
+    assert video_dir.is_dir()
+
+    filename = video_dir / f"{stem}.mp4"
+    assert filename.is_file(), f"Not a file: '{filename}'"
+
+    return filename
+
+
+####################################################################################
+#
+#   read_video_from_stem_and_ipart
+#
+
+def read_video_from_stem_and_ipart(stem, iPart):
+    filename = get_video_path_from_stem_and_ipart(stem, iPart)
+
+    vidcap = cv2.VideoCapture(str(filename))
+    video = read_video(vidcap)
+
+    vidcap.release()
+    assert video.shape[0] > 0
+
+    return video
+
+
+
+
+
+####################################################################################
+#
 #   get_sample_point
 #
 
