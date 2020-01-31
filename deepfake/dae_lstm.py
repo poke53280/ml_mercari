@@ -25,13 +25,14 @@ def load_part(iPart):
     for x in output_dir.iterdir():
         prefix = f"lines_p_{iPart}_"
         if x.suffix == '.npy' and x.stem.startswith(prefix):
-
+            data_original = np.load(x)
             original_name = x.stem.split(prefix, 1)[1]
-
-            # TODO, add original name to every sampled line
             assert len (original_name) > 5
-            l_npy.append(np.load(x))
-            l_orig.append(original_name)
+
+            l_name = [original_name] * data_original.shape[0]
+            
+            l_npy.append(data_original)
+            l_orig.extend(l_name)
 
     anData = np.concatenate(l_npy)
     return anData, l_orig
@@ -64,16 +65,18 @@ class MyCustomCallback(Callback):
     print('Training: batch {} begins at {}'.format(batch, datetime.datetime.now().time()))
 
 
-anTrain10, l_orig = load_part(10)
-anTrain23 = load_part(23)
-anTrain0 = load_part(0)
+anTrain10, _ = load_part(10)
+anTrain23, _ = load_part(23)
+anTrain0, _  = load_part(0)
 
 
 anTrain = np.concatenate([anTrain10, anTrain23, anTrain0])
 
 np.random.shuffle(anTrain)
 
-anTest = load_part(24)
+anTest, l_test_orig = load_part(24)
+
+assert anTest.shape[0] == len (l_test_orig)
 
 anTrain = preprocess_input(anTrain)
 anTest = preprocess_input(anTest)
@@ -91,17 +94,15 @@ num_timesteps = sequence.shape[1]
 
 
 model = Sequential()
-#model.add(LSTM(2048, activation='relu', return_sequences=True, input_shape=(num_timesteps, 3)))
-#model.add(LSTM(256, activation='relu', return_sequences=True))
-model.add(LSTM(32, activation='relu', return_sequences=True, input_shape=(num_timesteps, 3)))
+model.add(LSTM(128, activation='relu', return_sequences=True, input_shape=(num_timesteps, 3)))
+model.add(LSTM(32, activation='relu', return_sequences=True))
 model.add(LSTM(8, activation='relu'))
 
 model.add(RepeatVector(num_timesteps))
 
 model.add(LSTM(8, activation='relu', return_sequences=True))
 model.add(LSTM(32, activation='relu', return_sequences=True))
-#model.add(LSTM(256, activation='relu', return_sequences=True))
-#model.add(LSTM(2048, activation='relu', return_sequences=True))
+model.add(LSTM(128, activation='relu', return_sequences=True))
 
 model.add(TimeDistributed(Dense(3)))
 model.compile(optimizer='adam', loss='mse')
@@ -110,27 +111,32 @@ model.summary()
 
 
 # fit model
-model.fit(sequence[:100000], sequence[:100000], epochs=1, batch_size=2048, verbose=1, callbacks = [MyCustomCallback()])
+model.fit(sequence[:1000000], sequence[:1000000], epochs=1, batch_size=256, verbose=1)
 
 
-# Test: On each sampled original (real and fake sampling data)
-#           Predict on a set of real lines.
-#           Predict on a set of fake lines.
+azOrig = np.array(l_test_orig)
+
+azOrigUnique = np.unique(azOrig)
+aiOrig = np.searchsorted(azOrigUnique, azOrig)
+
+for iOrig in range (np.max(aiOrig)):
+
+    m_0 = aiOrig == iOrig
+
+    iOrig_real = test_sequence_real[m_0]
+    iOrig_fake = test_sequence_fake[m_0]
+
+    y_test_real = model.predict(iOrig_real).reshape(-1)
+    mse_real = mean_squared_error(y_test_real, iOrig_real.reshape(-1))
+
+    y_test_fake = model.predict(iOrig_fake).reshape(-1)
+    mse_fake = mean_squared_error(y_test_fake, iOrig_fake.reshape(-1))
+
+    print(f"{iOrig}: real {mse_real:.3f} fake {mse_fake:.3f}")
 
 
 
-y_test_real = model.predict(test_sequence_real[:1000]).reshape(-1)
-mse_real = mean_squared_error(y_test_real[:1000], test_sequence_real.reshape(-1)[:1000])
 
-y_test_fake = model.predict(test_sequence_fake[:1000]).reshape(-1)
-mse_fake = mean_squared_error(y_test_fake[:1000], test_sequence_fake.reshape(-1)[:1000])
-
-
-mse_real
-mse_fake
-
-test_sequence_real[:1000]
-test_sequence_fake[:1000]
 
 
 
