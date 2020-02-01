@@ -150,6 +150,20 @@ def GetGrid2DBB(width, height, cube_size, rOverlap):
     return l_bb
 
 
+####################################################################################
+#
+#   GetSubVolume2D
+#
+
+def GetSubVolume2D(cube, bb):
+    im_min_x = bb[0]
+    im_max_x = bb[1]
+    im_min_y = bb[2]
+    im_max_y = bb[3]
+
+    return cube[im_min_x:im_max_x, im_min_y: im_max_y]
+
+
 
 ####################################################################################
 #

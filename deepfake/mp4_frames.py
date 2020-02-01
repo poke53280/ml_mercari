@@ -50,6 +50,7 @@ from haar_cascade import HaarCascade
 import datetime
 
 
+
 ####################################################################################
 #
 #   get_video_path_from_stem_and_ipart
@@ -63,25 +64,6 @@ def get_video_path_from_stem_and_ipart(stem, iPart):
     assert filename.is_file(), f"Not a file: '{filename}'"
 
     return filename
-
-
-####################################################################################
-#
-#   read_video_from_stem_and_ipart
-#
-
-def read_video_from_stem_and_ipart(stem, iPart):
-    filename = get_video_path_from_stem_and_ipart(stem, iPart)
-
-    vidcap = cv2.VideoCapture(str(filename))
-    video = read_video(vidcap)
-
-    vidcap.release()
-    assert video.shape[0] > 0
-
-    return video
-
-
 
 
 
@@ -328,7 +310,12 @@ def m_print(p, m):
 #   read_video
 #
 
-def read_video(vidcap):
+def read_video(filepath):
+
+    assert filepath.is_file()
+
+    vidcap = cv2.VideoCapture(str(filepath))
+
     length = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
     width  = int(vidcap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -343,7 +330,11 @@ def read_video(vidcap):
 
         success,image = vidcap.read()
 
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
         video[iFrame] = image
+
+    vidcap.release()
 
     return video
 
@@ -414,11 +405,7 @@ def get_any_real_and_fake_video_from_part(iPart):
     x_real = dir / x_real
     assert x_real.is_file()
 
-    vidcap = cv2.VideoCapture(str(x_real))
-        
-    video_real = read_video(vidcap)
-
-    vidcap.release()
+    video_real = read_video(str(x_real))
 
     l_fakes = current[1]
 
@@ -427,11 +414,7 @@ def get_any_real_and_fake_video_from_part(iPart):
     x_fake = dir / x_fake
     assert x_fake.is_file()
 
-    vidcap = cv2.VideoCapture(str(x_fake))
-        
-    video_fake = read_video(vidcap)
-
-    vidcap.release()
+    video_fake = read_video(str(x_fake))
 
     return video_real, video_fake
 
@@ -466,15 +449,10 @@ def get_feature_from_part(iPart, if_detector):
         x_real = dir / x_real
         assert x_real.is_file()
 
-        vidcap = cv2.VideoCapture(str(x_real))
-        
-        video_real = read_video(vidcap)
-
-        vidcap.release()
+        video_real = read_video(str(x_real))
 
         num_frames = video_real.shape[0]
        
-
         start_processing = datetime.datetime.now()
 
         l_features = if_detector(video_real)
@@ -576,19 +554,11 @@ def sample_from_part(iPart, lines_per_video):
         x_fake = dir / x_fake
         assert x_fake.is_file()
         
-        vidcap = cv2.VideoCapture(str(x_real))
-        
-        video_real = read_video(vidcap)
-
-        vidcap.release()
+        video_real = read_video(str(x_real))
 
         anFeatures = detect_features(video_real)
 
-        vidcap = cv2.VideoCapture(str(x_fake))
-
-        video_fake = read_video(vidcap)
-
-        vidcap.release()
+        video_fake = read_video(str(x_fake))
 
         if video_real.shape != video_fake.shape:
             continue
@@ -820,11 +790,7 @@ def chunked_detect():
 
     print ("Reading video")
 
-    vidcap = cv2.VideoCapture(str(x_real))
-        
-    video_real = read_video(vidcap)
-
-    vidcap.release()
+    video_real = read_video(str(x_real))
 
     num_frames = video_real.shape[0]
 

@@ -1,6 +1,5 @@
 
 
-
 from mp4_frames import read_metadata
 from mp4_frames import get_part_dir
 from mp4_frames import get_output_dir
@@ -10,11 +9,7 @@ import cv2
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 
-from image_grid import get_grid3D_overlap
-from image_grid import get_bb_from_centers_3D
-
-from image_grid import Get3d  countinue
-
+from image_grid import GetSubVolume3D
 
 import numpy as np
 import pandas as pd
@@ -125,21 +120,11 @@ def get_sampling_cubes(video_real, video_fake):
 
     l_bb = GetGrid3DCenters(video_d.shape[0], video_d.shape[1], video_d.shape[2], 32, 1.3)
 
-
     l_mean = []
 
     for bb in l_bb:
-
-        # CONTINUE: cube = Get
-
-        im_min_x = bb[0]
-        im_max_x = bb[1]
-        im_min_y = bb[2]
-        im_max_y = bb[3]
-        im_min_z = bb[4]
-        im_max_z = bb[5]
-
-        l_mean.append(np.mean(video_d[im_min_x:im_max_x, im_min_y: im_max_y, im_min_z: im_max_z]))
+        cube = GetSubVolume3D(video_d, bb)
+        l_mean.append(np.mean(cube))
 
 
     df = pd.DataFrame({'c': l_c, 'mse' : l_mean})
