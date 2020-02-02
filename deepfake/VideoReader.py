@@ -26,7 +26,7 @@ class VideoReader:
         self.verbose = verbose
         self.insets = insets
 
-    def read_frames(self, path, num_frames, jitter=0, seed=None):
+    def read_frames(self, path, num_frames, jitter=0, seed = None):
         """Reads frames that are always evenly spaced throughout the video.
 
         Arguments:

@@ -304,13 +304,17 @@ def m_print(p, m):
     print (descr(p, m))
 """c"""
 
-
 ###################################################################################
 #
 #   read_video
 #
+#  
+#  nFrames 0 - read all
+# 
 
-def read_video(filepath):
+def read_video(filepath, nFrameMax):
+
+    assert nFrameMax >= 0
 
     assert filepath.is_file()
 
@@ -321,10 +325,15 @@ def read_video(filepath):
     height = int(vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps    = vidcap.get(cv2.CAP_PROP_FPS)
 
-    nFrame = length
+    if nFrameMax == 0:
+        nFrame = length
+    else:
+        nFrame = np.min([nFrameMax, length])
+    
+    
     iFrame = 0
 
-    video = np.zeros((length, height, width, 3), dtype = np.uint8)
+    video = np.zeros((nFrame, height, width, 3), dtype = np.uint8)
 
     for iFrame in range (nFrame):
 
@@ -646,13 +655,26 @@ def read_metadata(iPart):
     for x in l_files:
         zLabel = txt_parsed[x]['label']
         if zLabel == "REAL":
-            l_real_files.append(x)
+            file_exists = (p/x).is_file()
+            if file_exists:
+                l_real_files.append(x)
+            else:
+                print(f"Warning, missing original file {str(x)} in part {iPart}")
+
         if zLabel == "FAKE":
-            l_fake_files.append(x)
-            l_original_files.append(txt_parsed[x]['original'])
 
+            original_file = txt_parsed[x]['original']
 
-    
+            file_exists = (p/x).is_file()
+            orig_exists = (p/original_file).is_file()
+
+            if file_exists and orig_exists:
+                l_fake_files.append(x)
+                l_original_files.append(original_file)
+            else:
+                print(f"Warning, missing original file {str(original_file)} and/or fake file {str(x)} in part {iPart}")
+
+   
     d = {}
 
     for x in l_original_files:
