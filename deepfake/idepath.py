@@ -17,7 +17,7 @@ path_work = Path("C:\\Users\\T149900\\Documents\\GitHub")
 
 path_home = Path("C:\\Users\\T149900\\source\\repos")
 
-path = path_work
+path = path_home
 
 assert path.is_dir()
 
@@ -33,7 +33,7 @@ pd.set_option('display.width', 500)
 pd.set_option('display.max_colwidth', 500)
 
 pd.set_option('display.max_rows', 500)
-pd.set_option('display.min_rows', 100)
+# pd.set_option('display.min_rows', 100)
 
 
 

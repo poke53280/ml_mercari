@@ -870,20 +870,10 @@ def process_chunk(iPart):
 #   main
 #
 
-if __name__ == '__main__':
-    #parser = argparse.ArgumentParser()
-    #parser.add_argument("--part", "-p", help="parts to sample from", required = True)
-
-    #args = parser.parse_args()
-
-    #_= get_output_dir()
-
-    #iPart = int(args.part)
-
-    # l_F = get_feature_from_part(iPart, if_detector_empty)
-
-    with Pool(7) as p:
-        anFeatures = p.map(process_chunk, [0, 1, 2, 3, 4, 5, 6])
+#if __name__ == '__main__':
+   
+    #with Pool(7) as p:
+        #anFeatures = p.map(process_chunk, [0, 1, 2, 3, 4, 5, 6])
 
 
     # l_F = get_feature_from_part(iPart, if_detector_haar)

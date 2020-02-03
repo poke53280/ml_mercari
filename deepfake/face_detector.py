@@ -8,8 +8,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from blazeface import BlazeFace
-
 from mtcnn.mtcnn import MTCNN
 
 from mp4_frames import get_part_dir
@@ -36,9 +34,13 @@ import random
 #   get_test_video
 #
 
-def get_test_video(num_frames):
+def get_test_video(num_frames, isOriginal):
 
-    l_part = [0, 6, 7, 10, 18, 28, 37, 49]
+    l_part_work = [0, 6, 7, 10, 18, 28, 37, 49]
+
+    l_part_home = [2, 12, 20, 21, 30, 32, 35, 41, 49]
+
+    l_part = l_part_home
 
     iPart = random.choice(l_part)
 
@@ -47,9 +49,17 @@ def get_test_video(num_frames):
 
     idx = np.random.choice(len (l_d))
 
-    current = l_d[idx][0]
+    original = l_d[idx][0]
+    l_fakes = l_d[idx][1]
 
-    filepath = video_dir / current
+    assert len(l_fakes) > 0
+
+    fake = random.choice(l_fakes)
+
+    if isOriginal:
+        filepath = video_dir / original
+    else:
+        filepath = video_dir / fake
 
     video = read_video(filepath, num_frames)
 
@@ -320,12 +330,8 @@ class MTCNNDetector():
         return face
 
        
-        
-
-
-       
-weight_path = pathlib.Path(f"C:\\Users\\T149900\\Documents\\GitHub\\ml_mercari\\deepfake")
-assert weight_path.is_dir()
+#weight_path = pathlib.Path(f"C:\\Users\\T149900\\Documents\\GitHub\\ml_mercari\\deepfake")
+#assert weight_path.is_dir()
 
 
 ######################################################################
@@ -433,6 +439,7 @@ def sample_video_outer(video_base):
         l_samples.append(sample_single_cube(c01, get_random_trace_lines(num_samples)))
         l_samples.append(sample_single_cube(c11, get_random_trace_lines(num_samples)))
 
+    # Todo - handle empty / no faces case
     anSamples = np.concatenate(l_samples)
 
     #idxSamples = np.random.choice(anSamples.shape[0], 4000, replace = False)
@@ -441,68 +448,6 @@ def sample_video_outer(video_base):
 
     return anSamples
 
-
-
-t0 = datetime.datetime.now()
-video_base = get_test_video(32)
-t1 = datetime.datetime.now()
-dt_read = (t1 - t0).total_seconds()
-print(f"Video read time: {dt_read}s")
-
-aS = sample_video_outer(video_base)
-
-t2 = datetime.datetime.now()
-
-dt_all = (t2 - t0).total_seconds()
-
-print(f"Total read and sample time: {dt_all}s")
-
-
-
-
-
-b = BlazeDetector(weight_path)
-
-
-sample_size = 800
-rOverlap = 1.3
-
-l_bb = GetGrid2DBB(image.shape[0], image.shape[1], sample_size, 1.3)
-
-l_face = []
-
-t0 = datetime.datetime.now()
-
-for bb in l_bb:
-    
-    img_sub = GetSubVolume2D(image, bb)
-    img_128 = cv2.resize(img_sub, (128, 128))
-    
-    i = b.detect(img_128)
-    l_face.append(i)
-
-
-t1 = datetime.datetime.now()
-
-dt_blaze_chunked = (t1 - t0).total_seconds()
-
-print(f"Blaze detect time: {dt_blaze_chunked}s")
-
-
-for iFace, faces in enumerate(l_face):
-
-    if len (faces) > 0:
-        print (faces)
-
-        bb = l_bb[iFace]
-        img_sub = GetSubVolume2D(image, bb).copy()
-        plt.imshow(img_sub)
-        plt.show()
-
-        b.draw(img_sub, faces)
-
-        plt.imshow(img_sub)
-        plt.show()
 
 
 

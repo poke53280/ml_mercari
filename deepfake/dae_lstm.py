@@ -2,6 +2,7 @@
 
 from numpy import array
 from keras.models import Sequential
+from keras.models import load_model
 from keras.layers import LSTM
 from keras.layers import Dense
 from keras.layers import RepeatVector
@@ -75,97 +76,87 @@ class MyCustomCallback(Callback):
 
 
 
-anTrain10, _ = load_part(10)
-anTrain23, _ = load_part(23)
-anTrain0, _  = load_part(0)
+def train():
+
+    anTrain10, _ = load_part(10)    
+    anTrain23, _ = load_part(23)
+    anTrain0, _  = load_part(0)
 
 
-anTrain = np.concatenate([anTrain10, anTrain23, anTrain0])
+    anTrain = np.concatenate([anTrain10, anTrain23, anTrain0])
 
-np.random.shuffle(anTrain)
+    np.random.shuffle(anTrain)
 
-anTest, l_test_orig = load_part(24)
+    anTrain = preprocess_input(anTrain)
+  
 
-assert anTest.shape[0] == len (l_test_orig)
+    # Real part only
 
-anTrain = preprocess_input(anTrain)
-anTest = preprocess_input(anTest)
-
-# Real part only
-
-sequence = anTrain[:, :16, :]
-
-test_sequence_real  = anTest[:, :16, :]
-test_sequence_fake  = anTest[:, 16:, :]
+    sequence_real = anTrain[:, :16, :]
+    sequence_fake = anTrain[:, 16:, :]
+    
 
 
-num_samples = sequence.shape[0]
-num_timesteps = sequence.shape[1]
+    num_samples = sequence_real.shape[0]
+    num_timesteps = sequence_real.shape[1]
 
 
-model = Sequential()
-model.add(LSTM(128, activation='relu', return_sequences=True, input_shape=(num_timesteps, 3)))
-model.add(LSTM(32, activation='relu', return_sequences=True))
-model.add(LSTM(8, activation='relu'))
+    model = Sequential()
+    model.add(LSTM(256, activation='relu', return_sequences=True, input_shape=(num_timesteps, 3)))
+    model.add(LSTM(128, activation='relu', return_sequences=True))
+    model.add(LSTM(4, activation='relu'))
 
-model.add(RepeatVector(num_timesteps))
+    model.add(RepeatVector(num_timesteps))
 
-model.add(LSTM(8, activation='relu', return_sequences=True))
-model.add(LSTM(32, activation='relu', return_sequences=True))
-model.add(LSTM(128, activation='relu', return_sequences=True))
+    model.add(LSTM(4, activation='relu', return_sequences=True))
+    model.add(LSTM(128, activation='relu', return_sequences=True))
+    model.add(LSTM(256, activation='relu', return_sequences=True))
 
-model.add(TimeDistributed(Dense(3)))
-model.compile(optimizer='adam', loss='mse')
+    model.add(TimeDistributed(Dense(3)))
+    model.compile(optimizer='adam', loss='mse')
 
-model.summary()
-
-
-# fit model
-model.fit(sequence[:1000000], sequence[:1000000], epochs=1, batch_size=256, verbose=1)
+    model.summary()
 
 
-azOrig = np.array(l_test_orig)
+    p = get_output_dir()
 
-azOrigUnique = np.unique(azOrig)
-aiOrig = np.searchsorted(azOrigUnique, azOrig)
+    # fit models
+    # 0.0165
+    model.fit(sequence_real[:2000000], sequence_real[:2000000], epochs=1, batch_size=256, verbose=1)
+    model.save(p / 'my_model_rr.h5')
 
-for iOrig in range (np.max(aiOrig)):
-
-    m_0 = aiOrig == iOrig
-
-    iOrig_real = test_sequence_real[m_0]
-    iOrig_fake = test_sequence_fake[m_0]
-
-    y_test_real = model.predict(iOrig_real).reshape(-1)
-    mse_real = mean_squared_error(y_test_real, iOrig_real.reshape(-1))
-
-    y_test_fake = model.predict(iOrig_fake).reshape(-1)
-    mse_fake = mean_squared_error(y_test_fake, iOrig_fake.reshape(-1))
-
-    print(f"{iOrig}: real {mse_real:.3f} fake {mse_fake:.3f}")
+    model.fit(sequence_real[:2000000], sequence_fake[:2000000], epochs=1, batch_size=256, verbose=1)
+    model.save(p / 'my_model_rf.h5')
 
 
+    model = Sequential()
+    model.add(LSTM(256, activation='relu', return_sequences=True, input_shape=(num_timesteps, 3)))
+    model.add(LSTM(128, activation='relu', return_sequences=True))
+    model.add(LSTM(4, activation='relu'))
+
+    model.add(RepeatVector(num_timesteps))
+
+    model.add(LSTM(4, activation='relu', return_sequences=True))
+    model.add(LSTM(128, activation='relu', return_sequences=True))
+    model.add(LSTM(256, activation='relu', return_sequences=True))
+
+    model.add(TimeDistributed(Dense(3)))
+    model.compile(optimizer='adam', loss='mse')
+
+    model.summary()
+
+
+    model.fit(sequence_fake[:2000000], sequence_real[:2000000], epochs=1, batch_size=256, verbose=1)
+    model.save(p / 'my_model_fr.h5')
+
+    # 0.0124
+    model.fit(sequence_fake[:2000000], sequence_fake[:2000000], epochs=1, batch_size=256, verbose=1)
+    model.save(p / 'my_model_ff.h5')
 
 
 
 
 
-model.save(p / 'my_model.h5')
-# del model  # deletes the existing model
-
-# returns a compiled model
-# identical to the previous one
-model = load_model(p / 'my_model.h5')
-
-# create random sequence as baseline
-y_random = np.random.uniform(size = test_sequence_real.shape)
-y_random = y_random.reshape((-1, 16, 3))
-
-
-reconstruction_error(model, sequence[:20000])
-reconstruction_error(model, y_random[:20000])
-reconstruction_error(model, test_sequence_real)
-reconstruction_error(model, test_sequence_fake)
 
 
 
