@@ -3,7 +3,8 @@
 
 from mp4_frames import get_output_dir
 from mp4_frames import get_part_dir
-from mp4_frames import read_video_from_stem_and_ipart
+from mp4_frames import get_video_path_from_stem_and_ipart
+from mp4_frames import read_video
 from mp4_frames import get_line
 from image_grid import _get_bb_from_centers_3D
 from image_grid import GetSubVolume3D

@@ -19,6 +19,9 @@ from mp4_frames import read_video
 
 from image_grid import GetGrid2DBB
 from image_grid import GetSubVolume2D
+from line_sampler import get_random_trace_lines
+from line_sampler import sample_single_cube
+
 
 import matplotlib.pyplot as plt
 import datetime
@@ -116,7 +119,7 @@ def _cut_face_bb(image, face):
 
 ######################################################################
 #
-#   _cut_face_feature
+#   _fit_1D
 #
 
 def _fit_1D(c, half_size, extent):
@@ -137,24 +140,6 @@ def _fit_1D(c, half_size, extent):
     assert (c1 - c0) == (half_size * 2)       
 
     return (c0, c1)
-
-
-
-def _cut_face_feature(image, p, size):
-    assert size %2 == 0
-
-    half_size = size // 2        
-
-    x_shape = image.shape[1]
-    y_shape = image.shape[0]
-
-    (x0, x1) = _fit_1D(p[0], half_size, x_shape)
-    (y0, y1) = _fit_1D(p[1], half_size, y_shape)
-
-    sub_image = image[y0:y1, x0:x1, :].copy()
-
-    return sub_image
-
 
 
 
@@ -287,6 +272,8 @@ class MTCNNDetector():
         for x in ['l_eye', 'r_eye', 'c_nose',  'l_mouth', 'r_mouth']:
             d_face[x] = (d_face[x][0]/ width, d_face[x][1]/ heigth)
 
+        d_face = self.get_face_area(d_face)
+
         return d_face
 
     def detect(self, image):
@@ -317,24 +304,45 @@ class MTCNNDetector():
             _draw_single_feature(image, face, 'l_mouth', 2)
             _draw_single_feature(image, face, 'r_mouth', 2)
 
+    def get_face_area(self, face):
+        l_xFeatures = [  face['c_nose'][0],  face['l_eye'][0], face['r_eye'][0], face['l_mouth'][0], face['r_mouth'][0]]
+        l_yFeatures = [  face['c_nose'][1],  face['l_eye'][1], face['r_eye'][1], face['l_mouth'][1], face['r_mouth'][1]]
+
+        x0 = np.min(l_xFeatures)
+        x1 = np.max(l_xFeatures)
+
+        y0 = np.min(l_yFeatures)
+        y1 = np.max(l_yFeatures)
+
+        face['f_min'] = (x0, y0)
+        face['f_max'] = (x1, y1)
+
+        return face
+
+       
+        
+
 
        
 weight_path = pathlib.Path(f"C:\\Users\\T149900\\Documents\\GitHub\\ml_mercari\\deepfake")
 assert weight_path.is_dir()
 
 
+######################################################################
+#
+#   sample_video
+#
 
-def sample_video(isDraw):
+def sample_video(video, video_dept, cube_size, isDraw):
 
-    t0 = datetime.datetime.now()
-    video_base = get_test_video(32)
-    t1 = datetime.datetime.now()
-    dt_read = (t1 - t0).total_seconds()
-    print(f"Video read time: {dt_read}s")
+    assert video.shape[0] == video_dept
 
-    iFrame = np.random.choice(video_base.shape[0]//2)
+    iFrame = video.shape[0]//2
 
-    image = video_base[iFrame].copy()
+    image = video[iFrame]
+
+    x_shape = image.shape[1]
+    y_shape = image.shape[0]
 
     if isDraw:
         plt.imshow(image)
@@ -342,15 +350,14 @@ def sample_video(isDraw):
 
     mtcnn = MTCNNDetector()
 
-
     t0 = datetime.datetime.now()
 
     l_faces = mtcnn.detect(image)
 
+    t1 = datetime.datetime.now()
+
     for x in l_faces:
         print(f"Confidence {x['confidence']}")
-
-    t1 = datetime.datetime.now()
 
     dt_mtcnn  = (t1 - t0).total_seconds()
 
@@ -361,22 +368,17 @@ def sample_video(isDraw):
         mtcnn.draw(image_mtcnn_rect, l_faces)
         plt.imshow(image_mtcnn_rect)
         plt.show()
+    
 
-    x_shape = image.shape[1]
-    y_shape = image.shape[0]
-
-    l_img_sub = []
+    l_video_cube = []
 
     for x in l_faces:
 
-        l_xFeatures = [  x['c_nose'][0],  x['l_eye'][0], x['r_eye'][0], x['l_mouth'][0], x['r_mouth'][0]]
-        l_yFeatures = [  x['c_nose'][1],  x['l_eye'][1], x['r_eye'][1], x['l_mouth'][1], x['r_mouth'][1]]
+        x0 = x['f_min'][0]
+        y0 = x['f_min'][1]
 
-        x0 = np.min(l_xFeatures)
-        x1 = np.max(l_xFeatures)
-
-        y0 = np.min(l_yFeatures)
-        y1 = np.max(l_yFeatures)
+        x1 = x['f_max'][0]
+        y1 = x['f_max'][1]
 
         cx = 0.5 * (x0 + x1)
         cy = 0.5 * (y0 + y1)
@@ -384,29 +386,79 @@ def sample_video(isDraw):
         x_size = (x1 - x0) * x_shape
         y_size = (y1 - y0) * y_shape
 
-        size = int ((1.8 * np.min([x_size, y_size]) // 2) * 2)
+        face_size = int ((1.8 * np.min([x_size, y_size]) // 2) * 2)
 
-        size = np.max([size, 32])
+        print(f"Characteristic face size {face_size} vs sample size {cube_size}")
 
-        print(f"Sample size {size}")
+        (x0, x1) = _fit_1D(cx, cube_size // 2, x_shape)
+        (y0, y1) = _fit_1D(cy, cube_size // 2, y_shape)
 
-        img_sub = _cut_face_feature(image, (cx, cy), size)
-        l_img_sub.append(img_sub)
-
-    if isDraw:
-        for img_sub in l_img_sub:
+        if isDraw:
+            img_sub = image[y0:y1, x0:x1, :]
             plt.imshow(img_sub)
             plt.show()
-    
-    return l_img_sub
+
+        video_sub = video[:, y0:y1, x0:x1, :]
+
+        assert video_sub.shape == (video_dept, cube_size, cube_size, 3)
+
+        l_video_cube.append(video_sub)
+
+    return l_video_cube
 
 
 
-for x in range (10):
-    l_img_sub = sample_video(False)
-    for img_sub in l_img_sub:
-        plt.imshow(img_sub)
-        plt.show()
+
+
+######################################################################
+#
+#   sample_video_outer
+#
+
+def sample_video_outer(video_base):
+
+    l_video_sub = sample_video(video_base, 32, 64, False)
+
+    l_samples = []
+    for vid_sub in l_video_sub:
+        c00 = vid_sub[:, :32, :32, :]
+        c10 = vid_sub[:, 32:, :32, :]
+        c01 = vid_sub[:, :32, 32:, :]
+        c11 = vid_sub[:, 32:, 32:, :]
+
+        num_samples = 1000
+
+        l_samples.append(sample_single_cube(c00, get_random_trace_lines(num_samples)))
+        l_samples.append(sample_single_cube(c10, get_random_trace_lines(num_samples)))
+        l_samples.append(sample_single_cube(c01, get_random_trace_lines(num_samples)))
+        l_samples.append(sample_single_cube(c11, get_random_trace_lines(num_samples)))
+
+    anSamples = np.concatenate(l_samples)
+
+    #idxSamples = np.random.choice(anSamples.shape[0], 4000, replace = False)
+
+    #anSamples = anSamples[idxSamples]
+
+    return anSamples
+
+
+
+t0 = datetime.datetime.now()
+video_base = get_test_video(32)
+t1 = datetime.datetime.now()
+dt_read = (t1 - t0).total_seconds()
+print(f"Video read time: {dt_read}s")
+
+aS = sample_video_outer(video_base)
+
+t2 = datetime.datetime.now()
+
+dt_all = (t2 - t0).total_seconds()
+
+print(f"Total read and sample time: {dt_all}s")
+
+
+
 
 
 b = BlazeDetector(weight_path)
