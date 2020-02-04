@@ -18,7 +18,7 @@ from mp4_frames import read_video
 from image_grid import GetGrid2DBB
 from image_grid import GetSubVolume2D
 from line_sampler import get_random_trace_lines
-from line_sampler import sample_single_cube
+from line_sampler import sample_cube
 
 
 import matplotlib.pyplot as plt
@@ -28,42 +28,6 @@ import cv2
 
 import random
 
-
-######################################################################
-#
-#   get_test_video
-#
-
-def get_test_video(num_frames, isOriginal):
-
-    l_part_work = [0, 6, 7, 10, 18, 28, 37, 49]
-
-    l_part_home = [2, 12, 20, 21, 30, 32, 35, 41, 49]
-
-    l_part = l_part_home
-
-    iPart = random.choice(l_part)
-
-    video_dir = get_part_dir(iPart)
-    l_d = read_metadata(iPart)
-
-    idx = np.random.choice(len (l_d))
-
-    original = l_d[idx][0]
-    l_fakes = l_d[idx][1]
-
-    assert len(l_fakes) > 0
-
-    fake = random.choice(l_fakes)
-
-    if isOriginal:
-        filepath = video_dir / original
-    else:
-        filepath = video_dir / fake
-
-    video = read_video(filepath, num_frames)
-
-    return video
 
 
 
@@ -105,27 +69,7 @@ def _draw_face_bb(image, face):
 
     image = cv2.rectangle(image, (x0, y0), (x1, y1), (255,0,0), 5)
 
-######################################################################
-#
-#   _cut_face_bb
-#
 
-def _cut_face_bb(image, face):
-
-    x_shape = image.shape[1]
-    y_shape = image.shape[0]
-
-    x0 = int (face['bb_min'][0] * x_shape)
-    y0 = int (face['bb_min'][1] * y_shape)
-
-    x1 = int (face['bb_max'][0] * x_shape)
-    y1 = int (face['bb_max'][1] * y_shape)
-
-    print(f"({x0}, {y0}) - ({x1}, {y1})")
-
-    sub_image = image[y0:y1, x0:x1, :].copy()
-
-    return sub_image
 
 ######################################################################
 #
@@ -152,6 +96,16 @@ def _fit_1D(c, half_size, extent):
     return (c0, c1)
 
 
+######################################################################
+#
+#   _get_integer_coords_single_feature
+#
+
+def _get_integer_coords_single_feature(x_shape, y_shape, face, zFeature):
+    x = int (face[zFeature][0] * x_shape)
+    y = int (face[zFeature][1] * y_shape)
+
+    return (x, y)
 
 ######################################################################
 #
@@ -162,11 +116,7 @@ def _draw_single_feature(image, face, zFeature, rect_size):
 
     assert rect_size > 0
 
-    x_shape = image.shape[1]
-    y_shape = image.shape[0]
-
-    x = int (face[zFeature][0] * x_shape)
-    y = int (face[zFeature][1] * y_shape)
+    x, y = _get_integer_coords_single_feature(image, face, zFeature)
 
     x0 = x - rect_size
     y0 = y - rect_size
@@ -175,68 +125,6 @@ def _draw_single_feature(image, face, zFeature, rect_size):
     y1 = y + rect_size
 
     image = cv2.rectangle(image, (x0, y0), (x1, y1), (255,0,0), 2)
-
-######################################################################
-#
-#   BlazeDetector
-#
-
-class BlazeDetector():
-    def __init__(self, weight_path):
-        assert weight_path.is_dir()
-        gpu = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.net = BlazeFace().to(gpu)
-        self.net.load_weights(weight_path / "blazeface.pth")
-        self.net.load_anchors(weight_path / "anchors.npy")
-
-        self.net.min_score_thresh = 0.75
-        self.net.min_suppression_threshold = 0.3
-
-        self.detections = []
-
-
-    def detect(self, img):
-        assert img.shape == (128, 128, 3)
-        detection = self.net.predict_on_image(img)
-
-        l_face = []
-        
-        for anFace in detection:
-
-            face  = {}
-
-            face['bb_min']  = (anFace[1].item(), anFace[0].item())
-            face['bb_max']  = (anFace[3].item(), anFace[2].item())
-
-            face['r_eye']   = (anFace[4].item(), anFace[5].item())
-            face['l_eye']   = (anFace[6].item(), anFace[7].item())
-
-            face['c_nose']    = (anFace[8].item(), anFace[9].item())
-            face['c_mouth']   = (anFace[10], anFace[11])
-
-            face['r_ear']   = (anFace[12].item(), anFace[13].item())        
-            face['l_ear']   = (anFace[14].item(), anFace[15].item())  
-
-            face['confidence'] = anFace[16].item()
-            
-            l_face.append(face)
-        return l_face
-
-
-    def draw(self, image, l_face):
-            x_shape = image.shape[1]
-            y_shape = image.shape[0]
-
-            for face in l_face:
-                _draw_face_bb(image, face)
-                _draw_single_feature(image, face, 'c_mouth', 2)
-                _draw_single_feature(image, face, 'r_eye', 2)
-                _draw_single_feature(image, face, 'l_eye', 2)
-                _draw_single_feature(image, face, 'c_nose', 2)
-                _draw_single_feature(image, face, 'r_ear', 2)
-                _draw_single_feature(image, face, 'l_ear', 2)
-
-    
 
 ######################################################################
 #
@@ -329,10 +217,30 @@ class MTCNNDetector():
 
         return face
 
-       
-#weight_path = pathlib.Path(f"C:\\Users\\T149900\\Documents\\GitHub\\ml_mercari\\deepfake")
-#assert weight_path.is_dir()
 
+    ######################################################################
+    #
+    #   cut_face_bb
+    #
+
+    def cut_face_bb(self, image, face):
+
+        x_shape = image.shape[1]
+        y_shape = image.shape[0]
+
+        x0 = int (face['bb_min'][0] * x_shape)
+        y0 = int (face['bb_min'][1] * y_shape)
+
+        x1 = int (face['bb_max'][0] * x_shape)
+        y1 = int (face['bb_max'][1] * y_shape)
+
+        print(f"({x0}, {y0}) - ({x1}, {y1})")
+
+        sub_image = image[y0:y1, x0:x1, :].copy()
+
+        return sub_image
+
+       
 
 ######################################################################
 #
