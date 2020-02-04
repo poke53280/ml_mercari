@@ -85,6 +85,46 @@ def get_feature_converter():
 
 ####################################################################################
 #
+#   sample_single
+#
+
+def sample_single(video_path):
+    video = read_video(video_path, 32)
+
+    (face0, face1) = find_two_consistent_faces(video)
+
+    invalid = (face0 is None) or (face1 is None)
+
+    if invalid:
+        return None
+
+    z_max = video.shape[0]
+    x_max = video.shape[2]
+    y_max = video.shape[1]
+
+    lines = get_video_lines(x_max, y_max, z_max, face0, face1)
+
+    l_data = []
+
+    d_f = get_feature_converter()
+
+    for zFeature in list(lines.keys()):
+        samples = sample_cube(video, lines[zFeature]).reshape(-1, 16 * 3)
+
+        num = samples.shape[0]
+        iF = d_f[zFeature]
+
+        anF = np.array([iF] * num).reshape(num, 1).astype(np.uint8)
+
+        combined_samples = np.hstack([anF, samples])
+        l_data.append(combined_samples)
+
+    anData = np.concatenate(l_data)
+    return anData
+
+
+####################################################################################
+#
 #   sample_pair
 #
 
@@ -196,8 +236,22 @@ def process(iPart):
                 print(f"p_{iPart}_{str(original.stem)}_{str(fake.stem)}: No data.")
                 pass
             else:
-                file_out = output_dir / f"p_{iPart}_{str(original.stem)}_{str(fake.stem)}.npy"
+                file_out = output_dir / f"p_{iPart}_Train_{str(original.stem)}_{str(fake.stem)}.npy"
                 np.save(file_out, data)
+
+
+            data_test_real = sample_single(original)
+            data_test_fake = sample_single(fake)
+
+            isValid = (data_test_real is not None) and (data_test_fake is not None)
+
+            if isValid:
+                file_real_out = output_dir / f"p_{iPart}_Test_{str(original.stem)}_real.npy"
+                np.save(file_real_out, data_test_real)
+
+                file_fake_out = output_dir / f"p_{iPart}_Test_{str(fake.stem)}_fake.npy"
+                np.save(file_fake_out, data_test_fake)
+
 
 
 ####################################################################################
