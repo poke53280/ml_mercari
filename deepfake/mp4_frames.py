@@ -749,6 +749,22 @@ def get_output_dir():
 
 ####################################################################################
 #
+#   get_ready_data_dir
+#
+
+def get_ready_data_dir():
+    isLocal = os.name == 'nt'
+    if isLocal:
+        output_dir = pathlib.Path(f"C:\\Users\\T149900\\ready_data")
+        assert output_dir.is_dir(), f"output dir {output_dir} not existing"
+    else:
+        output_dir = pathlib.Path("/mnt/disks/tmp_mnt/data/ready_data")
+        assert output_dir.is_dir(), f"output dir {output_dir} not existing"
+
+    return output_dir
+
+####################################################################################
+#
 #   get_part_dir
 #
 

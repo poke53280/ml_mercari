@@ -1,28 +1,30 @@
 
 import numpy as np
 from mp4_frames import get_output_dir
+from mp4_frames import get_ready_data_dir
 from featureline import get_feature_converter
-import re
-
-zFeature = 'c_nose'
 
 input_dir = get_output_dir()
 assert input_dir.is_dir()
 
-l_files = list (input_dir.iterdir())
-
-l_files = [x for x in l_files if x.suffix == '.npy']
+output_dir = get_ready_data_dir()
+assert output_dir.is_dir()
 
 d_f = get_feature_converter()
 
-iF = d_f[zFeature]
-
+l_files = list (input_dir.iterdir())
+l_files = [x for x in l_files if x.suffix == '.npy']
+   
 l_train_parts = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 21]
 
-
 l_data_train = []
+ 
 
+# CONTINUE - PERHAPS FEATURE INSIDE FILE LOOP.
 
+for zFeature in list (d_f.keys()):
+
+    iF = d_f[zFeature]
 for x in l_files:
 
     l_x = str(x.stem).split("_")

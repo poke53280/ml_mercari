@@ -205,8 +205,6 @@ def find_two_consistent_faces(video):
 
     return (face0, face1)
 
-
-
 ####################################################################################
 #
 #   process
@@ -232,12 +230,12 @@ def process(iPart):
         if (original.is_file() and fake.is_file()):
             data_train = sample_pair(original, fake)
 
-            if data is None:
+            if data_train is None:
                 print(f"p_{iPart}_{str(original.stem)}_{str(fake.stem)}: No data.")
                 pass
             else:
                 file_out = output_dir / f"p_{iPart}_Train_{str(original.stem)}_{str(fake.stem)}.npy"
-                np.save(file_out, data)
+                np.save(file_out, data_train)
 
 
             data_test_real = sample_single(original)
