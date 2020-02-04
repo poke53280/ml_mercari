@@ -14,6 +14,7 @@ from sklearn.metrics import mean_squared_error
 
 from face_detector import get_test_video
 from face_detector import sample_video_outer
+import matplotlib.pyplot as plt
 
 
 ####################################################################################
@@ -42,11 +43,6 @@ def analyse_test_part_24():
 
     num_timesteps = test_sequence_real.shape[1]
 
-    # create random sequence as baseline
-    #y_random = np.random.uniform(size = test_sequence_real.shape)
-    #y_random = y_random.reshape((-1, 16, 3))
-
-
     azOrig = np.array(l_test_orig)
 
     azOrigUnique = np.unique(azOrig)
@@ -69,6 +65,9 @@ def analyse_test_part_24():
 
 
 
+
+
+
 ####################################################################################
 #
 #   predict
@@ -81,7 +80,7 @@ def predict(model, data):
 
     mse = reconstruction_error(model, data)
     
-    print(f"Mse error {mse}")
+    # print(f"Mse error {mse}")
     return mse
 
 
@@ -89,27 +88,76 @@ def predict(model, data):
 p = get_output_dir()
 assert p.is_dir()
 
-model = load_model(p / 'my_model.h5')
+model_rr = load_model(p / 'my_model_rr.h5')
+model_ff = load_model(p / 'my_model_ff.h5')
 
-l_mse = []
+l_mse_rr = []
+l_mse_ff = []
 l_is_real = []
+l_mean_rf = []
 
-for i in range (10):
+num_runs = 3
+
+for i in range (num_runs):
+
+    print(f"{i}/ {num_runs}")
 
     isReal = np.random.choice([True, False])
+
+    print (f"isReal: {isReal}")
 
     video_base = get_test_video(32, isReal)
 
     aS = sample_video_outer(video_base)
 
-    mse = predict(model, preprocess_input(aS))
+    data_in = preprocess_input(aS)
+
+    mse_rr = predict(model_rr, data_in)
+    print(f"mse_rr: {mse_rr}")
+    l_mse_rr.append(mse_rr)
+
+    data_p_rr = model_rr.predict(data_in)
+    distro_plot(data_in, data_p_rr)
+
+    mse_ff = predict(model_ff, data_in)
+    print(f"mse_ff: {mse_ff}")
+    l_mse_ff.append(mse_ff)
+
+    data_p_ff = model_ff.predict(data_in)
+    distro_plot(data_in, data_p_ff)
+
+    diff_r_f = np.abs(data_p_rr - data_p_ff)
+
+    diff_r_f = np.sum(diff_r_f, axis = 2)
+    diff_r_f = np.sum(diff_r_f, axis = 1)
+
+    l_mean_rf.append(np.mean(diff_r_f))
     
     l_is_real.append(isReal)
-    l_mse.append(mse)
+    
 
-df = pd.DataFrame({'mse' : l_mse, 'y' : l_is_real})
-
-
-df
+df = pd.DataFrame({'mse_rr' : l_mse_rr, 'mse_ff' : l_mse_ff, 'mean_rf' : l_mean_rf, 'y' : l_is_real})
 
 
+df.sort_values(by = 'mean_rf')
+
+
+
+
+#############
+
+data_in = preprocess_input(aS)
+data_p = model_rr.predict(data_in)
+
+distro_plot(data_in, data_p)
+
+
+def distro_plot(data_in, data_p):
+
+    err = (data_p - data_in)
+    err = np.abs(err)
+    err = np.sum(err, axis = 2)
+    err = np.sum(err, axis = 1)
+
+    plt.hist(err, bins = 200)
+    plt.show()
