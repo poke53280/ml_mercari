@@ -33,6 +33,26 @@ def dataframe_exists(iPart, x_real):
 
 ####################################################################################
 #
+#   create_diff_image
+#
+
+def create_diff_image(image_1, image_2):
+
+    image_3 = np.sum((image_1-image_2)**2,axis=2)
+
+    cm = plt.get_cmap('viridis')
+
+    colored_image = cm(image_3)
+
+    colored_image = colored_image[:, :, :3]
+
+    colored_image = colored_image * 256
+    colored_image = colored_image.astype(np.uint8)
+    return colored_image
+
+
+####################################################################################
+#
 #   create_diff_video
 #
 
@@ -49,17 +69,7 @@ def create_diff_video(video_real, video_fake, outfile):
         image_1 = cv2.cvtColor(video_real[iFrame], cv2.COLOR_BGR2RGB)
         image_2 = cv2.cvtColor(video_fake[iFrame], cv2.COLOR_BGR2RGB)
 
-
-        image_3 = np.sum((image_1-image_2)**2,axis=2)
-
-        cm = plt.get_cmap('viridis')
-
-        colored_image = cm(image_3)
-
-        colored_image = colored_image[:, :, :3]
-
-        colored_image = colored_image * 256
-        colored_image = colored_image.astype(np.uint8)
+        colored_image = create_diff_image(image_1, image_2)
     
         video_tracked.write(colored_image)
 

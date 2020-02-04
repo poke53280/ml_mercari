@@ -57,6 +57,28 @@ def load_sample_cubes(original, l_fakes, l_ac, nCubeSize, iPart):
 
 ####################################################################################
 #
+#   rasterize_lines
+#
+
+def rasterize_lines(p):
+    l_l = []
+
+    for x in p:
+        l = get_line(x[::2], x[1::2])
+        assert l.shape[1] >= 16, f"Line is short: {l.shape[1]}"
+
+        l = np.swapaxes(l, 0, 1)
+        l = l[:16]
+        l = l.astype(np.int32)
+
+        l_l.append(l)
+
+    anLines = np.stack(l_l)
+    return anLines
+
+
+####################################################################################
+#
 #   get_random_trace_lines
 #
 
@@ -85,19 +107,17 @@ def get_random_trace_lines(num_samples):
 
         l_l.append(l)
 
-    anLines = np.stack(l_l)
+    anLines = rasterize_lines(p)
 
     return anLines
 
 
 ####################################################################################
 #
-#   sample_single_cube
+#   sample_cube
 #
 
-def sample_single_cube(r, anLines):
-
-    assert r.shape ==  (32, 32, 32, 3)   
+def sample_cube(r, anLines):
 
     l_sample = []
 
@@ -181,8 +201,8 @@ def sample_from_part(iPart):
 
                 anLines = get_random_trace_lines(num_samples)
 
-                real_samples = sample_single_cube(cube_real, anLines)
-                fake_samples = sample_single_cube(cube_fake, anLines)
+                real_samples = sample_cube(cube_real, anLines)
+                fake_samples = sample_cube(cube_fake, anLines)
 
                 combined_samples = np.hstack([real_samples, fake_samples])
 

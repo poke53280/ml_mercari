@@ -75,7 +75,6 @@
     <Compile Include="dae\__init__.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="deepfake\blazeface.py" />
     <Compile Include="deepfake\face_detector.py" />
     <Compile Include="deepfake\dae_lstm.py" />
     <Compile Include="deepfake\dae_smdata.py" />
@@ -83,8 +82,13 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="deepfake\facenet.py" />
+    <Compile Include="deepfake\featureline.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="deepfake\feature_trainer.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\frame_compare.py" />
-    <Compile Include="deepfake\haar_cascade.py" />
     <Compile Include="deepfake\idepath.py" />
     <Compile Include="deepfake\image_grid.py" />
     <Compile Include="deepfake\image_p.py" />

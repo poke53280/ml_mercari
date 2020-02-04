@@ -46,7 +46,6 @@ import string
 import os
 import argparse
 from multiprocessing import Pool
-from haar_cascade import HaarCascade
 import datetime
 
 
@@ -348,6 +347,36 @@ def read_video(filepath, nFrameMax):
     return video
 
 
+######################################################################
+#
+#   get_test_video_filepaths
+#
+
+def get_test_video_filepaths():
+
+    l_part_work = [0, 6, 7, 10, 18, 28, 37, 49]
+
+    l_part_home = [2, 12, 20, 21, 30, 32, 35, 41, 49]
+
+    l_part = l_part_work
+
+    iPart = random.choice(l_part)
+
+    video_dir = get_part_dir(iPart)
+    l_d = read_metadata(iPart)
+
+    idx = np.random.choice(len (l_d))
+
+    original = l_d[idx][0]
+    l_fakes = l_d[idx][1]
+
+    assert len(l_fakes) > 0
+
+    fake = random.choice(l_fakes)
+
+    return (video_dir / original, video_dir / fake)
+
+
 ###################################################################################
 #
 #   detect_features
@@ -495,27 +524,6 @@ def if_detector_empty(video_real):
 
     for i in range(video_real.shape[0]):
         l_f.append(0)            
-
-    return l_f
-
-
-####################################################################################
-#
-#   if_detector_haar
-#
-
-def if_detector_haar(video_real):
-
-    h = HaarCascade(get_code_dir())
-
-    l_f = []
-
-    for i in range(video_real.shape[0]):
-        faces = h.detect(video_real[i])
-        if len(faces) > 0:
-            l_f.append(1)
-        else:
-            l_f.append(0)
 
     return l_f
 

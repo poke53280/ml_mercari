@@ -18,33 +18,6 @@ import datetime
 
 ####################################################################################
 #
-#   load_part
-#
-
-def load_part(iPart):
-    output_dir = get_output_dir()
-    assert output_dir.is_dir()
-    l_npy = []
-    l_orig = []
-
-    for x in output_dir.iterdir():
-        prefix = f"lines_p_{iPart}_"
-        if x.suffix == '.npy' and x.stem.startswith(prefix):
-            data_original = np.load(x)
-            original_name = x.stem.split(prefix, 1)[1]
-            assert len (original_name) > 5
-
-            l_name = [original_name] * data_original.shape[0]
-            
-            l_npy.append(data_original)
-            l_orig.extend(l_name)
-
-    anData = np.concatenate(l_npy)
-    return anData, l_orig
-
-
-####################################################################################
-#
 #   preprocess_input
 #
 
@@ -64,26 +37,12 @@ def reconstruction_error(model, data):
     return rms
 
 
-####################################################################################
-#
-#   MyCustomCallback
-#
-
-class MyCustomCallback(Callback):
-
-  def on_train_batch_begin(self, batch, logs=None):
-    print('Training: batch {} begins at {}'.format(batch, datetime.datetime.now().time()))
-
-
 
 def train():
 
-    anTrain10, _ = load_part(10)    
-    anTrain23, _ = load_part(23)
-    anTrain0, _  = load_part(0)
+    input_dir = get_output_dir()
 
-
-    anTrain = np.concatenate([anTrain10, anTrain23, anTrain0])
+    anTrain = np.load(input_dir / "train_c_nose.npy")
 
     np.random.shuffle(anTrain)
 
@@ -102,15 +61,15 @@ def train():
 
 
     model = Sequential()
-    model.add(LSTM(256, activation='relu', return_sequences=True, input_shape=(num_timesteps, 3)))
-    model.add(LSTM(128, activation='relu', return_sequences=True))
+    model.add(LSTM(128, activation='relu', return_sequences=True, input_shape=(num_timesteps, 3)))
+    model.add(LSTM(32, activation='relu', return_sequences=True))
     model.add(LSTM(4, activation='relu'))
 
     model.add(RepeatVector(num_timesteps))
 
     model.add(LSTM(4, activation='relu', return_sequences=True))
+    model.add(LSTM(32, activation='relu', return_sequences=True))
     model.add(LSTM(128, activation='relu', return_sequences=True))
-    model.add(LSTM(256, activation='relu', return_sequences=True))
 
     model.add(TimeDistributed(Dense(3)))
     model.compile(optimizer='adam', loss='mse')
@@ -122,7 +81,7 @@ def train():
 
     # fit models
     # 0.0165
-    model.fit(sequence_real[:2000000], sequence_real[:2000000], epochs=1, batch_size=256, verbose=1)
+    model.fit(sequence_real, sequence_real, epochs=1, batch_size=256, verbose=1)
     model.save(p / 'my_model_rr.h5')
 
     model.fit(sequence_real[:2000000], sequence_fake[:2000000], epochs=1, batch_size=256, verbose=1)

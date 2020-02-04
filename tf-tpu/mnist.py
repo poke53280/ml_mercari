@@ -187,6 +187,8 @@
 #
 # gcloud compute scp .\mnist.py USERNAME@tpu-driver-eur:.
 #
+# gcloud compute scp .\*.py anders_topper@atcompute:/mnt/disks/tmp_mnt/data
+
 # ... and run again
 #
 # 
