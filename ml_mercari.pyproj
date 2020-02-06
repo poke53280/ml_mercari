@@ -97,6 +97,13 @@
     </Compile>
     <Compile Include="deepfake\line_sampler.py" />
     <Compile Include="deepfake\mp4_frames.py" />
+    <Compile Include="deepfake\prediction_stage1.py" />
+    <Compile Include="deepfake\predictor.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="deepfake\stage2_trainer.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\VideoReader.py">
       <SubType>Code</SubType>
     </Compile>

@@ -7,6 +7,10 @@ from featureline import get_feature_converter
 
 import pandas as pd
 
+####################################################################################
+#
+#   create_test_merge
+#
 
 def create_test_merge(l_test_parts):
     input_dir = get_output_dir()    
@@ -87,6 +91,10 @@ def create_test_merge(l_test_parts):
     df_meta.to_pickle(output_dir / f"test_meta.pkl")
 
 
+####################################################################################
+#
+#   create_train_merge
+#
 
 def create_train_merge(l_train_parts):
 

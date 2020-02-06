@@ -728,9 +728,19 @@ def get_code_dir():
     return path
 
 
+
 ####################################################################################
 #
-#   _get_aux_dir
+#   _is_kaggle
+#
+
+def _is_kaggle():
+    return pathlib.Path("/kaggle/input").is_dir()
+
+
+####################################################################################
+#
+#   get_aux_dir
 #
 
 def get_aux_dir(zDir):
@@ -741,6 +751,9 @@ def get_aux_dir(zDir):
         aux_dir = pathlib.Path("/mnt/disks/tmp_mnt/data")
 
     assert aux_dir.is_dir(), f"base aux dir {aux_dir} not existing"
+
+    if len(zDir) == 0:
+        return aux_dir
 
     aux_dir = aux_dir / zDir
 
@@ -771,7 +784,35 @@ def get_ready_data_dir():
 #
 
 def get_model_dir():
+    if _is_kaggle():
+        p = pathlib.Path("/kaggle/input/models")
+        assert p.is_dir()
+        return p
+
     return get_aux_dir("mod_out")
+
+
+####################################################################################
+#
+#   get_test_dir
+#
+
+def get_test_dir():
+    if _is_kaggle():
+        p = pathlib.Path("/kaggle/input/deepfake-detection-challenge/test_videos")
+        assert p.is_dir()
+        return p
+
+    return get_aux_dir("test_dir")
+
+
+####################################################################################
+#
+#   get_submission_dir
+#
+
+def get_submission_dir():
+    return get_aux_dir("")
 
 
 ####################################################################################
