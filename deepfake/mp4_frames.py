@@ -728,6 +728,25 @@ def get_code_dir():
     return path
 
 
+####################################################################################
+#
+#   _get_aux_dir
+#
+
+def get_aux_dir(zDir):
+    isLocal = os.name == 'nt' 
+    if isLocal:
+        aux_dir = pathlib.Path(f"C:\\Users\\T149900")
+    else:
+        aux_dir = pathlib.Path("/mnt/disks/tmp_mnt/data")
+
+    assert aux_dir.is_dir(), f"base aux dir {aux_dir} not existing"
+
+    aux_dir = aux_dir / zDir
+
+    assert aux_dir.is_dir(), f"dir {aux_dir} not existing"
+
+    return aux_dir
 
 
 ####################################################################################
@@ -736,16 +755,7 @@ def get_code_dir():
 #
 
 def get_output_dir():
-    isLocal = os.name == 'nt'
-    if isLocal:
-        output_dir = pathlib.Path(f"C:\\Users\\T149900\\vid_out")
-        assert output_dir.is_dir(), f"output dir {output_dir} not existing"
-    else:
-        output_dir = pathlib.Path("/mnt/disks/tmp_mnt/data/vid_out")
-        assert output_dir.is_dir(), f"output dir {output_dir} not existing"
-
-    return output_dir
-
+    return get_aux_dir("vid_out")
 
 ####################################################################################
 #
@@ -753,15 +763,16 @@ def get_output_dir():
 #
 
 def get_ready_data_dir():
-    isLocal = os.name == 'nt'
-    if isLocal:
-        output_dir = pathlib.Path(f"C:\\Users\\T149900\\ready_data")
-        assert output_dir.is_dir(), f"output dir {output_dir} not existing"
-    else:
-        output_dir = pathlib.Path("/mnt/disks/tmp_mnt/data/ready_data")
-        assert output_dir.is_dir(), f"output dir {output_dir} not existing"
+    return get_aux_dir("ready_data")
 
-    return output_dir
+####################################################################################
+#
+#   get_model_dir
+#
+
+def get_model_dir():
+    return get_aux_dir("mod_out")
+
 
 ####################################################################################
 #

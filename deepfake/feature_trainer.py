@@ -1,69 +1,155 @@
 
+
 import numpy as np
 from mp4_frames import get_output_dir
 from mp4_frames import get_ready_data_dir
 from featureline import get_feature_converter
 
-input_dir = get_output_dir()
-assert input_dir.is_dir()
+import pandas as pd
 
-output_dir = get_ready_data_dir()
-assert output_dir.is_dir()
 
-d_f = get_feature_converter()
+def create_test_merge(l_test_parts):
+    input_dir = get_output_dir()    
+    assert input_dir.is_dir()
 
-l_files = list (input_dir.iterdir())
-l_files = [x for x in l_files if x.suffix == '.npy']
+    output_dir = get_ready_data_dir()
+    assert output_dir.is_dir()
+
+    d_f = get_feature_converter()
+
+    l_files = list (input_dir.iterdir())
+    l_files = [x for x in l_files if x.suffix == '.npy']
    
-l_train_parts = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 21]
+    l_data_test = {}
+    for zFeature in list (d_f.keys()):
+        l_data_test[zFeature] = []
 
-l_data_train = []
+
+    l_iPart = []
+    l_zVideo = []
+    l_y = []
+
  
+    for x in l_files:
+        l_x = str(x.stem).split("_")
 
-# CONTINUE - PERHAPS FEATURE INSIDE FILE LOOP.
+        isTestFile = (len (l_x) == 5) and (l_x[2] == 'Test')
 
-for zFeature in list (d_f.keys()):
+        if isTestFile:
+            pass
+        else:
+            continue
 
-    iF = d_f[zFeature]
-for x in l_files:
+        iPart = int (l_x[1])
+        video = l_x[3]
+        y = l_x[4]
 
-    l_x = str(x.stem).split("_")
+        isCollect = (iPart in l_test_parts)
 
-    if not len (l_x) == 4:
-        # Not correct file name format.
-        continue
+        if isCollect:
+            pass
+        else:
+            continue
 
-    iPart = int (l_x[1])
-    original = l_x[2]
-    fake = l_x[3]
+        data = np.load(x)
 
-    isCollect = (iPart in l_train_parts)
+        anFeature = data[:, 0]
 
-    if not isCollect:
-        continue
+        data = data[:, 1:]
 
-    data = np.load(x)
+        data = data.reshape(-1, 16, 3)
 
-    anFeature = data[:, 0]
+        num_rows = data.shape[0]
+        assert num_rows % len (d_f.keys()) == 0
 
-    m_correct_feature = (anFeature == iF)
+        num_rows_per_feature = num_rows // len (d_f.keys())
 
-    data = data[:, 1:]
+        l_iPart.extend([iPart] * num_rows_per_feature)
+        l_zVideo.extend([video] * num_rows_per_feature)
+        l_y.extend([y] * num_rows_per_feature)
 
-    data = data.reshape(-1, 32, 3)
+        for zFeature in list (d_f.keys()):
+            iF = d_f[zFeature]
+            m_correct_feature = (anFeature == iF)
+            l_data_test[zFeature].append(data[m_correct_feature])
+            assert data[m_correct_feature].shape[0] == num_rows_per_feature
 
-    data = data[m_correct_feature]
+    num_meta = len (l_iPart)
 
-    l_data_train.append(data)
+    for zFeature in list (d_f.keys()):
+        if len (l_data_test[zFeature]) > 0:
+            anDataTest = np.concatenate(l_data_test[zFeature])
+            assert anDataTest.shape[0] == num_meta
+            np.save(output_dir / f"test_{zFeature}.npy", anDataTest)
+
+    df_meta = pd.DataFrame({'iPart' : l_iPart, 'video': l_zVideo, 'y': l_y})
+
+    df_meta.to_pickle(output_dir / f"test_meta.pkl")
 
 
-anDataTrain = np.concatenate(l_data_train)
 
-# real/fake same sampled line, from all vidoes in same part set, same feature set.
+def create_train_merge(l_train_parts):
 
-np.save(input_dir / f"train_{zFeature}.npy", anDataTrain)
+    input_dir = get_output_dir()    
+    assert input_dir.is_dir()
+
+    output_dir = get_ready_data_dir()
+    assert output_dir.is_dir()
+
+    d_f = get_feature_converter()
+
+    l_files = list (input_dir.iterdir())
+    l_files = [x for x in l_files if x.suffix == '.npy']
+   
+    l_data_train = {}
+    for zFeature in list (d_f.keys()):
+        l_data_train[zFeature] = []
+
+ 
+    for x in l_files:
+
+        l_x = str(x.stem).split("_")
+
+        isTrainFile = (len (l_x) == 5) and (l_x[2] == 'Train')
+    
+        if isTrainFile:
+            pass
+        else:
+            continue
+
+        iPart = int (l_x[1])
+        original = l_x[3]
+        fake = l_x[4]
+
+        isCollect = (iPart in l_train_parts)
+
+        if isCollect:
+            pass
+        else:
+            continue
+
+        data = np.load(x)
+
+        anFeature = data[:, 0]
+
+        data = data[:, 1:]
+
+        data = data.reshape(-1, 32, 3)
+    
+        for zFeature in list (d_f.keys()):
+            iF = d_f[zFeature]
+
+            m_correct_feature = (anFeature == iF)
+
+            l_data_train[zFeature].append(data[m_correct_feature])
 
 
+    for zFeature in list (d_f.keys()):
+        if len (l_data_train[zFeature]) > 0:
+            anDataTrain = np.concatenate(l_data_train[zFeature])
+            np.save(output_dir / f"train_{zFeature}.npy", anDataTrain)
+
+            
 
 
 
