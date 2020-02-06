@@ -38,6 +38,9 @@ def reconstruction_error(model, data):
     return rms
 
 
+
+
+
 ####################################################################################
 #
 #   get_model
@@ -49,11 +52,11 @@ def get_model(num_timesteps):
     model = Sequential()
     model.add(LSTM(256, activation='relu', return_sequences=True, input_shape=(num_timesteps, 3)))
     model.add(LSTM(128, activation='relu', return_sequences=True))
-    model.add(LSTM(4, activation='relu'))
+    model.add(LSTM(12, activation='relu'))
 
     model.add(RepeatVector(num_timesteps))
 
-    model.add(LSTM(4, activation='relu', return_sequences=True))
+    model.add(LSTM(12, activation='relu', return_sequences=True))
     model.add(LSTM(128, activation='relu', return_sequences=True))
     model.add(LSTM(256, activation='relu', return_sequences=True))
 
@@ -88,7 +91,7 @@ def train():
 
     num_samples = anTrain.shape[0]
 
-    num_train = int (0.7 * num_samples)
+    num_train = int (0.9 * num_samples)
     num_test = num_samples - num_train
 
     num_timesteps = sequence_real.shape[1]
@@ -96,12 +99,20 @@ def train():
     model = get_model(num_timesteps)
          
     # 4 or 5 on batch 256 0.0042 threshold with less daa
-    model.fit(sequence_real[:num_train], sequence_real[:num_train], epochs=5, batch_size=256, verbose=1)
+    model.fit(sequence_real[:num_train], sequence_real[:num_train], epochs=4, batch_size=256, verbose=1)
+
+    m_dir = get_model_dir()
+    model.save(m_dir / 'm1_256-128-12_l_mouth_rr.h5')
 
 
-    # 0.0061 after 2 epochs         b 56, 128   -32 - 4
+    # 0.0061 after 2 epochs         b 56, 128 -  32 - 4
     # 0.0062 after 2-3  epochs      b256, 256 - 128 - 4   (~ 2 hrs)
     # 0.0056 after 5 epochs                                  6 hrs)
+
+    #  256 - 12 - 10
+    #
+
+    
 
     num_test = 2000
     assert num_test <= num_train
