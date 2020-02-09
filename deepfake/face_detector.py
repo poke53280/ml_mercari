@@ -324,40 +324,6 @@ def sample_video(video, video_dept, cube_size, isDraw):
 
 
 
-######################################################################
-#
-#   sample_video_outer
-#
-
-def sample_video_outer(video_base):
-
-    l_video_sub = sample_video(video_base, 32, 64, False)
-
-    l_samples = []
-    for vid_sub in l_video_sub:
-        c00 = vid_sub[:, :32, :32, :]
-        c10 = vid_sub[:, 32:, :32, :]
-        c01 = vid_sub[:, :32, 32:, :]
-        c11 = vid_sub[:, 32:, 32:, :]
-
-        num_samples = 1000
-
-        l_samples.append(sample_single_cube(c00, get_random_trace_lines(num_samples)))
-        l_samples.append(sample_single_cube(c10, get_random_trace_lines(num_samples)))
-        l_samples.append(sample_single_cube(c01, get_random_trace_lines(num_samples)))
-        l_samples.append(sample_single_cube(c11, get_random_trace_lines(num_samples)))
-
-    # Todo - handle empty / no faces case
-    anSamples = np.concatenate(l_samples)
-
-    #idxSamples = np.random.choice(anSamples.shape[0], 4000, replace = False)
-
-    #anSamples = anSamples[idxSamples]
-
-    return anSamples
-
-
-
 
 
 

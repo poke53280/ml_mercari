@@ -74,7 +74,7 @@ def get_accumulated_stats(lines_in, lines_out):
 def get_accumulated_stats_init():
     d_acc = {}
 
-    d_acc['mse'] = 0
+    d_acc['mse'] = -1
     
 
     # max
@@ -216,26 +216,27 @@ def train_stage2():
 
     df = pd.DataFrame(l)
 
-
+    num_rows = df.shape[0]
+    num_train = int (0.9 * num_rows)
 
 
     x_cols = [x for x in list (df.columns) if x != 'y']
 
-    X_train = df[x_cols][:1500]
-    X_test = df[x_cols][1500:]
+    X_train = df[x_cols][:num_train]
+    X_test = df[x_cols][num_train:]
 
     y = df.y.copy()
 
     m_fake = (y == 'fake')
     m_real = (y == 'real')
 
-    y[m_fake] = '0'
-    y[m_real] = '1'
+    y[m_fake] = '1'
+    y[m_real] = '0'
 
     y = y.astype(np.int)
 
-    y_train = y[:1500]
-    y_test = y[1500:]
+    y_train = y[:num_train]
+    y_test = y[num_train:]
 
 
     params = {

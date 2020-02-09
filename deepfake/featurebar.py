@@ -2,10 +2,30 @@
 
 from mp4_frames import read_metadata
 from mp4_frames import get_part_dir
-from mp4_frames import get_output_dir
 from mp4_frames import read_video
-
 from mp4_frames import get_test_video_filepaths
+
+import random
+
+from face_detector import MTCNNDetector
+
+from face_detector import _get_integer_coords_single_feature
+
+# TODO...
+
+
+video_path = random.choice(get_test_video_filepaths())
+assert video_path.is_file()
+
+
+anData = sample_single(video_path)
+
+anData is None
+
+
+video_path
+
+
 
 from line_sampler import rasterize_lines
 from line_sampler import sample_cube
@@ -14,13 +34,12 @@ import matplotlib.pyplot as plt
 
 from easy_face import create_diff_image
 from face_detector import MTCNNDetector
-from face_detector import _get_integer_coords_single_feature
 
-import random
 
-from multiprocessing import Pool
 
 import numpy as np
+
+
 
 ####################################################################################
 #
@@ -73,14 +92,41 @@ def get_video_lines(x_max, y_max, z_max, face0, face1):
     return d_lines
 
 
+
 ####################################################################################
 #
-#   get_feature_converter
+#   find_two_consistent_faces
 #
 
-def get_feature_converter():
-    d_f = {'bb_min': 0, 'bb_max' : 1, 'l_eye': 2, 'r_eye' : 3, 'c_nose': 4, 'l_mouth': 5, 'r_mouth': 6, 'f_min': 7, 'f_max': 8}
-    return d_f
+# Todo: Test for size diff and pos diff. Skip on failure.
+
+def find_two_consistent_faces(video):
+
+    m = MTCNNDetector()
+
+    l_faces0 = m.detect(video[0])
+
+    isSingleFace0 = len (l_faces0) == 1
+
+    if not isSingleFace0:
+        print("Not single face in frame 0. Skipping")
+        return (None, None)
+
+    l_faces1 = m.detect(video[31])
+
+    isSingleFace1 = len (l_faces1) == 1
+
+    if not isSingleFace1:
+        print("Not single face in frame 31. Skipping")
+        return (None, None)
+
+    # Todo: Test for size diff and pos diff. Skip on failure.
+
+    face0 = l_faces0[0]
+    face1 = l_faces1[0]
+
+    return (face0, face1)
+
 
 
 ####################################################################################
@@ -91,10 +137,7 @@ def get_feature_converter():
 def sample_single(video_path):
     video = read_video(video_path, 32)
 
-    if video is None:
-        return None
-
-    if video.shape[0] == 0:
+    if len (video) == 0:
         return None
 
     (face0, face1) = find_two_consistent_faces(video)
@@ -127,6 +170,18 @@ def sample_single(video_path):
 
     anData = np.concatenate(l_data)
     return anData
+
+
+
+
+####################################################################################
+#
+#   get_feature_converter
+#
+
+def get_feature_converter():
+    d_f = {'bb_min': 0, 'bb_max' : 1, 'l_eye': 2, 'r_eye' : 3, 'c_nose': 4, 'l_mouth': 5, 'r_mouth': 6, 'f_min': 7, 'f_max': 8}
+    return d_f
 
 
 ####################################################################################
@@ -177,39 +232,6 @@ def sample_pair(video_real_path, video_fake_path):
 
 
 
-####################################################################################
-#
-#   find_two_consistent_faces
-#
-
-# Todo: Test for size diff and pos diff. Skip on failure.
-
-def find_two_consistent_faces(video):
-
-    m = MTCNNDetector()
-
-    l_faces0 = m.detect(video[0])
-
-    isSingleFace0 = len (l_faces0) == 1
-
-    if not isSingleFace0:
-        print("Not single face in frame 0. Skipping")
-        return (None, None)
-
-    l_faces1 = m.detect(video[31])
-
-    isSingleFace1 = len (l_faces1) == 1
-
-    if not isSingleFace1:
-        print("Not single face in frame 31. Skipping")
-        return (None, None)
-
-    # Todo: Test for size diff and pos diff. Skip on failure.
-
-    face0 = l_faces0[0]
-    face1 = l_faces1[0]
-
-    return (face0, face1)
 
 ####################################################################################
 #

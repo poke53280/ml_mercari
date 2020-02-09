@@ -1,33 +1,24 @@
 
+
+
+
+import os
+import pathlib
 import numpy as np
 import pandas as pd
-import pathlib
-
-from shutil import copyfile
-
-isKaggle = pathlib.Path("/kaggle/input").is_dir()
-
-# !pip install /kaggle/input/mtcnnpackage/mtcnn-0.1.0-py3-none-any.whl
-# Bytt til os install.
-
-if isKaggle:
-
-    copyfile(src = "../input/pythoncode/dae_lstm.py", dst = "../working/dae_lstm.py")
-
-    copyfile(src = "../input/pythoncode/easy_face.py", dst = "../working/easy_face.py")
-    copyfile(src = "../input/pythoncode/face_detector.py", dst = "../working/face_detector.py")
-    copyfile(src = "../input/pythoncode/feature_trainer.py", dst = "../working/feature_trainer.py")
-    copyfile(src = "../input/pythoncode/image_grid.py", dst = "../working/image_grid.py")
-    copyfile(src = "../input/pythoncode/line_sampler.py", dst = "../working/line_sampler.py")
-    copyfile(src = "../input/pythoncode/mp4_frames.py", dst = "../working/mp4_frames.py")
-    copyfile(src = "../input/pythoncode/stage2_trainer.py", dst = "../working/stage2_trainer.py")
-    copyfile(src = "../input/pythoncode/featureline.py", dst = "../working/featureline.py")
-
-
 
 from keras.models import load_model
 from lightgbm import Booster
 from lightgbm import Dataset
+
+
+isKaggle = pathlib.Path("/kaggle/input").is_dir()
+
+if isKaggle:
+    os.system('pip install /kaggle/input/mtcnnpackage/mtcnn-0.1.0-py3-none-any.whl')
+    os.chdir('/kaggle/input/pythoncode')
+
+
 
 from mp4_frames import get_test_dir
 from mp4_frames import get_model_dir
@@ -36,25 +27,41 @@ from mp4_frames import get_submission_dir
 from dae_lstm import preprocess_input
 from dae_lstm import reconstruction_error
 from stage2_trainer import predict_single_file
+from stage2_trainer import get_accumulated_stats_init
 
 
+if isKaggle:
+    os.chdir('/kaggle/working')
 
 input_dir = get_test_dir()
 model_dir = get_model_dir()
 submission_dir = get_submission_dir()
 
-l_files = list (input_dir.iterdir())
-
 m1 = load_model(get_model_dir() / "my_model_l_mouth_rr.h5")
-
 m2 = Booster(model_file = str(get_model_dir() / "m2.txt"))
+
+l_files = list (sorted(input_dir.iterdir()))
+
+l_filenames = [str(x.name) for x in l_files]
+
+
+num_files = 300
+
+
+if num_files == 0:
+    num_files = len (l_files)
+
 
 d_res = {}
 
-for i, x in enumerate(l_files):
+for i, x in enumerate(l_files[:num_files]):
     print (i)
 
-    d_res[str(x.name)] = predict_single_file(m1, x)
+    try:
+        d_res[str(x.name)] = predict_single_file(m1, x)
+    except Exception as err:
+        d_res[str(x.name)] = get_accumulated_stats_init()
+    
 
 """c"""
 
@@ -63,27 +70,38 @@ df = pd.DataFrame(d_res).T
 df = df.reset_index()
 df = df.rename(columns = {'index' : 'filename'})
 
-df = df.assign(label = 0.5)
-
-label = df.label.copy()
-
-m_invalid = (df.mse == 0) & (df.acc_argmax_99 == 0) & (df.acc_argmax_01 == 0)
+m_invalid = (df.mse < 0)
+m_valid = ~m_invalid
 
 x_cols = [x for x in list (df.columns) if (x != "filename") and (x != "label")]
 
-label[~m_invalid] = m2.predict(df[x_cols][~m_invalid])
+label = m2.predict(df[x_cols])
+
+label[m_invalid] = 0.5
+
+assert (label >= 0).all()
 
 df = df.assign(label = label)
 
-df[['filename', 'label']].to_csv(submission_dir / 'submission.csv',index=False)
+
+sub=pd.DataFrame()
+
+sub['filename'] = l_filenames
+sub['label_sub'] = 0.5
+
+sub = pd.merge(left = sub, right = df[['label','filename']], on = 'filename', how = 'left')
+
+m_got_value = ~sub['label'].isna()
+
+label = sub.label_sub.copy()
+
+label[m_got_value] = sub['label'][m_got_value]
 
 
+sub = sub.assign(label = label)
+sub = sub.drop('label_sub', axis = 1)
 
-
-
-
-
-
+sub.to_csv('submission.csv',index=False)
 
 
 

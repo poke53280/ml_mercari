@@ -36,8 +36,6 @@ import cv2
 import numpy as np
 import pandas as pd
 
-#from mtcnn.mtcnn import MTCNN
-from sklearn.metrics import mean_squared_error
 import pathlib
 import random
 import json
@@ -812,6 +810,12 @@ def get_test_dir():
 #
 
 def get_submission_dir():
+    if _is_kaggle():
+        p = pathlib.Path("/kaggle/working")
+        assert p.is_dir()
+        return p
+
+
     return get_aux_dir("")
 
 
