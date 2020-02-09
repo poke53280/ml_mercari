@@ -1,11 +1,11 @@
 
-
-
-
 import os
 import pathlib
 import numpy as np
 import pandas as pd
+
+import keras
+import tensorflow as tf
 
 from keras.models import load_model
 from lightgbm import Booster
@@ -29,6 +29,13 @@ from dae_lstm import reconstruction_error
 from stage2_trainer import predict_single_file
 from stage2_trainer import get_accumulated_stats_init
 
+from mtcnn.mtcnn import MTCNN
+
+
+print(f"Tensorflow {tf.__version__}")
+print(f"Keras {keras.__version__}")
+
+
 
 if isKaggle:
     os.chdir('/kaggle/working')
@@ -44,8 +51,7 @@ l_files = list (sorted(input_dir.iterdir()))
 
 l_filenames = [str(x.name) for x in l_files]
 
-
-num_files = 300
+num_files = 0
 
 
 if num_files == 0:
@@ -53,6 +59,7 @@ if num_files == 0:
 
 
 d_res = {}
+
 
 for i, x in enumerate(l_files[:num_files]):
     print (i)
@@ -62,7 +69,6 @@ for i, x in enumerate(l_files[:num_files]):
     except Exception as err:
         d_res[str(x.name)] = get_accumulated_stats_init()
     
-
 """c"""
 
 df = pd.DataFrame(d_res).T
