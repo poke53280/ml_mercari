@@ -77,11 +77,9 @@
     </Compile>
     <Compile Include="deepfake\face_detector.py" />
     <Compile Include="deepfake\dae_lstm.py" />
-    <Compile Include="deepfake\dae_smdata.py" />
     <Compile Include="deepfake\easy_face.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="deepfake\facenet.py" />
     <Compile Include="deepfake\featureline.py">
       <SubType>Code</SubType>
     </Compile>
@@ -92,12 +90,8 @@
     <Compile Include="deepfake\idepath.py" />
     <Compile Include="deepfake\image_grid.py" />
     <Compile Include="deepfake\image_p.py" />
-    <Compile Include="deepfake\kernel.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="deepfake\line_sampler.py" />
     <Compile Include="deepfake\mp4_frames.py" />
-    <Compile Include="deepfake\prediction_stage1.py" />
     <Compile Include="deepfake\predictor.py">
       <SubType>Code</SubType>
     </Compile>

@@ -5,7 +5,6 @@ from mp4_frames import get_output_dir
 from mp4_frames import get_part_dir
 from mp4_frames import get_video_path_from_stem_and_ipart
 from mp4_frames import read_video
-from mp4_frames import get_line
 from image_grid import _get_bb_from_centers_3D
 from image_grid import GetSubVolume3D
 
@@ -15,6 +14,36 @@ import pandas as pd
 import cv2
 from multiprocessing import Pool
 
+
+####################################################################################
+#
+#   get_line
+#
+#
+
+def get_line(p0, p1):
+
+    dp = p1 - p0
+    dp = np.abs(dp)
+
+    num_steps = np.max(dp)
+
+    # t element of [0, 1]
+
+    step_size = 1 / num_steps
+
+    ai = np.arange(start = 0, stop = 1 + step_size, step = step_size)
+
+    ai_t = np.tile(ai, 3).reshape(-1, ai.shape[0])
+
+
+    p = (p1 - p0).reshape(3, -1) * ai_t
+
+    p = p + p0.reshape(3, -1)
+
+    p = np.round(p)
+
+    return p
 
 
 
@@ -60,15 +89,15 @@ def load_sample_cubes(original, l_fakes, l_ac, nCubeSize, iPart):
 #   rasterize_lines
 #
 
-def rasterize_lines(p):
+def rasterize_lines(p, nLength):
     l_l = []
 
     for x in p:
         l = get_line(x[::2], x[1::2])
-        assert l.shape[1] >= 16, f"Line is short: {l.shape[1]}"
+        assert l.shape[1] >= nLength, f"Line is short: {l.shape[1]}"
 
         l = np.swapaxes(l, 0, 1)
-        l = l[:16]
+        l = l[:nLength]
         l = l.astype(np.int32)
 
         l_l.append(l)
@@ -107,7 +136,7 @@ def get_random_trace_lines(num_samples):
 
         l_l.append(l)
 
-    anLines = rasterize_lines(p)
+    anLines = rasterize_lines(p, 16)
 
     return anLines
 

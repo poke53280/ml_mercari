@@ -22,17 +22,13 @@ from multiprocessing import Pool
 
 import numpy as np
 
+
 ####################################################################################
 #
 #   get_video_lines
 #
 
-def get_video_lines(x_max, y_max, z_max, face0, face1):
-
-    v_max = 3
-    max_permutations = v_max * v_max * v_max * v_max * (32 - 16)
-
-    num_samples = int (0.4 * max_permutations)
+def get_video_lines(x_max, y_max, z_max, face0, face1, v_max, num_samples):
 
     l_zFeature = [x for x in list(face0.keys()) if not "confidence" in x]
 
@@ -40,18 +36,28 @@ def get_video_lines(x_max, y_max, z_max, face0, face1):
 
     for zFeature in l_zFeature:
 
-        # print (f"Processing {zFeature}...")
-
         start = (*_get_integer_coords_single_feature(x_max, y_max, face0, zFeature), 0)
         end = (*_get_integer_coords_single_feature(x_max, y_max, face1, zFeature), 31)
 
-        start_x = start[0] + np.random.randint(-v_max, v_max + 1, size=num_samples)
-        start_y = start[1] + np.random.randint(-v_max, v_max + 1, size=num_samples)
-        start_z = np.random.randint(0, 32 - 16, size=num_samples)
+        start_x = start[0] 
+        start_y = start[1] 
 
-        end_x = end[0] + np.random.randint(-v_max, v_max + 1, size=num_samples)
-        end_y = end[1] + np.random.randint(-v_max, v_max + 1, size=num_samples)
+        start_z = 0
+        end_z = 16
+
+        end_x = end[0] 
+        end_y = end[1]
+
+
+        start_x = start_x + np.random.randint(-v_max, v_max + 1, size=num_samples)
+        start_y = start_y + np.random.randint(-v_max, v_max + 1, size=num_samples)
+        end_x = end_x + np.random.randint(-v_max, v_max + 1, size=num_samples)
+        end_y = end_y + np.random.randint(-v_max, v_max + 1, size=num_samples)
+
+        start_z = start_z + np.random.randint(0, 32 - 16, size=num_samples)
         end_z = start_z + 16
+
+        
         assert (end_z < 32).all()
 
         an_x = np.array([start_x, end_x]).T
@@ -108,7 +114,11 @@ def sample_single(video_path):
     x_max = video.shape[2]
     y_max = video.shape[1]
 
-    lines = get_video_lines(x_max, y_max, z_max, face0, face1)
+    v_max = 5
+    max_permutations = v_max * v_max * v_max * v_max * (32 - 16)
+    num_samples = int (0.4 * max_permutations)
+
+    lines = get_video_lines(x_max, y_max, z_max, face0, face1, v_max, num_samples)
 
     l_data = []
 
@@ -151,7 +161,11 @@ def sample_pair(video_real_path, video_fake_path):
     x_max = video_real.shape[2]
     y_max = video_real.shape[1]
 
-    lines = get_video_lines(x_max, y_max, z_max, face0, face1)
+    v_max = 5
+    max_permutations = v_max * v_max * v_max * v_max * (32 - 16)
+    num_samples = int (0.4 * max_permutations)
+
+    lines = get_video_lines(x_max, y_max, z_max, face0, face1, v_max, num_samples)
 
     l_data = []
 

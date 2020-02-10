@@ -109,7 +109,7 @@ def get_accumulated_stats_init():
 #   predict_single_file
 #
 
-def predict_single_file(m, x):
+def predict_single_file(m, x, isVerbose):
 
     d_f = get_feature_converter()
 
@@ -134,6 +134,9 @@ def predict_single_file(m, x):
 
     data = data.reshape(-1, 16, 3)
 
+    if isVerbose:
+        print (data[0])
+
     num_rows = data.shape[0]
     assert num_rows % len (d_f.keys()) == 0
 
@@ -149,7 +152,14 @@ def predict_single_file(m, x):
         print(err)
         return get_accumulated_stats_init()
 
+    if isVerbose:
+        print (lines_out[0])
+
     d_acc = get_accumulated_stats(lines_in, lines_out)
+
+    if isVerbose:
+        print (d_acc)
+
     return d_acc
 
 

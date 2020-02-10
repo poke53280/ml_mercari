@@ -20,6 +20,8 @@ if isKaggle:
 
 
 
+from mp4_frames import get_part_dir
+
 from mp4_frames import get_test_dir
 from mp4_frames import get_model_dir
 from mp4_frames import get_submission_dir
@@ -41,6 +43,10 @@ if isKaggle:
     os.chdir('/kaggle/working')
 
 input_dir = get_test_dir()
+
+#input_dir = get_part_dir(0)
+
+
 model_dir = get_model_dir()
 submission_dir = get_submission_dir()
 
@@ -51,7 +57,7 @@ l_files = list (sorted(input_dir.iterdir()))
 
 l_filenames = [str(x.name) for x in l_files]
 
-num_files = 0
+num_files = 3000
 
 
 if num_files == 0:
@@ -65,11 +71,13 @@ for i, x in enumerate(l_files[:num_files]):
     print (i)
 
     try:
-        d_res[str(x.name)] = predict_single_file(m1, x)
+        d_res[str(x.name)] = predict_single_file(m1, x, i < 3)
     except Exception as err:
         d_res[str(x.name)] = get_accumulated_stats_init()
     
 """c"""
+
+print("Done stage 1 prediction")
 
 df = pd.DataFrame(d_res).T
 
@@ -81,6 +89,8 @@ m_valid = ~m_invalid
 
 x_cols = [x for x in list (df.columns) if (x != "filename") and (x != "label")]
 
+print("Starting stage 2 prediction")
+
 label = m2.predict(df[x_cols])
 
 label[m_invalid] = 0.5
@@ -89,6 +99,7 @@ assert (label >= 0).all()
 
 df = df.assign(label = label)
 
+print("Done stage 2 prediction")
 
 sub=pd.DataFrame()
 
@@ -103,11 +114,12 @@ label = sub.label_sub.copy()
 
 label[m_got_value] = sub['label'][m_got_value]
 
-
 sub = sub.assign(label = label)
 sub = sub.drop('label_sub', axis = 1)
 
-sub.to_csv('submission.csv',index=False)
+sub.to_csv(get_submission_dir() / 'submission.csv',index=False)
+
+print("All done.")
 
 
 
