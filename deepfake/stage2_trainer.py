@@ -173,15 +173,14 @@ def train_stage2():
 
     model_dir = get_model_dir()
 
-    m = load_model(get_model_dir() / "my_model_l_mouth_rr.h5")
-
+    m = load_model(get_model_dir() / "model_l_mouth_rr.h5")
 
     input_dir = get_ready_data_dir()
 
     data = np.load(input_dir / "test_l_mouth.npy")
     df_meta = pd.read_pickle(input_dir / "test_meta.pkl")
 
-    data = preprocess_input(data.reshape(-1, 16, 3))
+    data = preprocess_input(data.reshape(-1, 32, 3))
 
     data_out = m.predict(data, verbose = 1, batch_size = 256)
 

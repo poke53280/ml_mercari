@@ -314,7 +314,18 @@ def find_two_consistent_faces(video):
 ####################################################################################
 #
 #   process
+
+
 #
+#   For all originals in input part. If there exists at least one associated fake, pick first/any fake and create:
+#       
+#     Line_Pair_p_<iPart>_<original>_<fake>.npy
+#          Same line by line for original/fake pair.
+#
+#     Line_Test_p_<iPart>_<original>_real.npy
+#     Line_Test_p_<iPart>_<fake>_fake.npy
+#
+
 
 def process(iPart):
 
@@ -332,30 +343,39 @@ def process(iPart):
 
         original =  dir / current[0]
         fake = dir / random.choice(current[1])
+
+        isPairFound = original.is_file() and fake.is_file()
         
-        if (original.is_file() and fake.is_file()):
-            data_train = sample_pair(original, fake)
-
-            if data_train is None:
-                print(f"Line_Pair_p_{iPart}_{str(original.stem)}_{str(fake.stem)}: No data.")
-                pass
-            else:
-                file_out = output_dir / f"Line_Pair_p_{iPart}_{str(original.stem)}_{str(fake.stem)}.npy"
-                np.save(file_out, data_train)
-
-
+        if (isPairFound):
+            data_pair = sample_pair(original, fake)
             data_test_real = sample_single(original)
             data_test_fake = sample_single(fake)
 
-            isValid = (data_test_real is not None) and (data_test_fake is not None)
+            if data_pair is None:
+                print(f"p_{iPart}: Line_Pair_p_{iPart}_{str(original.stem)}_{str(fake.stem)}: No data. Skipping.")
+                continue
 
-            if isValid:
-                file_real_out = output_dir / f"Line_Test_p_{iPart}_{str(original.stem)}_real.npy"
-                np.save(file_real_out, data_test_real)
+            if data_test_real is None:
+                print(f"p_{iPart}_o{str(original.stem)}_: test real sampling returned None. Skipping.")
+                continue
 
-                file_fake_out = output_dir / f"Line_Test_p_{iPart}_{str(fake.stem)}_fake.npy"
-                np.save(file_fake_out, data_test_fake)
 
+            if data_test_fake is None:
+                print(f"p_{iPart}_o{str(original.stem)}_: test fake sampling returned None. Skipping.")
+                continue
+                
+                
+            file_out = output_dir / f"Line_Pair_p_{iPart}_{str(original.stem)}_{str(fake.stem)}.npy"
+            np.save(file_out, data_pair)
+
+            file_real_out = output_dir / f"Line_Test_p_{iPart}_{str(original.stem)}_real.npy"
+            np.save(file_real_out, data_test_real)
+
+            file_fake_out = output_dir / f"Line_Test_p_{iPart}_{str(fake.stem)}_fake.npy"
+            np.save(file_fake_out, data_test_fake)
+
+        else:
+            print(f"p_{iPart}: No fake found for original. Skipping original.")
 
 
 ####################################################################################
@@ -367,13 +387,14 @@ if __name__ == '__main__':
     outdir_test = get_output_dir()
     assert outdir_test.is_dir()
 
+    # Check access ok
     file_test = outdir_test / "test_out_cubes.txt"
     nPing = file_test.write_text("ping")
     assert nPing == 4
 
     l_tasks = list (range(50))
 
-    num_threads = 50
+    num_threads = 30
 
     print(f"Launching on {num_threads} thread(s)")
 

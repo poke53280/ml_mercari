@@ -7,12 +7,17 @@ from featureline import get_feature_converter
 
 import pandas as pd
 
+
 ####################################################################################
 #
 #   create_test_merge
 #
 
-def create_test_merge(l_test_parts):
+def create_test_merge(iPartMin, iPartMax):
+
+    assert iPartMax > iPartMin
+
+    l_test_parts = list (range(iPartMin, iPartMax))
 
     num_length = 32
 
@@ -87,11 +92,14 @@ def create_test_merge(l_test_parts):
         if len (l_data_test[zFeature]) > 0:
             anDataTest = np.concatenate(l_data_test[zFeature])
             assert anDataTest.shape[0] == num_meta
-            np.save(output_dir / f"test_{zFeature}.npy", anDataTest)
+            np.save(output_dir / f"test_{zFeature}_p_{iPartMin}_p_{iPartMax}.npy", anDataTest)
+        else:
+            print(f"No data: test_{zFeature}_p_{iPartMin}_p_{iPartMax}")
+            
 
     df_meta = pd.DataFrame({'iPart' : l_iPart, 'video': l_zVideo, 'y': l_y})
 
-    df_meta.to_pickle(output_dir / f"test_meta.pkl")
+    df_meta.to_pickle(output_dir / f"test_meta_p_{iPartMin}_p_{iPartMax}.pkl")
 
 
 ####################################################################################
@@ -99,7 +107,12 @@ def create_test_merge(l_test_parts):
 #   create_train_merge
 #
 
-def create_train_merge(l_train_parts):
+def create_train_merge(iPartMin, iPartMax):
+
+    assert iPartMax > iPartMin
+
+    l_train_parts = list (range(iPartMin, iPartMax))
+
 
     num_length = 32
 
@@ -161,7 +174,7 @@ def create_train_merge(l_train_parts):
     for zFeature in list (d_f.keys()):
         if len (l_data_train[zFeature]) > 0:
             anDataTrain = np.concatenate(l_data_train[zFeature])
-            np.save(output_dir / f"train_{zFeature}.npy", anDataTrain)
+            np.save(output_dir / f"train_{zFeature}_p_{iPartMin}_p_{iPartMax}.npy", anDataTrain)
 
             
 
