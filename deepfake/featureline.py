@@ -344,6 +344,17 @@ def process(iPart):
         original =  dir / current[0]
         fake = dir / random.choice(current[1])
 
+        file_pair_out = output_dir / f"Line_Pair_p_{iPart}_{str(original.stem)}_{str(fake.stem)}.npy"
+        file_real_out = output_dir / f"Line_Test_p_{iPart}_{str(original.stem)}_real.npy"
+        file_fake_out = output_dir / f"Line_Test_p_{iPart}_{str(fake.stem)}_fake.npy"
+
+        isExisting = file_pair_out.is_file() and file_real_out.is_file() and file_fake_out.is_file()
+
+        if isExisting:
+            print(f"p_{iPart}_{str(original.stem)}: Already done")
+            continue
+
+
         isPairFound = original.is_file() and fake.is_file()
         
         if (isPairFound):
@@ -364,14 +375,16 @@ def process(iPart):
                 print(f"p_{iPart}_o{str(original.stem)}_: test fake sampling returned None. Skipping.")
                 continue
                 
-                
-            file_out = output_dir / f"Line_Pair_p_{iPart}_{str(original.stem)}_{str(fake.stem)}.npy"
-            np.save(file_out, data_pair)
+            np.save(file_pair_out, data_pair)
 
-            file_real_out = output_dir / f"Line_Test_p_{iPart}_{str(original.stem)}_real.npy"
+            np.save(file_pair_out, None)
+
+            an = np.load(file_pair_out)
+
+            
             np.save(file_real_out, data_test_real)
 
-            file_fake_out = output_dir / f"Line_Test_p_{iPart}_{str(fake.stem)}_fake.npy"
+            
             np.save(file_fake_out, data_test_fake)
 
         else:
