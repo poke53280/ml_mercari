@@ -13,6 +13,9 @@ import pandas as pd
 #
 
 def create_test_merge(l_test_parts):
+
+    num_length = 32
+
     input_dir = get_output_dir()    
     assert input_dir.is_dir()
 
@@ -37,16 +40,16 @@ def create_test_merge(l_test_parts):
     for x in l_files:
         l_x = str(x.stem).split("_")
 
-        isTestFile = (len (l_x) == 5) and (l_x[2] == 'Test')
+        isTestFile = (len (l_x) == 6) and (l_x[1] == 'Test')
 
         if isTestFile:
             pass
         else:
             continue
 
-        iPart = int (l_x[1])
-        video = l_x[3]
-        y = l_x[4]
+        iPart = int (l_x[3])
+        video = l_x[4]
+        y = l_x[5]
 
         isCollect = (iPart in l_test_parts)
 
@@ -61,7 +64,7 @@ def create_test_merge(l_test_parts):
 
         data = data[:, 1:]
 
-        data = data.reshape(-1, 16, 3)
+        data = data.reshape(-1, num_length, 3)
 
         num_rows = data.shape[0]
         assert num_rows % len (d_f.keys()) == 0
@@ -98,6 +101,9 @@ def create_test_merge(l_test_parts):
 
 def create_train_merge(l_train_parts):
 
+    num_length = 32
+
+
     input_dir = get_output_dir()    
     assert input_dir.is_dir()
 
@@ -118,16 +124,16 @@ def create_train_merge(l_train_parts):
 
         l_x = str(x.stem).split("_")
 
-        isTrainFile = (len (l_x) == 5) and (l_x[2] == 'Train')
+        isTrainFile = (len (l_x) == 6) and (l_x[1] == 'Pair')
     
         if isTrainFile:
             pass
         else:
             continue
 
-        iPart = int (l_x[1])
-        original = l_x[3]
-        fake = l_x[4]
+        iPart = int (l_x[3])
+        original = l_x[4]
+        fake = l_x[5]
 
         isCollect = (iPart in l_train_parts)
 
@@ -142,7 +148,7 @@ def create_train_merge(l_train_parts):
 
         data = data[:, 1:]
 
-        data = data.reshape(-1, 32, 3)
+        data = data.reshape(-1, num_length * 2, 3) 
     
         for zFeature in list (d_f.keys()):
             iF = d_f[zFeature]

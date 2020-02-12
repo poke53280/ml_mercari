@@ -90,6 +90,9 @@
     <Compile Include="deepfake\idepath.py" />
     <Compile Include="deepfake\image_grid.py" />
     <Compile Include="deepfake\image_p.py" />
+    <Compile Include="deepfake\inception.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\line_sampler.py" />
     <Compile Include="deepfake\mp4_frames.py" />
     <Compile Include="deepfake\predictor.py">

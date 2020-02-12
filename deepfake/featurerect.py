@@ -233,6 +233,8 @@ def get_centered_line(p0_l, p0_r, x_max, y_max, W):
     t_x_min = - p0_c[0]/ cHalfVector[0]
     t_x_max = (x_max - p0_c[0])/ cHalfVector[0]
 
+
+    # DIVIDE BY ZERO ERROR
     t_y_min = - p0_c[1]/ cHalfVector[1]
     t_y_max = (y_max - p0_c[1])/ cHalfVector[1]
 
@@ -338,8 +340,6 @@ if __name__ == '__main__':
 
 
 
-aturerect.py:236: RuntimeWarning: divide by zero encountered in float_scalars
-  t_y_min = - p0_c[1]/ cHalfVector[1]
-featurerect.py:237: RuntimeWarning: divide by zero encountered in double_scalars
+
 
 

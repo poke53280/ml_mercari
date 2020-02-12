@@ -16,6 +16,7 @@ from mp4_frames import get_ready_data_dir
 from mp4_frames import get_model_dir
 import datetime
 
+import argparse
 
 ####################################################################################
 #
@@ -72,22 +73,25 @@ def get_model(num_timesteps):
 #   train
 #
 
-def train():
+def train(zFeature, nLimit):
 
     input_dir = get_ready_data_dir()
 
-    # Todo: Test and predict as far as possible on unseen faces and scenes.
-    # Here, most frames are seen in train and memorization can produce artifically good results.
-    # Testing on fully different data will likely show eventual overfitting on known features.
+    m_dir = get_model_dir()
 
-    anTrain = np.load(input_dir / "train_l_mouth.npy")
+
+    anTrain = np.load(input_dir / f"train_{zFeature}.npy")
 
     np.random.shuffle(anTrain)
 
+    if nLimit > 0:
+        anTrain = anTrain[:nLimit]
+
     anTrain = preprocess_input(anTrain)
 
-    sequence_real = anTrain[:, :16, :]
-    sequence_fake = anTrain[:, 16:, :]
+    sequence_real = anTrain[:, :32, :]
+    sequence_fake = anTrain[:, 32:, :]
+  
 
     num_samples = anTrain.shape[0]
 
@@ -97,52 +101,59 @@ def train():
     num_timesteps = sequence_real.shape[1]
 
     model = get_model(num_timesteps)
-         
-    # 4 or 5 on batch 256 0.0042 threshold with less daa
-    model.fit(sequence_real[:num_train], sequence_real[:num_train], epochs=4, batch_size=256, verbose=1)
-
-    m_dir = get_model_dir()
-    model.save(m_dir / 'm1_256-128-12_l_mouth_rr.h5')
-
-
-    # 0.0061 after 2 epochs         b 56, 128 -  32 - 4
-    # 0.0062 after 2-3  epochs      b256, 256 - 128 - 4   (~ 2 hrs)
-    # 0.0056 after 5 epochs                                  6 hrs)
-
-    #  256 - 12 - 10
-    #
+    
+    for iEpoch in range(5):
+        model.fit(sequence_real[:num_train], sequence_real[:num_train], epochs=1, batch_size=256, verbose=1)
+        rms = reconstruction_error(model, sequence_real[num_train:])
+        print(f"Reconstuction error rms = {rms}")
 
     
+    model.save(m_dir / f"model_{zFeature}_rr.h5")
+   
 
-    num_test = 2000
-    assert num_test <= num_train
-    assert num_test <= num_test
-
-
-    # On train chunk
-    reconstruction_error(model, sequence_real[:num_test])
-
-    # on test chunk
-    reconstruction_error(model, sequence_real[num_train:num_train + num_test])
-
-    # shuffle test chunk for new test chunk sample
-    np.random.shuffle(sequence_real[num_train:])
-    reconstruction_error(model, sequence_real[num_train:num_train + num_test])
-
-
-    m_dir = get_model_dir()
-    model.save(m_dir / 'my_model_l_mouth_rr.h5')
-
-    #model.fit(sequence_real, sequence_fake, epochs=1, batch_size=256, verbose=1)
-    #model.save(p / 'my_model_rf.h5')
-
-
-    #model.fit(sequence_fake, sequence_real, epochs=1, batch_size=256, verbose=1)
-    #model.save(p / 'my_model_fr.h5')
+    model = get_model(num_timesteps)
+    model.fit(sequence_fake, sequence_real, epochs=5, batch_size=256, verbose=1)
+    model.save(m_dir/ f"model_{zFeature}_fr.h5")
 
 
     model = get_model(num_timesteps)
     model.fit(sequence_fake[:num_train], sequence_fake[:num_train], epochs=5, batch_size=256, verbose=1)
-    model.save(p / 'my_model_ff.h5')
+    model.save(m_dir / f"model_{zFeature}_ff.h5")
 
-    # 0.0031 after 5 epochs                                  6 hrs)
+  
+
+
+#################################################################################
+#
+#   main_get_art_arg
+#
+
+def main_get_art_arg():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--feature", "-f", help="facial feature dataset", required = True)
+    parser.add_argument("--limit", "-l", help="data cap. 0: no limit", required = True)
+
+    args = parser.parse_args()
+
+    zFeature = args.feature
+
+    nLimit = int(args.limit)
+
+    print(zFeature)
+
+    return zFeature, nLimit
+
+
+#################################################################################
+#
+#   __main__
+#
+
+
+if __name__ == '__main__':
+    zFeature, nLimit = main_get_art_arg()
+    train(zFeature, nLimit)
+
+
+
+

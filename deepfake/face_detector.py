@@ -17,7 +17,6 @@ from mp4_frames import read_video
 
 from image_grid import GetGrid2DBB
 from image_grid import GetSubVolume2D
-from line_sampler import get_random_trace_lines
 from line_sampler import sample_cube
 
 
