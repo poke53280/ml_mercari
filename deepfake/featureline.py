@@ -90,6 +90,25 @@ def get_feature_converter():
 
 ####################################################################################
 #
+#   get_error_line
+#
+
+def get_error_line():
+    anZero = np.zeros(10, np.uint8)
+    return anZero
+
+
+####################################################################################
+#
+#   is_error_line
+#
+
+def is_error_line(anData):
+    return anData.shape == (10, )
+
+
+####################################################################################
+#
 #   sample_single
 #
 
@@ -101,17 +120,17 @@ def sample_single(mtcnn_detector, video_path):
     video = read_video(video_path, 32)
 
     if video is None:
-        return None
+        return get_error_line()
 
     if video.shape[0] == 0:
-        return None
+        return get_error_line()
 
     (face0, face1) = find_two_consistent_faces(mtcnn_detector, video)
 
     invalid = (face0 is None) or (face1 is None)
 
     if invalid:
-        return None
+        return get_error_line()
 
     z_max = video.shape[0]
     x_max = video.shape[2]
@@ -159,7 +178,7 @@ def sample_pair(mtcnn_detector, video_real_path, video_fake_path):
     invalid = (face0 is None) or (face1 is None)
 
     if invalid:
-        return None
+        return get_error_line()
 
     z_max = video_real.shape[0]
     x_max = video_real.shape[2]
@@ -315,7 +334,7 @@ def find_two_consistent_faces(mtcnn_detector, video):
 
 
 #
-#   For all originals in input part. If there exists at least one associated fake, pick first/any fake and create:
+#   For all originals in input part. If there exists at least one associated fake, pick first fake and create:
 #       
 #     Line_Pair_p_<iPart>_<original>_<fake>.npy
 #          Same line by line for original/fake pair.
@@ -324,8 +343,44 @@ def find_two_consistent_faces(mtcnn_detector, video):
 #     Line_Test_p_<iPart>_<fake>_fake.npy
 #
 
+def process(t):
 
-def process(iPart):
+    iPart       = t[0]
+    original    = t[1]
+    fake        = t[2]
+
+    print(f"Processing p_{iPart}_{str(original.stem)}_{str(fake.stem)}")
+
+    output_dir = get_output_dir()
+
+    file_pair_out = output_dir / f"Line_Pair_p_{iPart}_{str(original.stem)}_{str(fake.stem)}.npy"
+    file_real_out = output_dir / f"Line_Test_p_{iPart}_{str(original.stem)}_real.npy"
+    file_fake_out = output_dir / f"Line_Test_p_{iPart}_{str(fake.stem)}_fake.npy"
+
+    isExisting = file_pair_out.is_file() and file_real_out.is_file() and file_fake_out.is_file()
+
+    assert not isExisting
+
+    data_pair = sample_pair(original, fake)
+    data_test_real = sample_single(original)
+    data_test_fake = sample_single(fake)
+
+    # functions return one zeroed out line in case of errors.
+
+    assert data_pair.shape[0] > 0 and data_test_real.shape[0] > 0 and data_test_fake.shape[0] > 0
+                
+    np.save(file_pair_out, data_pair)
+    np.save(file_real_out, data_test_real)
+    np.save(file_fake_out, data_test_fake)
+
+
+####################################################################################
+#
+#   prepare_process
+
+def prepare_process(iPart):
+
+    # Todo prep all (original, fake) for all parts. Issue tasks for all pairs and mp on those, not the iPart.
 
     l_d = read_metadata(iPart)
     dir = get_part_dir(iPart)
@@ -335,16 +390,36 @@ def process(iPart):
 
     num_originals = len(l_d)
 
+<<<<<<< HEAD
     
 
     for idx_key in range(num_originals):
+=======
+    l_part_task = []
+>>>>>>> 42390eca5600a6b1993ecd9b666d792c68573d8f
 
-        print(f"p_{iPart}: Processing original {idx_key + 1} / {num_originals}")
+    for idx_key in range(num_originals):
 
         current = l_d[idx_key]
 
         original =  dir / current[0]
-        fake = dir / random.choice(current[1])
+        
+        # Pick first fake. Todo: Can pick other fakes for more data. (one set per epoch)
+        num_fakes = len (current[1])
+
+        if num_fakes == 0:
+            print(f"p_{iPart}_{str(original.stem)}: No associated fakes. Skipping.")
+            continue
+
+        fake = dir / current[1][0]
+
+        isPairFound = original.is_file() and fake.is_file()
+
+        if isPairFound:
+            pass
+        else:
+            print(f"p_{iPart}: Original and/or fake not found. Skipping.")
+            continue
 
         file_pair_out = output_dir / f"Line_Pair_p_{iPart}_{str(original.stem)}_{str(fake.stem)}.npy"
         file_real_out = output_dir / f"Line_Test_p_{iPart}_{str(original.stem)}_real.npy"
@@ -353,10 +428,12 @@ def process(iPart):
         isExisting = file_pair_out.is_file() and file_real_out.is_file() and file_fake_out.is_file()
 
         if isExisting:
-            print(f"p_{iPart}_{str(original.stem)}: Already done")
+            # print(f"p_{iPart}_{str(original.stem)}: Already done")
             continue
 
+        l_part_task.append( (iPart, original, fake))
 
+<<<<<<< HEAD
         isPairFound = original.is_file() and fake.is_file()
         
         if (isPairFound):
@@ -380,17 +457,13 @@ def process(iPart):
             np.save(file_pair_out, data_pair)
 
             np.save(file_pair_out, None)
+=======
+>>>>>>> 42390eca5600a6b1993ecd9b666d792c68573d8f
 
-            an = np.load(file_pair_out)
+    return l_part_task        
+
 
             
-            np.save(file_real_out, data_test_real)
-
-            
-            np.save(file_fake_out, data_test_fake)
-
-        else:
-            print(f"p_{iPart}: No fake found for original. Skipping original.")
 
 
 ####################################################################################
@@ -407,9 +480,13 @@ if __name__ == '__main__':
     nPing = file_test.write_text("ping")
     assert nPing == 4
 
-    l_tasks = list (range(50))
+    l_tasks = []
 
-    num_threads = 30
+    for x in range(50):
+        l_part_task = prepare_process(x)
+        l_tasks.extend(l_part_task)
+
+    num_threads = 20
 
     print(f"Launching on {num_threads} thread(s)")
 
