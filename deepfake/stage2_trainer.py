@@ -1,5 +1,5 @@
 
-
+import gc
 import numpy as np
 import pandas as pd
 import pathlib
@@ -14,6 +14,8 @@ from featureline import get_feature_converter
 from dae_lstm import preprocess_input
 
 from featureline import sample_single
+from featureline import get_error_line
+from featureline import is_error_line
 
 import lightgbm as lgbm
 
@@ -123,16 +125,16 @@ def predict_single_file(m, x, isVerbose):
         data = sample_single(x)
     except Exception as err:
         print(err)
-        data = None
+        data = get_error_line()
 
-    if data is None:
+    if is_error_line(data):
         return get_accumulated_stats_init()
 
     anFeature = data[:, 0]
 
     data = data[:, 1:]
 
-    data = data.reshape(-1, 16, 3)
+    data = data.reshape(-1, 32, 3)
 
     if isVerbose:
         print (data[0])
@@ -145,6 +147,11 @@ def predict_single_file(m, x, isVerbose):
     m_correct_feature = (anFeature == iF)
 
     lines_in = preprocess_input(data[m_correct_feature])
+
+    del data
+    gc.collect()
+
+    # Todo check out (possible need for) predict on batch
 
     try:
         lines_out = m.predict(lines_in)
