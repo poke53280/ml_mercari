@@ -133,8 +133,6 @@ def train(trainpath, testpath, nLimit):
     
     model.save(m_dir / f"model_{trainpath.stem}_{testpath.stem}_ff.h5")
 
-  
-
 
 #################################################################################
 #
@@ -166,15 +164,16 @@ def main_get_art_arg():
     return trainpath, testpath, nLimit
 
 
+
 #################################################################################
 #
 #   __main__
 #
 
-
 if __name__ == '__main__':
     trainpath, testpath, nLimit = main_get_art_arg()
     train(trainpath, testpath, nLimit)
+
 
 
 

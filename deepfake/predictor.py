@@ -1,4 +1,5 @@
 
+import gc
 import os
 import pathlib
 import numpy as np
@@ -31,12 +32,15 @@ from dae_lstm import reconstruction_error
 from stage2_trainer import predict_single_file
 from stage2_trainer import get_accumulated_stats_init
 
-from mtcnn.mtcnn import MTCNN
+from face_detector import MTCNNDetector
+
+
+
+
 
 
 print(f"Tensorflow {tf.__version__}")
 print(f"Keras {keras.__version__}")
-
 
 
 if isKaggle:
@@ -50,15 +54,17 @@ input_dir = get_test_dir()
 model_dir = get_model_dir()
 submission_dir = get_submission_dir()
 
-m1 = load_model(get_model_dir() / "my_model_l_mouth_rr.h5")
+m1 = load_model(get_model_dir() / "model_l_mouth_rr.h5")
 m2 = Booster(model_file = str(get_model_dir() / "m2.txt"))
+
+
+mtcnn_detector = MTCNNDetector()
 
 l_files = list (sorted(input_dir.iterdir()))
 
 l_filenames = [str(x.name) for x in l_files]
 
-num_files = 3000
-
+num_files = 0
 
 if num_files == 0:
     num_files = len (l_files)
@@ -70,12 +76,17 @@ d_res = {}
 for i, x in enumerate(l_files[:num_files]):
     print (i)
 
+    gc.collect()
+
     try:
-        d_res[str(x.name)] = predict_single_file(m1, x, i < 3)
+        d_res[str(x.name)] = predict_single_file(mtcnn_detector, m1, x, i < 3)
     except Exception as err:
         d_res[str(x.name)] = get_accumulated_stats_init()
     
 """c"""
+
+del mtcnn_detector
+gc.collect()
 
 print("Done stage 1 prediction")
 

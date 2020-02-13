@@ -8,6 +8,7 @@ from sklearn.metrics import mean_squared_error
 
 from mp4_frames import get_ready_data_dir
 from mp4_frames import get_model_dir
+from mp4_frames import get_pred0_dir
 
 from featureline import get_feature_converter
 
@@ -109,7 +110,7 @@ def get_accumulated_stats_init():
 #   predict_single_file
 #
 
-def predict_single_file(m, x, isVerbose):
+def predict_single_file(mtcnn_detector, m1, x, isVerbose):
 
     d_f = get_feature_converter()
 
@@ -120,7 +121,7 @@ def predict_single_file(m, x, isVerbose):
         return get_accumulated_stats_init()
 
     try:
-        data = sample_single(x)
+        data = sample_single(mtcnn_detector, x)
     except Exception as err:
         print(err)
         data = None
@@ -132,7 +133,7 @@ def predict_single_file(m, x, isVerbose):
 
     data = data[:, 1:]
 
-    data = data.reshape(-1, 16, 3)
+    data = data.reshape(-1, 32, 3)
 
     if isVerbose:
         print (data[0])
@@ -147,7 +148,7 @@ def predict_single_file(m, x, isVerbose):
     lines_in = preprocess_input(data[m_correct_feature])
 
     try:
-        lines_out = m.predict(lines_in)
+        lines_out = m1.predict(lines_in)
     except Exception as err:
         print(err)
         return get_accumulated_stats_init()
@@ -170,28 +171,59 @@ def predict_single_file(m, x, isVerbose):
 
 def train_stage2():
 
+    zModel = "rr"
 
     model_dir = get_model_dir()
 
-    m = load_model(get_model_dir() / "model_l_mouth_rr.h5")
+    m = load_model(get_model_dir() / f"model_l_mouth_{zModel}.h5")
 
     input_dir = get_ready_data_dir()
+    output_dir = get_pred0_dir()
 
-    data = np.load(input_dir / "test_l_mouth.npy")
-    df_meta = pd.read_pickle(input_dir / "test_meta.pkl")
+    # 0 to disable
+    num_predict_cut = 0
+
+    data = np.load(input_dir / "test_l_mouth_p_41_p_44.npy")
+    df_meta = pd.read_pickle(input_dir / "test_meta_p_41_p_44.pkl")
+
+    assert data.shape[0] == df_meta.shape[0]
+
+    if num_predict_cut == 0:
+        num_predict_cut = data.shape[0]
+
+
+    data = data[:num_predict_cut]
+    df_meta = df_meta[:num_predict_cut]
 
     data = preprocess_input(data.reshape(-1, 32, 3))
 
     data_out = m.predict(data, verbose = 1, batch_size = 256)
 
+    rms = mean_squared_error(data_out.reshape(-1), data.reshape(-1))
 
-    np.save(input_dir / "test_l_mouth_reconstruction.npy", data_out)
+    print (f"RMS = {rms}")
 
-    data_out = np.load(input_dir / "test_l_mouth_reconstruction.npy")
+    np.save(output_dir / f"pred_l_mouth_p_41_p_44_{zModel}.npy", data_out)
 
 
-    ##################### df meta preprocessing ################
+####################################################################################
+#
+#   run_stage2
+#
 
+def run_stage2():
+    input_dir = get_ready_data_dir()
+    pred_dir = get_pred0_dir()
+
+    data = np.load(input_dir / "test_l_mouth_p_41_p_44.npy")
+    data = preprocess_input(data.reshape(-1, 32, 3))
+
+    df_meta = pd.read_pickle(input_dir / "test_meta_p_41_p_44.pkl")
+
+    data_out = np.load(pred_dir / "pred_l_mouth_p_41_p_44_rr.npy")
+
+    assert data.shape[0] == df_meta.shape[0]
+    assert data.shape == data_out.shape
 
     zVideo = df_meta['iPart'].astype('str') + df_meta['video']
 
@@ -251,7 +283,7 @@ def train_stage2():
     params = {
         'objective' :'binary',
         'learning_rate' : 0.01,
-        'num_leaves' : 3,
+        'num_leaves' : 5,
         'feature_fraction': 0.64, 
         'bagging_fraction': 0.8, 
         'bagging_freq':1,
@@ -263,9 +295,11 @@ def train_stage2():
     d_train = lgbm.Dataset(X_train, y_train)
     d_valid = lgbm.Dataset(X_test, y_test)
     
-    m2 = lgbm.train(params, d_train, 30, valid_sets=[d_train, d_valid], verbose_eval=1)
+    m2 = lgbm.train(params, d_train, 290, valid_sets=[d_train, d_valid], verbose_eval=1)
 
     m2.save_model(str(get_model_dir() / 'm2.txt'))
+
+
 
 
 

@@ -93,7 +93,7 @@ def get_feature_converter():
 #   sample_single
 #
 
-def sample_single(video_path):
+def sample_single(mtcnn_detector, video_path):
 
     num_frames = 32
     v_max = 9
@@ -106,7 +106,7 @@ def sample_single(video_path):
     if video.shape[0] == 0:
         return None
 
-    (face0, face1) = find_two_consistent_faces(video)
+    (face0, face1) = find_two_consistent_faces(mtcnn_detector, video)
 
     invalid = (face0 is None) or (face1 is None)
 
@@ -146,7 +146,7 @@ def sample_single(video_path):
 #   sample_pair
 #
 
-def sample_pair(video_real_path, video_fake_path):
+def sample_pair(mtcnn_detector, video_real_path, video_fake_path):
 
     num_frames = 32
     v_max = 9
@@ -154,7 +154,7 @@ def sample_pair(video_real_path, video_fake_path):
     video_real = read_video(video_real_path, num_frames)
     video_fake = read_video(video_fake_path, num_frames)
 
-    (face0, face1) = find_two_consistent_faces(video_real)
+    (face0, face1) = find_two_consistent_faces(mtcnn_detector, ideo_real)
 
     invalid = (face0 is None) or (face1 is None)
 
@@ -200,12 +200,10 @@ def sample_pair(video_real_path, video_fake_path):
 #   find_two_consistent_faces
 #
 
-def find_two_consistent_faces(video):
+def find_two_consistent_faces(mtcnn_detector, video):
 
-    m = MTCNNDetector()
-
-    l_faces0 = m.detect(video[0])
-    l_faces1 = m.detect(video[31])
+    l_faces0 = mtcnn_detector.detect(video[0])
+    l_faces1 = mtcnn_detector.detect(video[31])
 
 
     l_bb_min = []
@@ -333,7 +331,11 @@ def process(iPart):
     dir = get_part_dir(iPart)
     output_dir = get_output_dir()
 
+    mtcnn_detector = MTCNNDetector()
+
     num_originals = len(l_d)
+
+    
 
     for idx_key in range(num_originals):
 
@@ -358,9 +360,9 @@ def process(iPart):
         isPairFound = original.is_file() and fake.is_file()
         
         if (isPairFound):
-            data_pair = sample_pair(original, fake)
-            data_test_real = sample_single(original)
-            data_test_fake = sample_single(fake)
+            data_pair = sample_pair(mtcnn_detector, original, fake)
+            data_test_real = sample_single(mtcnn_detector, original)
+            data_test_fake = sample_single(mtcnn_detector, fake)
 
             if data_pair is None:
                 print(f"p_{iPart}: Line_Pair_p_{iPart}_{str(original.stem)}_{str(fake.stem)}: No data. Skipping.")
