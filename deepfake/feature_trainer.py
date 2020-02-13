@@ -4,6 +4,7 @@ import numpy as np
 from mp4_frames import get_output_dir
 from mp4_frames import get_ready_data_dir
 from featureline import get_feature_converter
+from featureline import is_error_line
 
 import pandas as pd
 
@@ -64,6 +65,9 @@ def create_test_merge(iPartMin, iPartMax):
             continue
 
         data = np.load(x)
+
+        if is_error_line(data):
+            continue
 
         anFeature = data[:, 0]
 
@@ -156,6 +160,9 @@ def create_train_merge(iPartMin, iPartMax):
             continue
 
         data = np.load(x)
+
+        if is_error_line(data):
+            continue
 
         anFeature = data[:, 0]
 

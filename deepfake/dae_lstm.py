@@ -103,6 +103,9 @@ def train(trainpath, testpath, nLimit):
     model = get_model(num_timesteps)
     
     for iEpoch in range(6):
+        # Todo reshuffle anTrain for each epoch.
+        # Todo provide new real /fake<n> set for each epoch.
+
         model.fit(train_real, train_real, epochs=1, batch_size=256, verbose=1)
 
         data_p = model.predict(test_real)
