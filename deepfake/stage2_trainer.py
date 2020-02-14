@@ -109,10 +109,10 @@ def get_accumulated_stats_init():
 
 ####################################################################################
 #
-#   predict_single_file
+#   predict_stage1_single_file
 #
 
-def predict_single_file(mtcnn_detector, m1, x, isVerbose):
+def predict_stage1_single_file(mtcnn_detector, m1, x, isVerbose):
 
     d_f = get_feature_converter()
 
@@ -123,7 +123,7 @@ def predict_single_file(mtcnn_detector, m1, x, isVerbose):
         return get_accumulated_stats_init()
 
     try:
-        data = sample_single(mtcnn_detector, x)
+        data = sample_single(mtcnn_detector, x, 0.3)
     except Exception as err:
         print(err)
         data = get_error_line()
@@ -173,34 +173,35 @@ def predict_single_file(mtcnn_detector, m1, x, isVerbose):
 
 ####################################################################################
 #
-#   train_stage2
+#   predict_stage1
+#
+#
+# e.g. predict_stage1("l_mouth", "rr", 0, 1)
 #
 
-def train_stage2():
-
-    zModel = "rr"
+def predict_stage1(zFeature, zModel_type, iPartMin, iPartMax):
 
     model_dir = get_model_dir()
-
-    m = load_model(get_model_dir() / f"model_l_mouth_{zModel}.h5")
-
     input_dir = get_ready_data_dir()
     output_dir = get_pred0_dir()
 
-    # 0 to disable
-    num_predict_cut = 0
 
-    data = np.load(input_dir / "test_l_mouth_p_41_p_44.npy")
-    df_meta = pd.read_pickle(input_dir / "test_meta_p_41_p_44.pkl")
+    modelfile = get_model_dir() / f"model_{zFeature}_{zModel_type}.h5"
+    assert modelfile.is_file()
+
+    data_file = input_dir / f"test_{zFeature}_p_{iPartMin}_p_{iPartMax}.npy"
+    assert data_file.is_file()
+
+    meta_file = input_dir / f"test_meta_p_{iPartMin}_p_{iPartMax}.pkl"
+    assert meta_file.is_file()
+
+    output_file = output_dir / f"pred_{zFeature}_p_{iPartMin}_p_{iPartMax}_{zModel_type}.npy"
+
+    m = load_model(modelfile)
+    data = np.load(data_file)
+    df_meta = pd.read_pickle(meta_file)
 
     assert data.shape[0] == df_meta.shape[0]
-
-    if num_predict_cut == 0:
-        num_predict_cut = data.shape[0]
-
-
-    data = data[:num_predict_cut]
-    df_meta = df_meta[:num_predict_cut]
 
     data = preprocess_input(data.reshape(-1, 32, 3))
 
@@ -210,27 +211,43 @@ def train_stage2():
 
     print (f"RMS = {rms}")
 
-    np.save(output_dir / f"pred_l_mouth_p_41_p_44_{zModel}.npy", data_out)
+    np.save(output_file, data_out)
 
 
 ####################################################################################
 #
-#   run_stage2
+#   train_stage2
 #
 
-def run_stage2():
+# e.g. train_stage2("l_mouth", "rr", 0, 1)
+
+def train_stage2(zFeature, zModel_type, iPartMin, iPartMax):
+
+
     input_dir = get_ready_data_dir()
     pred_dir = get_pred0_dir()
 
-    data = np.load(input_dir / "test_l_mouth_p_41_p_44.npy")
+    data_file = input_dir / f"test_{zFeature}_p_{iPartMin}_p_{iPartMax}.npy"
+    assert data_file.is_file()
+
+    meta_file = input_dir / f"test_meta_p_{iPartMin}_p_{iPartMax}.pkl"
+    assert meta_file.is_file()
+
+    prediction_file = output_dir / f"pred_{zFeature}_p_{iPartMin}_p_{iPartMax}_{zModel_type}.npy"
+    assert prediction_file.is_file()
+
+    m2_file = model_dir / f"m2_{zFeature}_p_{iPartMin}_p_{iPartMax}_{zModel_type}.txt"
+
+
+    data = np.load(data_file)
     data = preprocess_input(data.reshape(-1, 32, 3))
 
-    df_meta = pd.read_pickle(input_dir / "test_meta_p_41_p_44.pkl")
+    df_meta = pd.read_pickle(meta_file)
 
-    data_out = np.load(pred_dir / "pred_l_mouth_p_41_p_44_rr.npy")
+    data_p = np.load(prediction_file)
 
     assert data.shape[0] == df_meta.shape[0]
-    assert data.shape == data_out.shape
+    assert data.shape == data_p.shape
 
     zVideo = df_meta['iPart'].astype('str') + df_meta['video']
 
@@ -256,7 +273,7 @@ def run_stage2():
         y = df_meta[m_id].iloc[0].y
 
         lines_in = data[m_id]
-        lines_out = data_out[m_id]
+        lines_out = data_p[m_id]
 
         d_acc = get_accumulated_stats(lines_in, lines_out)
         d_acc['y'] = y
@@ -304,7 +321,8 @@ def run_stage2():
     
     m2 = lgbm.train(params, d_train, 290, valid_sets=[d_train, d_valid], verbose_eval=1)
 
-    m2.save_model(str(get_model_dir() / 'm2.txt'))
+    _ = m2.save_model(str(m2_file))
+
 
 
 

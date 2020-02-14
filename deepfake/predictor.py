@@ -20,7 +20,6 @@ if isKaggle:
     os.chdir('/kaggle/input/pythoncode')
 
 
-
 from mp4_frames import get_part_dir
 
 from mp4_frames import get_test_dir
@@ -29,13 +28,10 @@ from mp4_frames import get_submission_dir
 
 from dae_lstm import preprocess_input
 from dae_lstm import reconstruction_error
-from stage2_trainer import predict_single_file
+from stage2_trainer import predict_stage1_single_file
 from stage2_trainer import get_accumulated_stats_init
 
 from face_detector import MTCNNDetector
-
-
-
 
 
 
@@ -79,14 +75,18 @@ for i, x in enumerate(l_files[:num_files]):
     gc.collect()
 
     try:
-        d_res[str(x.name)] = predict_single_file(mtcnn_detector, m1, x, i < 3)
+        d_res[str(x.name)] = predict_stage1_single_file(mtcnn_detector, m1, x, i < 3)
     except Exception as err:
         d_res[str(x.name)] = get_accumulated_stats_init()
     
 """c"""
 
 del mtcnn_detector
+del m1
+
 gc.collect()
+
+
 
 print("Done stage 1 prediction")
 

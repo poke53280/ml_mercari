@@ -112,7 +112,9 @@ def is_error_line(anData):
 #   sample_single
 #
 
-def sample_single(mtcnn_detector, video_path):
+def sample_single(mtcnn_detector, video_path, rSampleSpace):
+
+    assert rSampleSpace > 0 and rSampleSpace <= 1.0
 
     num_frames = 32
     v_max = 9
@@ -137,7 +139,7 @@ def sample_single(mtcnn_detector, video_path):
     y_max = video.shape[1]
 
     max_permutations = v_max * v_max * v_max * v_max
-    num_samples = int (0.4 * max_permutations)
+    num_samples = int (rSampleSpace * max_permutations)
 
     lines = get_video_lines(x_max, y_max, z_max, face0, face1, v_max, num_samples)
 
@@ -362,8 +364,8 @@ def process(t):
     assert not isExisting
 
     data_pair = sample_pair(original, fake)
-    data_test_real = sample_single(original)
-    data_test_fake = sample_single(fake)
+    data_test_real = sample_single(original, 0.4)
+    data_test_fake = sample_single(fake, 0.4)
 
     # functions return one zeroed out line in case of errors.
 
@@ -390,13 +392,7 @@ def prepare_process(iPart):
 
     num_originals = len(l_d)
 
-<<<<<<< HEAD
-    
-
-    for idx_key in range(num_originals):
-=======
     l_part_task = []
->>>>>>> 42390eca5600a6b1993ecd9b666d792c68573d8f
 
     for idx_key in range(num_originals):
 
@@ -428,37 +424,10 @@ def prepare_process(iPart):
         isExisting = file_pair_out.is_file() and file_real_out.is_file() and file_fake_out.is_file()
 
         if isExisting:
-            # print(f"p_{iPart}_{str(original.stem)}: Already done")
             continue
 
         l_part_task.append( (iPart, original, fake))
 
-<<<<<<< HEAD
-        isPairFound = original.is_file() and fake.is_file()
-        
-        if (isPairFound):
-            data_pair = sample_pair(mtcnn_detector, original, fake)
-            data_test_real = sample_single(mtcnn_detector, original)
-            data_test_fake = sample_single(mtcnn_detector, fake)
-
-            if data_pair is None:
-                print(f"p_{iPart}: Line_Pair_p_{iPart}_{str(original.stem)}_{str(fake.stem)}: No data. Skipping.")
-                continue
-
-            if data_test_real is None:
-                print(f"p_{iPart}_o{str(original.stem)}_: test real sampling returned None. Skipping.")
-                continue
-
-
-            if data_test_fake is None:
-                print(f"p_{iPart}_o{str(original.stem)}_: test fake sampling returned None. Skipping.")
-                continue
-                
-            np.save(file_pair_out, data_pair)
-
-            np.save(file_pair_out, None)
-=======
->>>>>>> 42390eca5600a6b1993ecd9b666d792c68573d8f
 
     return l_part_task        
 

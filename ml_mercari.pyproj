@@ -98,6 +98,9 @@
     <Compile Include="deepfake\predictor.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="deepfake\scriptkid.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\stage2_trainer.py">
       <SubType>Code</SubType>
     </Compile>
