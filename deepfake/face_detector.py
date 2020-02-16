@@ -115,7 +115,10 @@ def _draw_single_feature(image, face, zFeature, rect_size):
 
     assert rect_size > 0
 
-    x, y = _get_integer_coords_single_feature(image, face, zFeature)
+    x_shape = image.shape[1]
+    y_shape = image.shape[0]
+
+    x, y = _get_integer_coords_single_feature(x_shape, y_shape, image, face, zFeature)
 
     x0 = x - rect_size
     y0 = y - rect_size

@@ -129,6 +129,10 @@ def sample_single(mtcnn_detector, video_path, rSampleSpace):
 
     (face0, face1) = find_two_consistent_faces(mtcnn_detector, video)
 
+    mtcnn_detector.draw(video[0], [face0])
+
+    # Todo: Debug: Draw the two frames with faces.
+
     invalid = (face0 is None) or (face1 is None)
 
     if invalid:
@@ -364,8 +368,8 @@ def process(t):
     assert not isExisting
 
     data_pair = sample_pair(original, fake)
-    data_test_real = sample_single(original, 0.4)
-    data_test_fake = sample_single(fake, 0.4)
+    data_test_real = sample_single(mtcnn_detector, original, 0.4)
+    data_test_fake = sample_single(mtcnn_detector, fake, 0.4)
 
     # functions return one zeroed out line in case of errors.
 
@@ -374,6 +378,9 @@ def process(t):
     np.save(file_pair_out, data_pair)
     np.save(file_real_out, data_test_real)
     np.save(file_fake_out, data_test_fake)
+
+
+
 
 
 ####################################################################################
@@ -432,7 +439,14 @@ def prepare_process(iPart):
     return l_part_task        
 
 
-            
+def get_first_video_task():
+    l_task = prepare_process(2)
+    return l_task[0]              
+
+
+mtcnn_detector = MTCNNDetector()
+t = get_first_video_task()
+
 
 
 ####################################################################################
