@@ -184,6 +184,31 @@ def create_train_merge(iPartMin, iPartMax):
             np.save(output_dir / f"train_{zFeature}_p_{iPartMin}_p_{iPartMax}.npy", anDataTrain)
 
             
+####################################################################################
+#
+#   create_train_merge_chunks
+#
+
+def create_train_merge_chunks(iPartMin, iPartMax):
+    assert iPartMax > iPartMin
+    l_Parts = list (range(iPartMin, iPartMax))
+
+    for iPart in l_Parts:
+        create_train_merge(iPart, iPart + 1)
+
+####################################################################################
+#
+#   create_test_merge_chunks
+#
+
+def create_test_merge_chunks(iPartMin, iPartMax):
+    assert iPartMax > iPartMin
+    l_Parts = list (range(iPartMin, iPartMax))
+
+    for iPart in l_Parts:
+        create_test_merge(iPart, iPart + 1)
+
+
 
 
 
