@@ -123,7 +123,7 @@ def predict_stage1_single_file(mtcnn_detector, m1, x, isVerbose):
         return get_accumulated_stats_init()
 
     try:
-        data = sample_single(mtcnn_detector, x, 0.3)
+        data = sample_single(mtcnn_detector, x, 0.3, False)
     except Exception as err:
         print(err)
         data = get_error_line()
@@ -171,6 +171,8 @@ def predict_stage1_single_file(mtcnn_detector, m1, x, isVerbose):
     return d_acc
 
 
+
+
 ####################################################################################
 #
 #   predict_stage1
@@ -181,21 +183,17 @@ def predict_stage1_single_file(mtcnn_detector, m1, x, isVerbose):
 
 def predict_stage1(zFeature, zModel_type, iPartMin, iPartMax):
 
-    model_dir = get_model_dir()
-    input_dir = get_ready_data_dir()
-    output_dir = get_pred0_dir()
+   
+
+    modelfile = get_model_filepath(zFeature, zModel_type, True)
+
+    data_file = get_test_filepath('l_mouth', iPartMin, iPartMax, True)
+
+    meta_file = get_meta_test_filepath(iPartMin, iPartMax, True)
 
 
-    modelfile = get_model_dir() / f"model_{zFeature}_{zModel_type}.h5"
-    assert modelfile.is_file()
+    output_file = get_pred0_filepath(zFeature, zModel_type, iPartMin, iPartMax, False)
 
-    data_file = input_dir / f"test_{zFeature}_p_{iPartMin}_p_{iPartMax}.npy"
-    assert data_file.is_file()
-
-    meta_file = input_dir / f"test_meta_p_{iPartMin}_p_{iPartMax}.pkl"
-    assert meta_file.is_file()
-
-    output_file = output_dir / f"pred_{zFeature}_p_{iPartMin}_p_{iPartMax}_{zModel_type}.npy"
 
     m = load_model(modelfile)
     data = np.load(data_file)

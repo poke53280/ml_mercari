@@ -12,8 +12,17 @@ from keras.callbacks import Callback
 import numpy as np
 from sklearn.metrics import mean_squared_error
 
-from mp4_frames import get_ready_data_dir
-from mp4_frames import get_model_dir
+
+from featureline import get_feature_converter
+
+from mp4_frames import get_model_filepath
+from mp4_frames import get_test_filepath
+from mp4_frames import get_train_filepath
+from mp4_frames import get_meta_test_filepath
+from mp4_frames import get_pred0_filepath
+
+
+
 import datetime
 
 import argparse
@@ -71,70 +80,49 @@ def get_model(num_timesteps):
 #   train
 #
 
-def train(trainpath, testpath, nLimit):
+def train(zModel_type, train_file_path, test_file_path, test_meta_file, model_path, limit):
     
-    m_dir = get_model_dir()
 
-    anTrain = np.load(trainpath)
-    anTest = np.load(testpath)
+    anTrain = np.load(train_file_path)
+    anTest = np.load(test_file_path)
 
     np.random.shuffle(anTrain)
 
-    if nLimit > 0:
-        anTrain = anTrain[:nLimit]
-        anTest = anTest[:nLimit]
+    if limit > 0:
+        anTrain = anTrain[:limit]
+        anTest = anTest[:limit]
 
     anTrain = preprocess_input(anTrain)
     anTest = preprocess_input(anTest)
 
-
-    train_real = anTrain[:, :32, :]
-    train_fake = anTrain[:, 32:, :]
-
     test_real = anTest[:, :32, :]
     test_fake = anTest[:, 32:, :]
-
 
     num_train = anTrain.shape[0]
     num_test = anTest.shape[0]
 
-    num_timesteps = train_real.shape[1]
+    num_timesteps = 32
 
     model = get_model(num_timesteps)
+
+    # For 'fr':
     
     for iEpoch in range(6):
-        # Todo reshuffle anTrain for each epoch.
+        np.random.shuffle(anTrain)
+        train_real = anTrain[:, :32, :]
+        train_fake = anTrain[:, 32:, :]
+
         # Todo provide new real /fake<n> set for each epoch.
 
-        model.fit(train_real, train_real, epochs=1, batch_size=256, verbose=1)
-
-        data_p = model.predict(test_real)
-        rms = mean_squared_error(data_p.reshape(-1), test_real.reshape(-1))
-        print(f"Reconstuction error rms = {rms}")
-   
-    model.save(m_dir / f"model_{trainpath.stem}_{testpath.stem}_rr.h5")
-   
-
-    model = get_model(num_timesteps)
-
-    for iEpoch in range(6):
-
         model.fit(train_fake, train_real, epochs=1, batch_size=256, verbose=1)
-        data_p = model.predict(test_fake)
-        rms = mean_squared_error(data_p.reshape(-1), test_real.reshape(-1))
-        print(f"Reconstuction error rms = {rms}")
-    
-    model.save(m_dir/ f"model_{trainpath.stem}_{testpath.stem}_fr.h5")
 
-    model = get_model(num_timesteps)
+        #data_p = model.predict(test_real)
+        #rms = mean_squared_error(data_p.reshape(-1), test_real.reshape(-1))
+        #print(f"Reconstuction error rms = {rms}")
 
-    for iEpoch in range(6):
-        model.fit(train_fake, train_fake, epochs=1, batch_size=256, verbose=1)
-        data_p = model.predict(test_fake)
-        rms = mean_squared_error(data_p.reshape(-1), test_fake.reshape(-1))
-        print(f"Reconstuction error rms = {rms}")
-    
-    model.save(m_dir / f"model_{trainpath.stem}_{testpath.stem}_ff.h5")
+
+    model.save(model_path)
+   
 
 
 #################################################################################
@@ -144,28 +132,63 @@ def train(trainpath, testpath, nLimit):
 
 def main_get_art_arg():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train", "-tr", help="train pair feature dataset", required = True)
-    parser.add_argument("--test", "-te",  help="test pair feature dataset", required = True)
+    parser.add_argument("--train_min", "-tr_min", help="train pair feature dataset, min part", required = True)
+    parser.add_argument("--train_max", "-tr_max", help="train pair feature dataset, max part", required = True)
+
+    parser.add_argument("--test_min", "-te_min", help="test feature dataset, min part", required = True)
+    parser.add_argument("--test_max", "-te_max", help="test feature dataset, max part", required = True)
+
+    parser.add_argument("--feature", "-f", help="face feature", required = True)
+
+    parser.add_argument("--model_type", "-mtype", help="model type {rr, ff, fr, rf}", required = True)
 
     parser.add_argument("--limit", "-l", help="data cap. 0: no limit", required = True)
 
     args = parser.parse_args()
 
-    zTrainfile = args.train
-    zTestfile = args.test
+    iTrainPartMin = int (args.train_min)
+    iTrainPartMax = int (args.train_max)
+    assert iTrainPartMax > iTrainPartMin
 
-    input_dir = get_ready_data_dir()
+    iTestPartMin = int (args.test_min)
+    iTestPartMax = int (args.test_max)
+    assert iTestPartMax > iTestPartMin
 
-    trainpath = input_dir / (zTrainfile + ".npy")
-    assert trainpath.is_file(), f"{str(trainpath)} is not a file"
-   
-    testpath = input_dir / (zTestfile + ".npy")
-    assert testpath.is_file(), f"{str(testpath)} is not a file"
+    zFeature = args.feature
 
-    nLimit = int(args.limit)
+    l_features = list (get_feature_converter().keys())
 
-    return trainpath, testpath, nLimit
+    assert zFeature in l_features
 
+    zModel_type = args.model_type
+
+    assert zModel_type in ['rr', 'ff' ,'rf', 'fr']
+
+    limit = int(args.limit)
+
+    
+    train_file_path = get_train_filepath(zFeature, iTrainPartMin, iTrainPartMax, True)
+    test_file_path = get_test_filepath(zFeature, iTestPartMin, iTestPartMax, True)
+    test_meta_file = get_meta_test_filepath(iTestPartMin, iTestPartMax, True)
+
+    model_path = get_model_filepath(zFeature, zModel_type, False)
+
+
+    return (zModel_type, train_file_path, test_file_path, test_meta_file, model_path, limit)
+
+
+def set_test_values():
+    iTrainPartMin = 40
+    iTrainPartMax = 41
+
+    iTestPartMin = 41
+    iTestPartMax = 44
+
+    limit = 10000
+
+    zFeature = 'l_mouth'
+
+    zModel_type = 'rr'
 
 
 #################################################################################
@@ -174,8 +197,9 @@ def main_get_art_arg():
 #
 
 if __name__ == '__main__':
-    trainpath, testpath, nLimit = main_get_art_arg()
-    train(trainpath, testpath, nLimit)
+    zModel_type, train_file_path, test_file_path, test_meta_file, model_path, limit = main_get_art_arg()
+
+    train(zModel_type, train_file_path, test_file_path, test_meta_file, model_path, limit)
 
 
 

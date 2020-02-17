@@ -678,6 +678,75 @@ def get_part_dir(iPart):
 
 ####################################################################################
 #
+#   get_model_filepath
+#
+
+def get_model_filepath(zFeature, zModel_type, isAssertExists):
+    
+    modelfile = get_model_dir() / f"model_{zFeature}_{zModel_type}.h5"
+
+    if isAssertExists:
+        assert modelfile.is_file()
+    
+    return modelfile
+
+####################################################################################
+#
+#   get_train_filepath
+#
+
+def get_train_filepath(zFeature, iPartMin, iPartMax, isAssertExists):
+    data_file = get_ready_data_dir() / f"train_{zFeature}_p_{iPartMin}_p_{iPartMax}.npy"
+
+    if isAssertExists:
+        assert data_file.is_file() 
+    
+    return data_file
+
+
+####################################################################################
+#
+#   get_train_filepath
+#
+
+def get_test_filepath(zFeature, iPartMin, iPartMax, isAssertExists):
+    data_file = get_ready_data_dir() / f"test_{zFeature}_p_{iPartMin}_p_{iPartMax}.npy"
+
+    
+    if isAssertExists:
+        assert data_file.is_file() 
+
+    return data_file
+
+
+####################################################################################
+#
+#   get_meta_test_filepath
+#
+
+def get_meta_test_filepath(iPartMin, iPartMax, isAssertExists):
+    meta_file = get_ready_data_dir() / f"test_meta_p_{iPartMin}_p_{iPartMax}.pkl"
+
+    if isAssertExists:
+        assert meta_file.is_file() 
+    return meta_file
+
+
+####################################################################################
+#
+#   get_pred0_filepath
+#
+
+def get_pred0_filepath(zFeature, zModel_type, iPartMin, iPartMax, isAssertExists):
+    output_file = get_pred0_dir() / f"pred_{zFeature}_p_{iPartMin}_p_{iPartMax}_{zModel_type}.npy"
+
+    if isAssertExists:
+        assert output_file.is_file() 
+    return output_file
+
+
+####################################################################################
+#
 #   process_part
 #
 

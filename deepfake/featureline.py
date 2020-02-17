@@ -112,7 +112,7 @@ def is_error_line(anData):
 #   sample_single
 #
 
-def sample_single(mtcnn_detector, video_path, rSampleSpace):
+def sample_single(mtcnn_detector, video_path, rSampleSpace, isShowFaces):
 
     assert rSampleSpace > 0 and rSampleSpace <= 1.0
 
@@ -129,7 +129,24 @@ def sample_single(mtcnn_detector, video_path, rSampleSpace):
 
     (face0, face1) = find_two_consistent_faces(mtcnn_detector, video)
 
-    mtcnn_detector.draw(video[0], [face0])
+    if isShowFaces:
+
+        print(f"{str(video_path)}")
+        image0 = video[0].copy()
+        image31 = video[31].copy()
+
+        mtcnn_detector.draw(image0, [face0])
+        mtcnn_detector.draw(image31, [face1])
+
+        imgplot = plt.imshow(image0)
+        plt.show()
+
+        imgplot = plt.imshow(image31)
+        plt.show()
+ 
+
+
+
 
     # Todo: Debug: Draw the two frames with faces.
 
@@ -266,9 +283,14 @@ def find_two_consistent_faces(mtcnn_detector, video):
 
     A = L_x * L_y
 
+    c_x[c_x < 0.001] = 0.001
+    c_y[c_y < 0.001] = 0.001
+    A[A < 0.001] = 0.001
+
     df_f = df_f.assign(c_x = c_x, c_y = c_y, A = A)
 
     df_f = df_f.drop(['bb_min', 'bb_max'], axis = 1)
+
 
     # Remove low confidence faces
     df_f = df_f[df_f.confidence > 0.9]
@@ -310,28 +332,19 @@ def find_two_consistent_faces(mtcnn_detector, video):
 
     face0 = l_faces0[iFaceidx0]
 
-    d_x = np.abs(df1.c_x - face_info['c_x'])
-    d_y = np.abs(df1.c_y - face_info['c_y'])
-    d_A = np.abs(df1.A - face_info['A'])
+    d_x = np.abs (1 - df1.c_x/ face_info['c_x'])
+    d_y = np.abs (1 - df1.c_y / face_info['c_y'])
+    d_A = np.abs(1 - df1.A/ face_info['A'])
 
-    df1 = df1.assign(d_x = d_x, d_y = d_y, d_A = d_A)
+    d_maxdev = np.max([d_x, d_y, d_A], axis = 0)
 
-    df1 = df1.assign(nA = np.searchsorted(np.unique(df1.d_A), df1.d_A))
-    df1 = df1.assign(nX = np.searchsorted(np.unique(df1.d_x), df1.d_x))
-    df1 = df1.assign(nY = np.searchsorted(np.unique(df1.d_y), df1.d_y))
+    idx_minmax = np.argmin (d_maxdev)
 
-    nScore = df1.nA + df1.nX + df1.nY
-
-    df1 = df1.assign(nScore = nScore)
-
-    idxmin = df1.nScore.idxmin()
-
-    iFaceidx = int (df1.iloc[idxmin].iFaceidx)
+    iFaceidx = int (df1.iloc[idx_minmax].iFaceidx)
 
     face1 = l_faces1[iFaceidx]
 
     return (face0, face1)
-
 
 
 ####################################################################################
@@ -442,10 +455,6 @@ def prepare_process(iPart):
 def get_first_video_task():
     l_task = prepare_process(2)
     return l_task[0]              
-
-
-mtcnn_detector = MTCNNDetector()
-t = get_first_video_task()
 
 
 
