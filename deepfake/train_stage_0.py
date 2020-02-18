@@ -18,6 +18,12 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
+from sklearn.metrics import mean_squared_error
+
+from mp4_frames import get_ready_data_dir
+from mp4_frames import get_log_dir
+from mp4_frames import get_model_dir
+from mp4_frames import get_tst_vid
 
 
 ####################################################################################
@@ -60,46 +66,6 @@ def get_model(num_timesteps):
 
 ####################################################################################
 #
-#   get_path_set
-#
-#
-
-def get_path_set():
-
-    isLocal = os.name == 'nt'
-
-    if isLocal:
-
-        train_path = pathlib.Path("C:\\Users\\T149900\\ready_data\\train_l_mouth_p_40_p_41.npy")
-        test_path = pathlib.Path("C:\\Users\\T149900\\ready_data\\test_l_mouth_p_40_p_41.npy")
-        meta_path = pathlib.Path("C:\\Users\\T149900\\ready_data\\test_meta_p_40_p_41.pkl")
-        log_dir_base = pathlib.Path("C:\\Users\\T149900\\log_dir")
-    else:
-        #train_path = pathlib.Path("/mnt/disks/tmp_mnt/data/ready_data/train_l_mouth_p_40_p_41.npy")
-        #test_path = pathlib.Path("/mnt/disks/tmp_mnt/data/ready_data/test_l_mouth_p_41_p_44.npy")
-        #meta_path = pathlib.Path("/mnt/disks/tmp_mnt/data/ready_data/test_meta_p_41_p_44.pkl")
-        train_path = pathlib.Path("/mnt/disks/tmp_mnt/data/ready_data/train_l_mouth_p_0_p_40.npy")
-        test_path = pathlib.Path("/mnt/disks/tmp_mnt/data/ready_data/test_l_mouth_p_41_p_44.npy")
-        meta_path = pathlib.Path("/mnt/disks/tmp_mnt/data/ready_data/test_meta_p_41_p_44.pkl")
-
-        log_dir_base = pathlib.Path("/mnt/disks/tmp_mnt/data/log_dir")
-        
-
-    assert train_path.is_file()
-    assert test_path.is_file()
-    assert meta_path.is_file()
-    assert log_dir_base.is_dir()        
-
-
-
-    log_dir = log_dir_base / datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-
-    return (train_path, test_path, meta_path, log_dir)
-
-
-
-####################################################################################
-#
 #   preprocess_input
 #
 
@@ -108,47 +74,135 @@ def preprocess_input(data):
     return data
 
 
+####################################################################################
+#
+#   get_train_files
+#
+
+def get_train_files():
+    data_dir = get_ready_data_dir()
+
+    l_files = list (data_dir.iterdir())
+    l_files = [x for x in l_files if x.stem.startswith("tr_")]
+
+    return l_files
+
+
+####################################################################################
+#
+#   predict_on_vid
+#
+
+def predict_on_vid(m, anTest):
+
+    anTest_p = m.predict(anTest)
+
+    mse = mean_squared_error(anTest_p.reshape(-1), anTest.reshape(-1))
+
+    diff = (anTest_p - anTest).reshape(-1, 32*3)
+
+    sqr_diff = (diff * diff)
+
+    sum_diff = np.sum(sqr_diff, axis = 1)
+
+    mse_row = sum_diff/ (32*3)
+
+    mse095 = np.quantile(mse_row, 0.95)
+    mse005 = np.quantile(mse_row, 0.05)
+
+    return (mse, mse005, mse095)
+
+
+log_dir = get_log_dir() / datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+print(f"log dir: {str(log_dir)}")
+
+
+model_dir = get_model_dir()
+
+
+file_writer = tf.summary.create_file_writer(str(log_dir))
+file_writer.set_as_default()
+
+
+
 num_timesteps = 32
 
-train_path, test_path, meta_path, log_dir = get_path_set()
 
-tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir= log_dir, histogram_freq= 1, update_freq = 'batch', profile_batch=0)
+# tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir= log_dir, histogram_freq= 1, update_freq = 'epoch', profile_batch=0)
 
-nTestLimit = 5000
-
-anTest = np.load(test_path)
-np.random.shuffle(anTest)
-
-anTest = preprocess_input(anTest)
-
-test_real = anTest[:, :32, :]
-test_fake = anTest[:, 32:, :]
+nTrainLimit = 0
 
 
-if nTestLimit > 0:
-    anTest = anTest[:nTestLimit]
+l_TestReal = [np.load(get_tst_vid() / "te_41_44_0001_real.npy"), np.load(get_tst_vid() / "te_41_44_0025_real.npy"), np.load(get_tst_vid() / "te_41_44_0044_real.npy")]
+l_TestFake = [np.load(get_tst_vid() / "te_41_44_0009_fake.npy"), np.load(get_tst_vid() / "te_41_44_0029_fake.npy"), np.load(get_tst_vid() / "te_41_44_0034_fake.npy")]
 
 
-df_meta = pd.read_pickle(meta_path)
+l_TestReal = [preprocess_input(x) for x in l_TestReal]
+l_TestFake = [preprocess_input(x) for x in l_TestFake]
+
 
 m = get_model(num_timesteps)
 
 m.compile(loss = keras.losses.mse, optimizer = keras.optimizers.Adam(),metrics = ['mse'])
 
-l_train_path = [train_path]
+l_train_path = get_train_files()
 
-for iEpoch in range(20):
+num_epochs = 1
+
+log_step = 0
+
+for iEpoch in range(num_epochs):
     for train_path in l_train_path:
         print(f"Loading {train_path}...")
         anTrain = np.load(train_path)
+
+        if nTrainLimit > 0:
+            np.random.shuffle(anTrain)
+            anTrain = anTrain[:nTrainLimit]
+
         anTrain = preprocess_input(anTrain)
 
-        train_real = anTrain[:, :32, :]
-        train_fake = anTrain[:, 32:, :]
+        num_rows = anTrain.shape[0]
 
-        history = m.fit(train_fake, train_real, batch_size= 128, epochs= 1, validation_split= 0.2, callbacks=[tensorboard_callback])
+        max_rows_per_run = 10000
 
-        print("Checkpoint. Save model. Progress in epoch, progress on train file.")
+        num_splits = int (1 + num_rows / max_rows_per_run)
+
+        l_train = np.array_split(anTrain, num_splits)
+
+        for ichunk, train_chunk in enumerate(l_train):
+
+            print(f"Chunk {ichunk + 1}/ {len(l_train)}")
+
+            train_real = train_chunk[:, :32, :]
+            train_fake = train_chunk[:, 32:, :]
+
+            history = m.fit(train_fake, train_real, batch_size = 128, epochs= 1)
+
+            train_real_p = m.predict(train_fake)
+
+            mse_train = mean_squared_error(train_real_p.reshape(-1), train_fake.reshape(-1))
+
+            print(f"mse_train = {mse_train}")
+
+            tf.summary.scalar('mse_train', data=mse_train, step=log_step)
+
+            for ix, x in enumerate(l_TestReal):
+                (mse, mse005, mse095) = predict_on_vid(m, x)
+                tf.summary.scalar(f"mse_real_{ix}", data = mse, step = log_step)
+                tf.summary.scalar(f"mse005_real_{ix}", data = mse005, step = log_step)
+                tf.summary.scalar(f"mse095_real_{ix}", data = mse095, step = log_step)
 
 
+            for ix, x in enumerate(l_TestFake): 
+                (mse, mse005, mse095) = predict_on_vid(m, x)
+                tf.summary.scalar(f"mse_fake_{ix}", data = mse, step = log_step)
+                tf.summary.scalar(f"mse005_fake_{ix}", data = mse005, step = log_step)
+                tf.summary.scalar(f"mse095_fake_{ix}", data = mse095, step = log_step)
+
+            log_step = log_step + 1
+
+
+m.save(model_dir / "common_fr.h5")
 
