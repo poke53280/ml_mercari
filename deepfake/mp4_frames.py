@@ -608,11 +608,11 @@ def get_pred0_dir():
 
 ####################################################################################
 #
-#   get_tst_vid()
+#   get_chunk_dir()
 #
 
-def get_tst_vid():
-    return get_aux_dir("tst_vid")
+def get_chunk_dir():
+    return get_aux_dir("chunks")
 
 
 ####################################################################################
