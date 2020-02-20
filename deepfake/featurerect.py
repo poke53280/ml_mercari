@@ -224,53 +224,14 @@ def get_feature_lines(x_max, y_max, faces, l_featureLine, W, d_radius):
 #
 
 def get_centered_line(p0_l, p0_r, x_max, y_max, W):
-    p0_c = .5 * (p0_r + p0_l)
+    p_c = .5 * (p0_r + p0_l)
 
     lrVector = (p0_r - p0_l)
-    cHalfVector = W/2.0 * (lrVector / np.sqrt(np.dot(lrVector, lrVector)))
+    lrVector = W * (lrVector / np.sqrt(np.dot(lrVector, lrVector)))
 
+    p0 = p_c - .5 * lrVector
 
-    t_x_min = - p0_c[0]/ cHalfVector[0]
-    t_x_max = (x_max - p0_c[0])/ cHalfVector[0]
-
-
-    # DIVIDE BY ZERO ERROR
-    t_y_min = - p0_c[1]/ cHalfVector[1]
-    t_y_max = (y_max - p0_c[1])/ cHalfVector[1]
-
-    t_min = np.max([np.min([t_x_min, t_x_max]), np.min([t_y_min, t_y_max])])
-    t_max = np.min([np.max([t_x_min, t_x_max]), np.max([t_y_min, t_y_max])])
-
-    d_min = -1
-    d_max = 1
-
-    if t_min > -1:
-        d_min = t_min
-        d_max = d_min + 2
-
-    if t_max < 1:
-        d_max = t_max
-        d_min = d_max - 2
-
-    if d_max < 1 or d_min > -1:
-        print("No line possible")
-        return (None, None)
-
-    p0_min = p0_c + d_min * cHalfVector
-    p0_max = p0_c + d_max * cHalfVector
-
-    cL = p0_max - p0_min
-    
-    L = np.sqrt(np.dot(cL, cL))
-    L_lrVector = np.sqrt(np.dot(lrVector,lrVector))
-
-    rRatio =  L * L_lrVector / np.dot(cL, lrVector)
-
-    assert np.abs(rRatio > 0.99)
-    assert L/W > 0.999 
-    assert L/W < 1.001 
-
-    return (p0_min, 2 * cHalfVector)
+    return (p0, lrVector)
 
 
 ####################################################################################
@@ -278,12 +239,18 @@ def get_centered_line(p0_l, p0_r, x_max, y_max, W):
 #   get_face_line
 #
 
-def get_face_line(l_featureLine, face, x_max, y_max, W):
+def get_face_line(l_featureLine, face, x_max, y_max, rW):
 
     p0_l = np.array(_get_integer_coords_single_feature(x_max, y_max, face, l_featureLine[0])).astype(np.float32)
     p0_r = np.array(_get_integer_coords_single_feature(x_max, y_max, face, l_featureLine[1])).astype(np.float32)
-    
-    return get_centered_line(p0_l, p0_r, x_max, y_max, W)
+
+    v = p0_r - p0_l
+
+    line_length = np.sqrt(v.dot(v))
+
+    w = line_length * rW
+
+    return get_centered_line(p0_l, p0_r, x_max, y_max, w)
 
 
 ####################################################################################

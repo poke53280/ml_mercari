@@ -123,7 +123,7 @@ def predict_stage1_single_file(mtcnn_detector, m1, x, isVerbose):
         return get_accumulated_stats_init()
 
     try:
-        data = sample_single(mtcnn_detector, x, 0.3, False)
+        data = sample_single(mtcnn_detector, x, 0.3, isVerbose)
     except Exception as err:
         print(err)
         data = get_error_line()

@@ -106,6 +106,21 @@ def _get_integer_coords_single_feature(x_shape, y_shape, face, zFeature):
 
     return (x, y)
 
+
+######################################################################
+#
+#   _draw_single_feature
+#
+
+def _draw_box_integer_coords(image, x_int, y_int, rect_size):
+    x0 = x_int - rect_size
+    y0 = y_int - rect_size
+
+    x1 = x_int + rect_size
+    y1 = y_int + rect_size
+
+    image = cv2.rectangle(image, (x0, y0), (x1, y1), (255, 0, 0), 2)
+
 ######################################################################
 #
 #   _draw_single_feature
@@ -120,13 +135,22 @@ def _draw_single_feature(image, face, zFeature, rect_size):
 
     x, y = _get_integer_coords_single_feature(x_shape, y_shape, face, zFeature)
 
-    x0 = x - rect_size
-    y0 = y - rect_size
+    _draw_box_integer_coords(image, x, y, rect_size)
 
-    x1 = x + rect_size
-    y1 = y + rect_size
 
-    image = cv2.rectangle(image, (x0, y0), (x1, y1), (255,0,0), 2)
+######################################################################
+#
+#   _draw_single_point
+#
+
+def _draw_single_point(image, x, y, rect_size):
+    x_shape = image.shape[1]
+    y_shape = image.shape[0]
+
+    x = int (x * x_shape)
+    y = int (y * y_shape)
+    _draw_box_integer_coords(image, x, y, rect_size, (0, 255, 0))
+
 
 ######################################################################
 #
