@@ -1,53 +1,103 @@
 
 
-#
-# Based on: https://www.kaggle.com/unkownhihi/starter-kernel-with-cnn-model-ll-lb-0-69235 by 
-#
-
-
-# Code for generating dataset:
-import pandas as pd
 import numpy as np
 
-id_itrgd = [0,1, 2, 3]
-reg_itrgd = [4, 5, 8, 9]
-data_itrgd = ['b', 'q', 'f', 'h']
+from pathlib import Path
+from matplotlib.image import imread
+from matplotlib import pyplot as plt
+
+from keras.preprocessing.image import load_img
+from keras.preprocessing.image import img_to_array
+
+input_dir = Path("C:\\Users\\T149900\\Downloads\\cats_and_dogs")
+
+output_dir = Path("C:\\Users\\T149900\\Downloads\\cats_and_dogs_processed")
+
+assert input_dir.is_dir()
+assert output_dir.is_dir()
+
+l_photos = list()
+l_labels = list()
 
 
-id_eia = [0, 0, 0, 1, 3, 3]
-reg_eia = [4, 3, 4, 7, 10, 11]
-data_eia = [1.1, 1.3, 0.9, 1.7, 0.2, 1.1]
+for x in list (input_dir.iterdir()):
+    output = 0.0
+    if x.name.startswith("cat"):
+        output = 1.0
+    
+    photo = load_img(x, target_size=(200, 200))    
+    photo = img_to_array(photo)
 
-df_i = pd.DataFrame({'it_id':id_itrgd, 'it_reg': reg_itrgd, 'it_data': data_itrgd})
-df_e = pd.DataFrame({'eia_id':id_eia, 'eia_reg': reg_eia, 'eia_data': data_eia})
-
-# Create sortable string from number
-
-z_id = df_i.it_id.map(lambda x: f"{x:03}")
-z_reg = df_i.it_reg.map(lambda x: f"{x:03}")
-z_v = "id_" + z_id + "_reg_" + z_reg
-
-df_i = df_i.assign(z_v_i = z_v)
-
-z_id = df_e.eia_id.map(lambda x: f"{x:03}")
-z_reg = df_e.eia_reg.map(lambda x: f"{x:03}")
-z_v = "id_" + z_id + "_reg_" + z_reg
-
-df_e = df_e.assign(z_v_e = z_v)
-
-df_e = df_e.sort_values(by = 'z_v_e').reset_index(drop = True)
-df_i = df_i.sort_values(by = 'z_v_i').reset_index(drop = True)
-
-s_z_all = pd.concat([df_e.z_v_e, df_i.z_v_i])
-
-e_id = np.searchsorted(np.unique(s_z_all), df_e.z_v_e)
-i_id = np.searchsorted(np.unique(s_z_all), df_i.z_v_i)
-
-df_e = df_e.assign(v = e_id)
-df_i = df_i.assign(v = i_id)
+    l_photos.append(photo)
+    l_labels.append(output)
+"""c"""
 
 
-pd.merge_asof(df_e, df_i, on = 'v')
+photos = np.asarray(l_photos)
+labels = np.asarray(l_labels)
+print(photos.shape, labels.shape)
 
-# et.c.
+np.save(output_dir / 'dogs_vs_cats_photos.npy', photos)
+np.save(output_dir / 'dogs_vs_cats_labels.npy', labels)
 
+##################################################################################
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+import numpy as np
+from pathlib import Path
+
+
+import tensorflow as tf
+from tensorflow import keras
+
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Conv2D
+from tensorflow.keras.layers import MaxPooling2D
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import SGD
+
+
+from keras.preprocessing.image import ImageDataGenerator
+
+
+input_dir = Path("C:\\Users\\T149900\\Downloads\\cats_and_dogs_processed")
+
+photos = np.load(input_dir / 'dogs_vs_cats_photos.npy')
+labels = np.load(input_dir / 'dogs_vs_cats_labels.npy')
+
+print(photos.shape, labels.shape)
+
+def define_model():
+	model = Sequential()
+	model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(200, 200, 3)))
+	model.add(MaxPooling2D((2, 2)))
+	model.add(Flatten())
+	model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
+	model.add(Dense(1, activation='sigmoid'))
+	# compile model
+	opt = SGD(lr=0.001, momentum=0.9)
+	model.compile(optimizer=opt, loss='binary_crossentropy', metrics=['accuracy'])
+	return model
+
+
+photos = photos / 255.0
+
+num_all = photos.shape[0]
+num_test = 5000
+num_train = num_all - num_test
+
+idx = np.array(range(num_all))
+idx_test = np.random.choice(idx, size = num_test, replace = False)
+idx_train = np.array(list(set(idx)  - set(idx_test)))
+
+anTrain = photos[idx_train]
+anTest  = photos[idx_test]
+
+anYTrain = labels[idx_train]
+anYTest  = labels[idx_test]
+
+model = define_model()
+
+history = model.fit(x = anTrain, y = anYTrain, batch_size = 64, epochs = 20, verbose = 1, validation_data=[anTest, anYTest])
