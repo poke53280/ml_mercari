@@ -220,37 +220,19 @@ def get_feature_lines(x_max, y_max, faces, l_featureLine, W, d_radius):
 
 ####################################################################################
 #
-#   get_centered_line
-#
-
-def get_centered_line(p0_l, p0_r, x_max, y_max, W):
-    p_c = .5 * (p0_r + p0_l)
-
-    lrVector = (p0_r - p0_l)
-    lrVector = W * (lrVector / np.sqrt(np.dot(lrVector, lrVector)))
-
-    p0 = p_c - .5 * lrVector
-
-    return (p0, lrVector)
-
-
-####################################################################################
-#
 #   get_face_line
 #
 
-def get_face_line(l_featureLine, face, x_max, y_max, rW):
+def get_face_line(l_featureLine, face, x_max, y_max):
 
     p0_l = np.array(_get_integer_coords_single_feature(x_max, y_max, face, l_featureLine[0])).astype(np.float32)
     p0_r = np.array(_get_integer_coords_single_feature(x_max, y_max, face, l_featureLine[1])).astype(np.float32)
 
-    v = p0_r - p0_l
+    p_c = .5 * (p0_r + p0_l)
 
-    line_length = np.sqrt(v.dot(v))
+    lrVector = (p0_r - p0_l)
 
-    w = line_length * rW
-
-    return get_centered_line(p0_l, p0_r, x_max, y_max, w)
+    return (p_c, lrVector)
 
 
 ####################################################################################

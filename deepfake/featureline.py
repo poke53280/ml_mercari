@@ -350,8 +350,8 @@ def find_two_consistent_faces(mtcnn_detector, video):
 ####################################################################################
 #
 #   process
-
-
+#
+#
 #
 #   For all originals in input part. If there exists at least one associated fake, pick first fake and create:
 #       
