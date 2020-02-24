@@ -25,11 +25,12 @@ from line_sampler import get_line
 
 from mp4_frames import get_part_dir
 from mp4_frames import get_output_dir
+from mp4_frames import read_metadata
 
 import matplotlib.pyplot as plt
 import cv2
 from multiprocessing import Pool
-
+from sklearn.metrics import mean_squared_error
 
 
 ######################################################################
@@ -37,7 +38,7 @@ from multiprocessing import Pool
 #   draw_grid
 #
 
-def draw_grid(image_in, out):
+def draw_grid(image_in, raster_w, raster_h, out):
     image = image_in.copy()
     for x in range(raster_w):
         for y in range(raster_h):
@@ -97,14 +98,11 @@ def get_sample_grid (face, x_max, y_max, l_featureline, rW, raster_w, raster_h):
 #   sample
 #
 
-def sample(x_max, y_max, z_max, faces, l_featureline, rW, raster_w, raster_h, isDraw):
+def sample(x_max, y_max, z_max, faces, l_featureline, rW, raster_w, raster_h):
     
-    c_nose0 = np.array((*_get_integer_coords_single_feature(x_max, y_max, faces[0], 'c_nose'), 0))
-    c_nose1 = np.array((*_get_integer_coords_single_feature(x_max, y_max, faces[1], 'c_nose'), z_max -1))
 
-    vector = c_nose1 - c_nose0
-
-    length_vector = np.sqrt(vector.dot(vector))
+    l_feature_0 = np.array((*_get_integer_coords_single_feature(x_max, y_max, faces[0], l_featureline[0]), 0))
+    r_feature_0 = np.array((*_get_integer_coords_single_feature(x_max, y_max, faces[0], l_featureline[1]), 0))
 
 
 
@@ -151,23 +149,52 @@ def sample(x_max, y_max, z_max, faces, l_featureline, rW, raster_w, raster_h, is
     return (anBegin, anEnd, l_x, l_y, l_z)
 
 
-
 ######################################################################
 #
-#   get_error_data
+#   sample_feature
 #
 
-def get_error_data(W, H, video_size):
-    l_sample = []
+def sample_feature(video, faces, featureset, W, H, isDraw):
 
-    anZero = np.zeros((W, H, video_size, 3), dtype = np.uint8)
-    anZero = np.squeeze(anZero)
+    invalid = (faces[0] is None) or (faces[1] is None)
 
-    l_sample.append(anZero)
+    assert not invalid
 
-    anData = np.stack(l_sample)
 
-    return anData
+    x_max = video.shape[2]
+    y_max = video.shape[1]
+    z_max = video.shape[0]
+
+    video_size = z_max
+
+   
+
+    (anBegin, anEnd, l_x, l_y, l_z) = sample(x_max, y_max, z_max, faces, featureset, 0.0, W, H)
+
+    anSample = video[l_z, l_y, l_x]
+
+    anSample = anSample.reshape(W, H, video_size, 3)
+
+    anSample = np.squeeze(anSample)
+
+    anSample = np.swapaxes(anSample, 0, 1)
+
+    if isDraw:
+
+        image_begin = draw_grid(video[0], W, H, anBegin)
+        image_end = draw_grid(video[z_max -1], W, H, anEnd)
+
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+
+        ax1.imshow(image_begin)
+        ax2.imshow(image_end)
+        ax3.imshow(anSample)
+        plt.show()
+
+    
+
+    return anSample
+
 
 
 ######################################################################
@@ -182,25 +209,27 @@ def sample_video(mtcnn_detector, video_path, isDraw):
     W = 256
     H = 1
 
+
+    print (f"{video_path}")
+
     video = read_video(video_path, video_size)
 
     if video is None:
-        return get_error_data(W, H, video_size)
+        return None
 
     if video.shape[0] != video_size:
-        return get_error_data(W, H, video_size)
-        
+        return None
+
     x_max = video.shape[2]
     y_max = video.shape[1]
     z_max = video.shape[0]
-
 
     faces = find_two_consistent_faces(mtcnn_detector, video)
 
     invalid = (faces[0] is None) or (faces[1] is None)
 
     if invalid:
-        return get_error_data(W, H, video_size)
+        return None
 
 
     l_featuresets = [ ['l_mouth', 'r_mouth'], ['l_eye', 'r_eye'], ['bb_min', 'bb_max'], ['c_nose', 'r_eye'], ['l_mouth', 'c_nose'], ['f_min', 'f_max'],  ['l_eye', 'r_mouth']]
@@ -208,34 +237,26 @@ def sample_video(mtcnn_detector, video_path, isDraw):
     l_sample = []
 
     for featureset in l_featuresets:
+        anSample = sample_feature(video, faces, featureset, W, H, isDraw)
 
-        (anBegin, anEnd, l_x, l_y, l_z) = sample(x_max, y_max, z_max, faces, featureset, 0.0, W, H, True)
+        l_feature0 = np.array((*_get_integer_coords_single_feature(x_max, y_max, faces[0], featureset[0]), 0))
+        r_feature0 = np.array((*_get_integer_coords_single_feature(x_max, y_max, faces[0], featureset[1]), 0))
 
-        anSample = video[l_z, l_y, l_x]
+        vector = r_feature0 - l_feature0
 
-        anSample = anSample.reshape(W, H, video_size, 3)
-
-        anSample = np.squeeze(anSample)
-
-        if isDraw:
-
-            image_begin = draw_grid(video[0], anBegin)
-            image_end = draw_grid(video[z_max -1], anEnd)
-
-            fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
-
-            ax1.imshow(image_begin)
-            ax2.imshow(image_end)
-            ax3.imshow(np.swapaxes(anSample, 0, 1))
-            plt.show()
+        length_vector = np.sqrt(vector.dot(vector))
+   
+        anSample = straighten_sample(anSample, length_vector)
 
         anSample = anSample.reshape(-1)
-
         l_sample.append(anSample)
+
+    assert len (l_sample) == len (l_featuresets)
 
     anData = np.stack(l_sample)
 
     return anData
+
 
 
 ######################################################################
@@ -254,7 +275,7 @@ def sample_video_safe(mtcnn_detector, video_path, isDraw):
         data = sample_video(mtcnn_detector, video_path, isDraw)
     except Exception as err:
         print(err)
-        data = get_error_data(W, H, video_size)
+        data = None
 
     return data
 
@@ -267,27 +288,184 @@ def sample_video_safe(mtcnn_detector, video_path, isDraw):
 def process_part(iPart):
 
 
+    l_d = read_metadata(iPart)
+
     input_dir = get_part_dir(iPart)
 
     output_dir = get_output_dir()
 
+    mtcnn_detector = MTCNNDetector()
+
+    for o_set in l_d:
+
+        l_samples = []
+
+        original_path = input_dir / o_set[0]
+
+        #print(f"{iPart}: {original_path.stem}...")
+
+        r_data = sample_video_safe(mtcnn_detector, original_path, False)
+
+        if r_data is None:
+            print(f"{original_path.stem}: Bad original. Skipping set.")
+            continue
+
+        l_samples.append(r_data)
+
+        for fake_path in o_set[1]:
+            f_data = sample_video_safe(mtcnn_detector, input_dir / fake_path, False)
+
+            if f_data is None:
+                continue
+
+            l_samples.append(f_data)
+
+        if len (l_samples) >= 2:
+            data = np.concatenate(l_samples)
+            filename = f"p_{iPart}_{original_path.stem}.npy"
+            output_path = output_dir / filename
+            np.save(output_path, data)
+        else:
+            print(f"{original_path.stem}: No good fakes. Skipping set.")
+
+
+
+
+####################################################################################
+#
+#   straighten_sample
+#
+
+def straighten_sample(anSample, length_vector):
+
+    num_elements = anSample.shape[1]
+    num_lines = anSample.shape[0]
+
+    # center data
+    cx = num_elements // 2
+
+    Lh = int(length_vector / 2)
+
+
+    if Lh > 0.4 * num_elements:
+        Lh = int(0.4 * num_elements)
+
+    if cx - Lh < 0:
+        cx = Lh
+
+    if cx + Lh > num_elements:
+        cx = num_elements - Lh
+
+
+    l_out = []
+
+    l_out.append(anSample[0])
+
+
+    for iline in range(num_lines -1):
+
+        line0 = l_out[iline]
+        line1 = anSample[iline + 1]
+
+        line0_cut = line0[cx - Lh: cx + Lh]
+
+
+        mse_low = 100000
+        best_offset = 0
+
+        for offset in range(-5, 6):
+            line1_cut = line1[offset + cx - Lh: offset + cx + Lh]
+
+            min_size = np.min([line1_cut.shape[0], line0_cut.shape[0]])
+
+            if min_size == 0:
+                print("Warning: Empty clip line")
+                best_offset = 0
+                break
+
+            mse = mean_squared_error(line0_cut[:min_size], line1_cut[:min_size])
+
+            if mse < mse_low:
+                mse_low = mse
+                best_offset = offset
+
+
+        dst_idx = np.array(range(0, num_elements))
+
+        src_idx = dst_idx + best_offset
+
+        m_data = (src_idx >= 0) & (src_idx < num_elements)
+
+        src_idx = src_idx[m_data]
+        dst_idx = dst_idx[m_data]
+
+        line1_out = np.zeros(shape = line1.shape, dtype = np.uint8)
+
+        line1_out[dst_idx] = line1[src_idx]
+
+        l_out.append(line1_out)
+
+        # print(f"{iline}: {best_offset}: mse = {mse_low}")
+
+
+    anSampleOut = np.stack(l_out)
+    return anSampleOut
+
+
+
+
+####################################################################################
+#
+#   run_one
+#
+
+def run_one():
+    input_dir = get_part_dir(0)
+    mtcnn_detector = MTCNNDetector()
+
     l_files = list (sorted(input_dir.iterdir()))
 
     l_files = [x for x in l_files if x.suffix == '.mp4']
+    
+    
+    video_path = input_dir / "nrdnytturz.mp4"
 
-    mtcnn_detector = MTCNNDetector()
+    assert video_path.is_file()
 
-    for video_path in l_files:
+    #video_path = l_files[126]
 
-        print(f"{iPart}: {video_path.stem}...")
+    video_size = 32
 
-        data = sample_video_safe(mtcnn_detector, video_path, False)
+    W = 256
+    H = 1
 
-        filename = f"p_{iPart}_{video_path.stem}.npy"
+    video = read_video(video_path, video_size)
 
-        output_path = output_dir / filename
+    x_max = video.shape[2]
+    y_max = video.shape[1]
+    z_max = video.shape[0]
 
-        np.save(output_path, data)
+
+    faces = find_two_consistent_faces(mtcnn_detector, video)
+
+    featureset = ['l_mouth', 'r_mouth']
+
+   
+    anSample = sample_feature(video, faces, featureset, W, H, True)
+
+
+    l_feature0 = np.array((*_get_integer_coords_single_feature(x_max, y_max, faces[0], featureset[0]), 0))
+    r_feature0 = np.array((*_get_integer_coords_single_feature(x_max, y_max, faces[0], featureset[1]), 0))
+
+    vector = r_feature0 - l_feature0
+
+    length_vector = np.sqrt(vector.dot(vector))
+   
+    anSampleOut = straighten_sample(anSample, length_vector)
+
+    anSample = anSample.reshape(-1)
+
+
 
 
 
@@ -307,9 +485,9 @@ if __name__ == '__main__':
 
     l_tasks = list (range(50))
 
-    num_threads = 50
+    num_threads = 20
 
-    print(f"Launching on {num_threads} thread(s)")
+    # print(f"Launching on {num_threads} thread(s)")
 
     with Pool(num_threads) as p:
         l = p.map(process_part, l_tasks)

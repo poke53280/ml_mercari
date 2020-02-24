@@ -81,6 +81,12 @@ def define_model():
 	model.compile(optimizer=opt, loss='binary_crossentropy', metrics=['accuracy'])
 	return model
 
+model = define_model()
+
+
+# CONTINUE HERE
+
+
 
 photos = photos / 255.0
 
@@ -98,6 +104,6 @@ anTest  = photos[idx_test]
 anYTrain = labels[idx_train]
 anYTest  = labels[idx_test]
 
-model = define_model()
+
 
 history = model.fit(x = anTrain, y = anYTrain, batch_size = 64, epochs = 20, verbose = 1, validation_data=[anTest, anYTest])

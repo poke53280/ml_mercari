@@ -87,6 +87,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="deepfake\frame_compare.py" />
+    <Compile Include="deepfake\GetRealFake.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\idepath.py" />
     <Compile Include="deepfake\image_grid.py" />
     <Compile Include="deepfake\image_p.py" />
