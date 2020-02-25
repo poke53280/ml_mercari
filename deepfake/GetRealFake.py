@@ -23,7 +23,7 @@ labels = list()
 
 for x in l_files:
 
-    print (x)
+    # print (x)
     anData = np.load(x)
 
     video_size = 32
@@ -59,40 +59,5 @@ for x in l_files:
         photos = list()
         labels = list()
 
-
-
-def define_model():
-	model = Sequential()
-	model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(32, 256, 3)))
-	model.add(MaxPooling2D((2, 2)))
-	model.add(Flatten())
-	model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
-	model.add(Dense(1, activation='sigmoid'))
-	# compile model
-	opt = SGD(lr=0.001, momentum=0.9)
-	model.compile(optimizer=opt, loss='binary_crossentropy', metrics=['accuracy'])
-	return model
-
-
-
-def later():
-
-    num_all = photos.shape[0]
-    num_test = 5
-    num_train = num_all - num_test
-
-    idx = np.array(range(num_all))
-    idx_test = np.random.choice(idx, size = num_test, replace = False)
-    idx_train = np.array(list(set(idx)  - set(idx_test)))
-
-    anTrain = photos[idx_train]
-    anTest  = photos[idx_test]
-
-    anYTrain = labels[idx_train]
-    anYTest  = labels[idx_test]
-
-    model = define_model()
-
-    history = model.fit(x = anTrain, y = anYTrain, batch_size = 64, epochs = 20, verbose = 1, validation_data=[anTest, anYTest])
 
 

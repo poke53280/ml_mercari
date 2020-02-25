@@ -88,7 +88,6 @@ model = define_model()
 
 
 
-photos = photos / 255.0
 
 num_all = photos.shape[0]
 num_test = 5000

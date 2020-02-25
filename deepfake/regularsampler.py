@@ -483,9 +483,9 @@ if __name__ == '__main__':
     nPing = file_test.write_text("ping")
     assert nPing == 4
 
-    l_tasks = list (range(50))
+    l_tasks = [2] # list (range(1))
 
-    num_threads = 20
+    num_threads = 1
 
     # print(f"Launching on {num_threads} thread(s)")
 
