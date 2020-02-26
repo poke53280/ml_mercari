@@ -98,6 +98,7 @@
     </Compile>
     <Compile Include="deepfake\line_sampler.py" />
     <Compile Include="deepfake\mp4_frames.py" />
+    <Compile Include="deepfake\NameScanner.py" />
     <Compile Include="deepfake\predictor.py">
       <SubType>Code</SubType>
     </Compile>
@@ -110,6 +111,7 @@
     <Compile Include="deepfake\stage2_trainer.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="deepfake\TrainIImages.py" />
     <Compile Include="deepfake\train_stage_0.py">
       <SubType>Code</SubType>
     </Compile>

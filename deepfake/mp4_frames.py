@@ -45,6 +45,7 @@ import os
 import argparse
 from multiprocessing import Pool
 import datetime
+import pathlib
 
 
 
@@ -524,7 +525,28 @@ def read_metadata(iPart):
     for x in l_keys:
         l_d.append((x, d[x]))
 
-    return l_d
+
+    isOneFaceOnly = True
+
+    if isOneFaceOnly:
+
+        df_uniques = pd.read_pickle(get_meta_dir() / "uniques.pkl")
+
+        df_uniques = df_uniques[df_uniques.part == iPart]
+
+        l_uniques = list (df_uniques.original)
+
+        l_uniques = [x + ".mp4" for x in l_uniques]
+
+        l_d_filtered = []
+
+        for x in l_d:
+            if x[0] in l_uniques:
+                l_d_filtered.append(x)
+
+        return l_d_filtered
+    else:
+        return l_d
 
 
 
@@ -613,6 +635,14 @@ def get_pred0_dir():
 
 def get_chunk_dir():
     return get_aux_dir("chunks")
+
+####################################################################################
+#
+#   get_meta_dir()
+#
+
+def get_meta_dir():
+    return get_aux_dir("meta")
 
 
 ####################################################################################

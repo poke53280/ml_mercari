@@ -111,6 +111,8 @@ def sample(x_max, y_max, z_max, faces, l_featureline, rW, raster_w, raster_h):
 
     aiGrid = np.zeros((raster_w, raster_h, z_max, 3), dtype = np.int32)
 
+    # Modes: Sample dense and unlimited, sample dens and cut, sample spaced out to raster size.
+
     for x in range(raster_w):
         for y in range(raster_h):
             p0 = anBegin[x, y]
@@ -483,9 +485,9 @@ if __name__ == '__main__':
     nPing = file_test.write_text("ping")
     assert nPing == 4
 
-    l_tasks = [2] # list (range(1))
+    l_tasks = list (range(50))
 
-    num_threads = 1
+    num_threads = 20
 
     # print(f"Launching on {num_threads} thread(s)")
 

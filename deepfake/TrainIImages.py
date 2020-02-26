@@ -70,21 +70,18 @@ def get_model_lstm():
 def get_model_dense():
     model = Sequential()
 
-    model.add(Dense(2048, activation='relu', input_shape=(32, 256, 3)))
-    model.add(Dropout(0.1))
-   
-    model.add(Dropout(0.1))
-    model.add(Dense(512, activation='relu'))
-    model.add(Dropout(0.1))
-    model.add(Dense(256, activation='relu'))
-    model.add(Dropout(0.1))
+    model.add(Dense(512, activation='relu', input_shape=(32, 256, 3)))
+
+    model.add(Flatten())
+
+    
     model.add(Dense(128, activation='relu'))
     model.add(Dropout(0.1))
     model.add(Dense(64, activation='relu'))
     model.add(Dropout(0.1))
     model.add(Dense(16, activation='relu'))
     model.add(Dropout(0.1))
-    model.add(Flatten())
+    
     model.add(Dense(1, activation='sigmoid'))
    
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
@@ -96,15 +93,17 @@ def get_model_dense():
 
 ready_dir = get_ready_data_dir()
 
-model = define_model3()
+model = get_model_dense()
 
-filepath_photo = ready_dir / f"photos_0000.npy"
-filepath_label = ready_dir / f"labels_0000.npy"
+filepath_photo = ready_dir / f"photos_0001.npy"
+filepath_label = ready_dir / f"labels_0001.npy"
 
 anTest = np.load(filepath_photo)
+#anTest = anTest.reshape(-1, 32, 256 * 3)
+
 anYTest = np.load(filepath_label)
 
-for x in range(1, 100000):
+for x in range(1):
     print(f"Processing {x:04}...")
     filepath_photo = ready_dir / f"photos_{x:04}.npy"
     filepath_label = ready_dir / f"labels_{x:04}.npy"
@@ -123,10 +122,10 @@ for x in range(1, 100000):
 
     anTrain = anTrain[idx]
     anYTrain = anYTrain[idx]
-    # anTrain = anTrain.reshape(-1, 32, 256 * 3)
+    #anTrain = anTrain.reshape(-1, 32, 256 * 3)
 
 
-    history = model.fit(x = anTrain, y = anYTrain, batch_size = 128, epochs = 1, verbose = 1, validation_data=[anTest, anYTest])
+    history = model.fit(x = anTrain, y = anYTrain, batch_size = 128, epochs = 20, verbose = 1, validation_data=[anTest, anYTest])
 
 
 

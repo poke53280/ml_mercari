@@ -1,397 +1,519 @@
 
 
-from mp4_frames import get_output_dir
+from mp4_frames import get_meta_dir
 
 from pathlib import Path
 import pandas as pd
 
-input_dir = get_output_dir()
+def hardwork():
+
+    c("zqrz")
+    c("ivsk")
+    c("vedxk")
+    c("dvqlll")
+    c("kewxt")
+    c("bfofp")
+    c("bznv")
+    c("fnutl")
+    c("dftsw")
+    c("sjkig")
+
+    c("dvcl")
+    c("bkuo")
+    c("cmley")
+    c("cifsg")
+    c("bamub")
+    c("llptz")
+    c("dkfyv")
+    c("ibcoee")
+    c("kjkvq")
+    c("feicji")
+
+    c("jdtkz")
+    c("kyzj")
+    c("hwyh")
+    c("avpuw")
+    c("qqkvod")
+    c("csaui")
+    c("jxreja")
+    c("fdip")
+    c("svtju")
+    c("klqfp")
+
+    c("cbgry")
+    c("ahzfq")
+    c("cflko")
+    c("fcqoj")
+    c("imsac")
+    c("hxlr")
+    c("ydgt")
+    c("ezmvb")
+    c("bdhuo")
+    c("pkhkw")
+
+    c("clby")
+    c("fhncz")
+    c("bbbat")
+    c("vdmyz")
+    c("fkids")
+    c("baxps")
+    c("bnsxu")
+    c("avdvt")
+    c("cwbgz")
+    c("fltays")
+
+    c("cbxvj")
+    c("spsev")
+    c("dcnuh")
+    c("hksbf")
+    c("ndfbax")
+    c("bciyp")
+    c("pwppr")
+    c("lxmkq")
+    c("dstib")
+    c("okmqu")
+
+    c("jcxgvee")
+    c("biytpp")
+    c("hicjuu")
+    c("pzjry")
+    c("xkmyy")
+    c("obhwst")
+    c("pqhou")
+    c("lsdcd")
+    c("nepiit")
+    c("tvfyff")
+
+    c("ealzr")
+    c("eagqa")
+    c("lpttjs")
+    c("slytjs")
+    c("cbiwg")
+    c("zxafp")
+    c("ijnfp")
+    c("gxnfk")
+    c("fecys")
+    c("glamn")
+
+    c("lccey")
+    c("bdwpy")
+    c("mvdxf")
+    c("offdm")
+    c("qyaiav")
+    c("sqgvt")
+    c("fllcc")
+    c("ifgqd")
+    c("nrknr")
+    c("mudvg")
+
+    c("ljkwq")
+    c("tnjro")
+    c("csluw")
+    c("jqbue")
+    c("jsyvj")
+    c("tyvne")
+    c("knbod")
+    c("eypz")
+    c("clquf")
+    c("pgwvp")
+
+    c("mdwt")
+    c("npvws")
+    c("ghptd")
+    c("zurfg")
+    c("agbav")
+    c("itmnw")
+    c("ensqj")
+    c("qvxuz")
+    c("cgoqh")
+    c("yvhit")
+
+    c("mxmqh")
+    c("rttxr")
+    c("djxdy")
+    c("erufb")
+    c("soydh")
+    c("bypcsh")
+    c("bmpryt")
+    c("jemwfz")
+    c("yjbob")
+    c("qfalft")
+
+    c("hgtsz")
+    c("sllgua")
+    c("llcbay")
+    c("vfqgf")
+    c("zeyxy")
+    c("dtfqod")
+    c("mejgv")
+    c("ofosax")
+    c("oxsmx")
+    c("whldc")
+
+    c("tthzw")
+    c("sgjbak")
+    c("dekub")
+    c("nperme")
+    c("heoufz")
+    c("pbfrp")
+    c("qlkzc")
+    c("tbiya")
+    c("isnbk")
+    c("vdqlw")
+
+    c("hlgjnu")
+    c("xdkrcnt")
+    c("xsrqm")
+    c("ipowm")
+    c("nvldb")
+    c("nfimd")
+    c("ebkatw")
+    c("gghhm")
+    c("brlra")
+    c("qaaqq")
+
+    c("nvmnv")
+    c("zfamzp")
+    c("kfqrag")
+    c("otfnn")
+    c("snjcin")
+    c("myewu")
+    c("ked")
+    c("xperi")
+    c("jnrb")
+    c("sevxhi")
+
+    c("esqv")
+    c("uvhxg")
+    c("txceg")
+    c("nqdrt")
+    c("ohnon")
+    c("rwndz")
+    c("yknne")
+    c("ilkbv")
+    c("mkigb")
+    c("uqzbw")
+
+    c("lusvm")
+    c("fksks")
+    c("dnocq")
+    c("fpmab")
+    c("diydig")
+    c("oafhp")
+    c("iwthi")
+    c("cntnc")
+    c("kcqrjd")
+    c("espkk")
+
+    c("cxwvz")
+    c("jyxdp")
+    c("vsvwro")
+    c("ochzcz")
+    c("wyhnv")
+    c("wqjre")
+    c("urqnlof")
+    c("hrkwa")
+    c("lgmxcn")
+    c("yrrpp")
+
+    c("dryto")
+    c("ticjnw")
+    c("tworzx")
+    c("arrpq")
+    c("ynfgxe")
+    c("uyzvp")
+    c("kosmf")
+    c("sqyycl")
+    c("ieoerv")
+    c("xqwzan")
+
+    c("mumpse")
+    c("qorwh")
+    c("osqruu")
+    c("hpura")
+    c("uchzxj")
+    c("obkcg")
+    c("xvkcb")
+    c("gpcwa")
+    c("ftfemk")
+    c("qjvorp")
+
+    c("bzfhk")
+    c("ukhtg")
+    c("wzetgj")
+    c("uiwjv")
+    c("qouib")
+    c("cgjemt")
+    c("vhtds")
+    c("kvhby")
+    c("sahwx")
+    c("nqjzed")
+
+    c("hbqez")
+    c("nzhlw")
+    c("xqvzc")
+    c("fmutb")
+    c("rdfmib")
+    c("clekum")
+    c("euyynv")
+    c("vdaehw")
+    c("jwpyc")
+    c("eejln")
+
+    c("kzbwt")
+    c("zbgss")
+    c("mnijii")
+    c("akyive")
+    c("kztmw")
+    c("amfly")
+    c("epzlf")
+    c("gpnkd")
+    c("gochx")
+    c("afxat")
+
+    c("jnuym")
+    c("mnmpf")
+    c("whhnuq")
+    c("jhmliu")
+    c("psgcme")
+    c("xdqbae")
+    c("lrwhd")
+    c("clpxc")
+    c("fmsxom")
+    c("lndhy")
+
+    c("tolsk")
+    c("zrgvt")
+    c("stdavr")
+    c("ogpsz")
+    c("przmou")
+    c("fongi")
+    c("qmtchq")
+    c("vwuie")
+    c("aebkht")
+    c("gkmsvn")
+
+    c("kxzyc")
+    c("iwhkix")
+    c("qntmam")
+    c("ewuhue")
+    c("eftdhq")
+    c("kbulxc")
+    c("nrerlt")
+    c("vjkiyq")
+    c("rtpuwt")
+    c("ljkoj")
+
+    c("fwmqk")
+    c("kipkhe")
+    c("wyaye")
+    c("zpqe")
+    c("naevg")
+    c("oboxm")
+    c("pntqu")
+    c("lctglt")
+    c("yaivzm")
+    c("gotvgc")
+
+    c("vqbbw")
+    c("ibqqieq")
+    c("jhlnj")
+    c("pzlfxm")
+    c("cxptp")
+    c("oybwz")
+    c("rbhwa")
+    c("njwimw")
+    c("xeuhr")
+    c("filuu")
+
+    c("lqntrt")
+    c("axdeps")
+    c("vftcid")
+    c("qvdkibr")
+    c("wpzerce")
+    c("upbgva")
+    c("dmmua")
+    c("xbanya")
+    c("osnazd")
+    c("qockie")
+
+    c("kmxt")
+    c("ghgvb")
+    c("wyubcv")
+    c("bqcfd")
+    c("ampfd")
+    c("inbtx")
+    c("insnam")
+    c("uklgn")
+    c("wxivo")
+    c("novxe")
+
+    c("vvglf")
+    c("hquxv")
+    c("cdees")
+    c("jilf")
+    c("blpwe")
+    c("youvm")
+    c("plihp")
+    c("xdyuw")
+    c("hwuje")
+    c("hxxjoi")
+
+    c("idevi")
+    c("luqtk")
+    c("wfdlw")
+    c("kpaqf")
+    c("awcle")
+    c("roqkad")
+    c("wimfc")
+    c("snmzm")
+    c("txhvy")
+    c("hrtmcl")
+
+    c("jiex")
+    c("mcws")
+    c("bfymz")
+    c("htrke")
+    c("tcxzf")
+    c("plyqi")
+    c("zrmge")
+    c("oibrd")
+    c("csqbe")
+    c("skaha")
+
+    c("wnqod")
+    c("jgdrc")
+    c("vnxup")
+    c("wvcca")
+    c("iloqo")
+    c("lhxshn")
+    c("imwcc")
+    c("ivemk")
+    c("rzime")
+    c("vcxck")
+
+    c("bonii")
+    c("oehzw")
+    c("ezuft")
+    c("wpbea")
+    c("sqsai")
+    c("ewepg")
+    c("aipyy")
+    c("plhcc")
+    c("fhhyu")
+    c("kbeml")
+
+    c("vodql")
+    c("cppdv")
+    c("unqatf")
+    c("vlchg")
+    c("mfupp")
+    c("qhanu")
+    c("rzdkw")
+    c("ryjmx")
+    c("qjwrne")
+    c("bzzcuu")
+
+    c("wadvb")
+    c("ixqai")
+    c("ppsyp")
+    c("ihnpip")
+    c("qzwts")
+    c("pdaeg")
+    c("emetp")
+    c("titlj")
+    c("dtpds")
+    c("pupcz")
+
+    c("ucuo")
+    c("xags")
+    c("neehu")
+    c("pgopx")
+    c("qohoox")
+    c("qoryt")
+    c("tuktn")
+    c("bhciv")
+    c("jymad")
+    c("hbxqz")
+
+    c("novxe")
+    c("ujdlr")
+    c("fsvpk")
+    c("ekonq")
+    c("vbzdl")
+    c("vszkq")
+    c("sdoyu")
+    c("fpnhb")
+    c("fyimol")
+    c("eyguq")
+
+    c("gyokf")
+    c("lxixt")
+    c("gigws")
+    c("mfzqxw")
+    c("usgty")
+    c("yaivb")
+    c("chbzgd")
+    c("vjhhao")
+    c("kjjanhd")
+    c("dznch")
+
+    c("kcvrck")
+    c("ckkuye")
+    c("sdzzjn")
+    c("qepouw")
+    c("xupee")
+    c("zejay")
+    c("cwskt")
+    c("qvguto")
+    c("fiwtqa")
+    c("bktib")
+
+    c("gzfxx")
+    c("fklzz")
+    c("kuisc")
+    c("xbvjr")
+    c("crjvhc")
+    c("qrbjzz")
+    c("lssyhe")
+    c("qhqtm")
+    c("jqgia")
+    c("xjabn")
+
+    c("hpeya")
+    c("ggoq")
+    c("rfwek")
+    c("hmfc")
+    c("wervs")
+    c("dhwgib")
+    c("rzpsy")
 
 
-l_files = list (sorted(input_dir.iterdir()))
 
-l_name = []
+input_dir = get_meta_dir()
+
+df_all = pd.read_pickle(input_dir / "all_files.pkl")
+
+
+l_original = []
 l_part = []
 
-for x in l_files:
-    zTxt = x.stem
-
-    l_txt = zTxt.split("_")
-
-    if len (l_txt) != 3:
-        print(f"Warning: Cannot parse file : {zTxt}")
-        continue
-
-    iPart = l_txt[1]
-    zName = l_txt[2]
-
-    l_part.append(iPart)
-    l_name.append(zName)
-
-df = pd.DataFrame({'iPart': l_part, 'name': l_name})
-
-print (df.shape)
-
-df.to_pickle(input_dir / "all_originals.pkl")
-
-################
-
-df = pd.read_pickle(input_dir / "all_originals.pkl")
-
-# Row 1
-
-a = "zqrz"
-a = "ivsk"
-a = "vedxk"
-a = "dvqlll"
-a = "kewxt"
-a = "bfofp"
-a = "bznv"
-a = "fnutl"
-a = "dftsw"
-a = "sjkig"
-
-###############################
-
-# Row 2
-a = "dvcl"
-a = "bkuo"
-a = "cmley"
-a = "cifsg"
-a = "bamub"
-a = "llptz"
-a = "dkfyv"
-a = "ibcoee"
-a = "kjkvq"
-a = "feicji"
-
-# Row 3
-
-a = "jdtkz"
-a = "kyzj"
-a = "hwyh"
-a = "avpuw"
-a = "qqkvod"
-a = "csaui"
-a = "jxreja"
-a = "fdip"
-a = "svtju"
-a = "klqfp"
-
-
-
-#############################################################################3
-#  Row4
-
-a = "cbgry"
-a = "ahzfq"
-a = "cflko"
-a = "fcqoj"
-a = "imsac"
-a = "hxlr"
-a = "ydgt"
-a = "ezmvb"
-a = "bdhuo"
-a = "pkhkw"
-
-
-# Row 5
-
-a = "clby"
-a = "fhncz"
-a = "bbbat"
-a = "vdmyz"
-a = "fkids"
-a = "baxps"
-a = "bnsxu"
-a = "avdvt"
-a = "cwbgz"
-a = "fltays"
-
-# Row 6
-
-a = "cbxvj"
-a = "spsev"
-a = "dcnuh"
-a = "hksbf"
-a = "ndfbax"
-a = "bciyp"
-a = "pwppr"
-a = "lxmkq"
-a = "dstib"
-a = "okmqu"
-
-# Row 7
-
-a = "jcxgvee"
-a = "biytpp"
-a = "hicjuu"
-a = "pzjry"
-a = "xkmyy"
-a = "obhwst"
-a = "pqhou"
-a = "lsdcd"
-a = "nepiit"
-a = "tvfyff"
-
-# Row 8 and 9
-c("ealzr")
-c("eagqa")
-c("lpttjs")
-c("slytjs")
-c("cbiwg")
-c("zxafp")
-c("ijnfp")
-c("gxnfk")
-c("fecys")
-c("glamn")
-
-c("lccey")
-c("bdwpy")
-c("mvdxf")
-c("offdm")
-c("qyaiav")
-c("sqgvt")
-c("fllcc")
-c("ifgqd")
-c("nrknr")
-c("mudvg")
-
-
-# Row 10 and 11
-c("ljkwq")
-c("tnjro")
-c("csluw")
-c("jqbue")
-c("jsyvj")
-c("tyvne")
-c("knbod")
-c("eypz")
-c("clquf")
-c("pgwvp")
-
-c("mdwt")
-c("npvws")
-c("ghptd")
-c("zurfg")
-c("agbav")
-c("itmnw")
-c("ensqj")
-c("qvxuz")
-c("cgoqh")
-c("yvhit")
-
-
-c("mxmqh")
-c("rttxr")
-c("djxdy")
-c("erufb")
-c("soydh")
-c("bypcsh")
-c("bmpryt")
-c("jemwfz")
-c("yjbob")
-c("qfalft")
-
-c("hgtsz")
-c("sllgua")
-c("llcbay")
-c("vfqgf")
-c("zeyxy")
-c("dtfqod")
-c("mejgv")
-c("ofosax")
-c("oxsmx")
-c("whldc")
-
-c("tthzw")
-c("sgjbak")
-c("dekub")
-c("nperme")
-c("heoufz")
-c("pbfrp")
-c("qlkzc")
-c("tbiya")
-c("isnbk")
-c("vdqlw")
-
-
-c("hlgjnu")
-c("xdkrcnt")
-c("xsrqm")
-c("ipowm")
-c("nvldb")
-c("nfimd")
-c("ebkatw")
-c("gghhm")
-c("brlra")
-c("qaaqq")
-
-c("nvmnv")
-c("zfamzp")
-c("kfqrag")
-c("otfnn")
-c("snjcin")
-c("myewu")
-# Missing !!!! c("ked")
-c("xperi")
-c("jnrb")
-c("sevxhi")
-
-c("esqv")
-c("uvhxg")
-c("txceg")
-c("nqdrt")
-c("ohnon")
-c("rwndz")
-c("yknne")
-c("ilkbv")
-c("mkigb")
-c("uqzbw")
-
-
-c("lusvm")
-c("fksks")
-c("dnocq")
-c("fpmab")
-c("diydig")
-c("oafhp")
-c("iwthi")
-c("cntnc")
-c("kcqrjd")
-c("espkk")
-
-c("cxwvz")
-c("jyxdp")
-c("vsvwro")
-c("ochzcz")
-c("wyhnv")
-c("wqjre")
-c("urqnlof")
-c("hrkwa")
-c("lgmxcn")
-c("yrrpp")
-
-c("dryto")
-c("ticjnw")
-c("tworzx")
-c("arrpq")
-c("ynfgxe")
-c("uyzvp")
-c("kosmf")
-c("sqyycl")
-c("ieoerv")
-c("xqwzan")
-
-c("mumpse")
-c("qorwh")
-c("osqruu")
-c("hpura")
-c("uchzxj")
-c("obkcg")
-c("xvkcb")
-c("gpcwa")
-c("ftfemk")
-c("qjvorp")
-
-c("bzfhk")
-c("ukhtg")
-c("wzetgj")
-c("uiwjv")
-c("qouib")
-c("cgjemt")
-c("vhtds")
-c("kvhby")
-c("sahwx")
-c("nqjzed")
-
-c("hbqez")
-c("nzhlw")
-c("xqvzc")
-c("fmutb")
-c("rdfmib")
-c("clekum")
-c("euyynv")
-c("vdaehw")
-c("jwpyc")
-c("eejln")
-
-c("kzbwt")
-c("zbgss")
-c("mnijii")
-c("akyive")
-c("kztmw")
-c("amfly")
-c("epzlf")
-c("gpnkd")
-c("gochx")
-c("afxat")
-
-c("jnuym")
-c("mnmpf")
-c("whhnuq")
-c("jhmliu")
-c("psgcme")
-c("xdqbae")
-c("lrwhd")
-c("clpxc")
-c("fmsxom")
-c("lndhy")
-
-c("tolsk")
-c("zrgvt")
-c("stdavr")
-c("ogpsz")
-c("przmou")
-c("fongi")
-c("qmtchq")
-c("vwuie")
-c("aebkht")
-c("gkmsvn")
-
-c("kxzyc")
-c("iwhkix")
-c("qntmam")
-c("ewuhue")
-c("eftdhq")
-c("kbulxc")
-c("nrerlt")
-c("vjkiyq")
-c("rtpuwt")
-c("ljkoj")
-
-# MISSING c("fwmqk")
-c("kipkhe")
-# MISSINGc("wyay"
-c("zpqe")
-c("naevg")
-c("oboxm")
-c("pntqu")
-c("lctglt")
-c("yaivzm")
-c("gotvgc")
-
-c("vqbbw")
-c("ibqqieq")
-c("jhlnj")
-c("pzlfxm")
-c("cxptp")
-c("oybwz")
-c("rbhwa")
-c("njwimw")
-c("xeuhr")
-c("filuu")
-
-c("lqntrt")
-c("axdeps")
-c("vftcid")
-c("qvdkibr")
-c("wpzerce")
-c("upbgva")
-c("dmmua")
-c("xbanya")
-c("osnazd")
-c("qockie")
-
 def c(txt):
-    print (df[df.name.str.startswith(txt)])
+    m = df_all.original.str.startswith(txt)
+
+    nOriginals = df_all.original[m].unique().shape[0]
+
+    assert nOriginals == 1
+
+    l_original.append(df_all.original[m].iloc[0])
+    l_part.append(df_all.p[m].iloc[0])
+
+
+
+hardwork()
+
+df = pd.DataFrame({'part': l_part, 'original': l_original})
+
+
+df.to_pickle(input_dir / "uniques.pkl")
+

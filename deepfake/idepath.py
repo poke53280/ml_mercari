@@ -17,7 +17,7 @@ path_work = Path("C:\\Users\\T149900\\Documents\\GitHub")
 
 path_home = Path("C:\\Users\\T149900\\source\\repos")
 
-path = path_home
+path = path_work
 
 assert path.is_dir()
 
