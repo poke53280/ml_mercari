@@ -236,6 +236,46 @@ def sample_pair(mtcnn_detector, video_real_path, video_fake_path):
     return anData
 
 
+####################################################################################
+#
+#   find_middle_face_box
+#
+
+def find_middle_face_box(mtcnn_detector, video):
+    
+    z_max = video.shape[0]
+    y_max = video.shape[1]
+    x_max = video.shape[2]
+
+    l_faces = mtcnn_detector.detect(video[int(z_max/2)])
+
+    l_bb_min = []
+    l_bb_max = []
+    l_confidence = []
+
+    for x in l_faces:
+        l_bb_min.append(x['bb_min'])
+        l_bb_max.append(x['bb_max'])
+        l_confidence.append(x['confidence'])
+
+    
+    anBBMin = np.array(l_bb_min)
+    anBBMax = np.array(l_bb_max)
+    anConfidence = np.array(l_confidence)
+
+    iConfidenceMax = np.argmax(anConfidence)
+
+    arBBMin = anBBMin[iConfidenceMax]
+    arBBMax = anBBMax[iConfidenceMax]
+
+    arScale = np.array([x_max, y_max])
+
+    anBBMin = (arBBMin * arScale).astype(np.int32)
+    anBBMax = (arBBMax * arScale).astype(np.int32)
+
+    return (anBBMin, anBBMax)
+
+
 
 ####################################################################################
 #
