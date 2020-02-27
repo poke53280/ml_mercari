@@ -729,6 +729,27 @@ def get_part_dir(iPart):
 
 ####################################################################################
 #
+#   get_crops_dir
+#
+
+def get_crops_dir():
+
+    isLocal = os.name == 'nt'
+
+    if isLocal:
+        s = pathlib.Path(f"C:\\Users\\T149900\\Downloads\\faces_224")
+        
+    else:
+        s = pathlib.Path("/mnt/disks/tmp_mnt/data/crops/faces_224")
+
+    assert s.is_dir(), f"{s} not a directory"
+
+    return s
+
+
+
+####################################################################################
+#
 #   get_model_filepath
 #
 

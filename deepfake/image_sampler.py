@@ -5,7 +5,7 @@ from mp4_frames import read_video
 
 from mp4_frames import get_part_dir
 
-from mp4_frames import get_output_dir
+from mp4_frames import get_ready_data_dir
 from mp4_frames import read_metadata
 from face_detector import MTCNNDetector
 from featureline import find_middle_face_box
@@ -42,7 +42,9 @@ def adjust_box_1d(c, half_size, extent):
 #   process_part
 #
 
-def process_part(iPart):
+def process_part(iPart, isDraw):
+
+    assert get_ready_data_dir().is_dir()
 
     outputsize = 101
 
@@ -87,10 +89,10 @@ def process_part(iPart):
         s_min = center_adjusted - half_size
         s_max = center_adjusted + half_size
 
-
-        image_real = cv2.rectangle(image_real, (s_min[0], s_min[1]), (s_max[0], s_max[1]), (255,0,0), 5)
-        plt.imshow(image_real)
-        plt.show()
+        if isDraw:
+            image_real = cv2.rectangle(image_real, (s_min[0], s_min[1]), (s_max[0], s_max[1]), (255,0,0), 5)
+            plt.imshow(image_real)
+            plt.show()
 
         # Sample frame
 
@@ -142,13 +144,13 @@ def process_part(iPart):
                 test_sample = cv2.cvtColor(test_sample, cv2.COLOR_RGB2GRAY)
 
                 im = Image.fromarray(test_sample)
-                im.save(get_output_dir() / (filename +".png"))
+                im.save(get_ready_data_dir() / (filename +".png"))
 
                 m = erosion == 0
 
                 m = m.all(axis = 2)
 
                 im = Image.fromarray(m)
-                im.save(get_output_dir() / (filename +"_mask.png"))
+                im.save(get_ready_data_dir() / (filename +"_mask.png"))
 
     
