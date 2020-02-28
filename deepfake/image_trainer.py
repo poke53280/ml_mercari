@@ -26,6 +26,19 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 import torchvision.models as models
 
+from sklearn.metrics import log_loss
+
+def log_loss_test():
+
+    y_true = np.random.choice([0, 1], size = 1000)
+
+    y_pred_speculative = np.random.uniform(low = 0.1, high = 0.9, size = 1000)
+    y_pred_conservative = [0.5] * 1000
+
+    log_loss(y_true, y_pred_conservative)
+    log_loss(y_true, y_pred_speculative)
+
+
 ####################################################################################
 #
 #   load_image_and_label
@@ -155,11 +168,11 @@ def make_splits(crops_dir, metadata_df, frac):
 def create_data_loaders(crops_dir, metadata_df, image_size, batch_size, num_workers):
     train_df, val_df = make_splits(crops_dir, metadata_df, frac=0.05)
 
-    train_dataset = VideoDataset(crops_dir, train_df, "train", image_size, sample_size=10000)
+    train_dataset = VideoDataset(crops_dir, train_df, "train", image_size, sample_size=train_df.shape[0])
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, 
                               num_workers=num_workers, pin_memory=True)
 
-    val_dataset = VideoDataset(crops_dir, val_df, "val", image_size, sample_size=500, seed=1234)
+    val_dataset = VideoDataset(crops_dir, val_df, "val", image_size, sample_size=val_df.shape[0], seed=1234)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, 
                             num_workers=num_workers, pin_memory=True)
 
@@ -263,13 +276,15 @@ def fit(epochs):
 #
 
 class MyResNeXt(models.resnet.ResNet):
-    def __init__(self, training=True):
+    def __init__(self, checkpoint, training=True):
         super(MyResNeXt, self).__init__(block=models.resnet.Bottleneck,
                                         layers=[3, 4, 6, 3], 
                                         groups=32, 
                                         width_per_group=4)
 
-        self.load_state_dict(checkpoint)
+        if checkpoint is not None:
+            print(f"Loading checkpoint data...")
+            self.load_state_dict(checkpoint)
 
         # Override the existing FC layer with a new one.
         self.fc = nn.Linear(2048, 1)
@@ -385,7 +400,7 @@ if isDraw:
 checkpoint = torch.load(get_model_dir() / "resnext50_32x4d-7cdf4587.pth")
 
 # checkpoint used as global in constructor:
-net = MyResNeXt().to(gpu)
+net = MyResNeXt(checkpoint, True).to(gpu)
 
 del checkpoint
 
@@ -411,4 +426,11 @@ epochs_done = 0
 optimizer = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=wd)
 
 
-fit(5)
+fit(4)
+
+
+torch.save(net.state_dict(), get_model_dir() / "checkpoint.pth")
+
+evaluate(net, val_loader, device=gpu)
+
+
