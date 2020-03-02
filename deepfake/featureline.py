@@ -235,6 +235,60 @@ def sample_pair(mtcnn_detector, video_real_path, video_fake_path):
     anData = np.concatenate(l_data)
     return anData
 
+####################################################################################
+#
+#   find_spaced_out_faces_boxes
+#
+
+def find_spaced_out_faces_boxes(mtcnn_detector, video, nSpace):
+    z_max = video.shape[0]
+    y_max = video.shape[1]
+    x_max = video.shape[2]
+
+    l_key_frames = list(np.linspace(0, z_max - 1, endpoint = True, num = z_max/nSpace).astype(np.int32))
+
+    d = {}
+
+    for iKeyFrame in l_key_frames:
+        l_faces_key_frame = mtcnn_detector.detect(video[iKeyFrame])
+        d[iKeyFrame] = l_faces_key_frame
+
+    return d
+
+
+
+####################################################################################
+#
+#   get_random_face_box_from_z
+#
+
+def get_random_face_box_from_z(d, z, x_max, y_max, z_max):
+    anKeys = np.array(list(d.keys()))
+
+    assert z >= anKeys[0]
+    assert z <= anKeys[-1]
+
+    idx_key = np.abs(anKeys - z).argmin()
+
+    iKeyFrame = anKeys[idx_key]
+
+    l_faces = d[iKeyFrame]
+
+    idx_face = np.random.choice(range(len(l_faces)))
+
+    l_face = l_faces[idx_face]
+
+    arBBMin = l_face['bb_min']
+    arBBMax = l_face['bb_max']
+
+    arScale = np.array([x_max, y_max])
+
+    anBBMin = (arBBMin * arScale).astype(np.int32)
+    anBBMax = (arBBMax * arScale).astype(np.int32)
+
+    return (anBBMin, anBBMax)
+
+
 
 ####################################################################################
 #

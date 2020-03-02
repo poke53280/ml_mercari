@@ -87,10 +87,10 @@ def upsample(img):
 
 
 
-img_size_ori = 101
+img_size_ori = 128
 img_size_target = 128
 
-def load_to_series(l_x):
+def load_to_series_grayscale(l_x):
 
     l_data = []
 
@@ -104,6 +104,44 @@ def load_to_series(l_x):
         data = np.array(i)
         data = 1.0 - (data / 255.0)
         l_data.append(data)
+
+    sData = pd.Series(l_data)
+    return sData
+
+
+def load_to_series_rgb(l_x):
+
+    l_data = []
+
+
+    for x in l_x:
+        filename = input_dir / x
+        assert filename.is_file()
+
+        i = load_img(filename, color_mode = "rgb")
+
+        #plt.imshow(i)
+        #plt.show()
+
+        data = np.array(i)
+
+        # 0 - red
+        # 1 - green
+        # 2 - blue
+
+        data[:, :, 1] = 255
+        #plt.imshow(data)
+        #plt.show()
+
+        pData = np.zeros(data.shape, dtype = np.float32)
+
+        pData[:, :, 0] = (data[:, :, 0] - 123.68) / 58.393
+        pData[:, :, 1] = (data[:, :, 0] - 116.779) / 57.12
+        pData[:, :, 2] = (data[:, :, 0] - 103.939) / 57.375
+
+        pData.shape
+
+        l_data.append(pData)
 
     sData = pd.Series(l_data)
     return sData
@@ -142,7 +180,7 @@ azTest  = azOriginal[:num_valid]
 
 rFilesPerOriginal = len(l_files) / num_originals
 
-num_max_files_per_run = 20000
+num_max_files_per_run = 2000
 
 num_originals_per_chunk = num_max_files_per_run / rFilesPerOriginal
 
@@ -172,11 +210,11 @@ for iTrain, azTrain in enumerate(l_azTrain):
     m_train = df.original.isin(azTrain)
     m_test  = df.original.isin(azTest)
 
-    sDataTest = load_to_series(df.file[m_test])
-    sMaskTest = load_to_series(df.file_mask[m_test])
+    sDataTest = load_to_series_rgb(df.file[m_test])
+    sMaskTest = load_to_series_grayscale(df.file_mask[m_test])
 
-    sDataTrain = load_to_series(df.file[m_train])
-    sMaskTrain = load_to_series(df.file_mask[m_train])
+    sDataTrain = load_to_series_rgb(df.file[m_train])
+    sMaskTrain = load_to_series_grayscale(df.file_mask[m_train])
 
     num_test = m_test.sum()
     num_train = m_train.sum()
