@@ -4,6 +4,7 @@ import numpy as np
 from mp4_frames import read_video
 
 from mp4_frames import get_part_dir
+from mp4_frames import get_output_dir
 
 from mp4_frames import get_ready_data_dir
 from mp4_frames import read_metadata
@@ -16,7 +17,7 @@ import cv2
 
 from easy_face import create_diff_image
 from PIL import Image
-
+from multiprocessing import Pool
 
 
 ####################################################################################
@@ -42,7 +43,9 @@ def adjust_box_1d(c, half_size, extent):
 #   process_part
 #
 
-def process_part(iPart, isDraw):
+def process_part(iPart):
+
+    isDraw = False
 
     assert get_ready_data_dir().is_dir()
 
@@ -152,5 +155,28 @@ def process_part(iPart, isDraw):
 
                 im = Image.fromarray(m)
                 im.save(get_ready_data_dir() / (filename +"_mask.png"))
+
+####################################################################################
+#
+#   __main__
+#
+
+if __name__ == '__main__':
+    outdir_test = get_output_dir()
+    assert outdir_test.is_dir()
+
+    file_test = outdir_test / "test_out_cubes.txt"
+    nPing = file_test.write_text("ping")
+    assert nPing == 4
+
+    l_tasks = list (range(50))
+
+    num_threads = 1
+
+    # print(f"Launching on {num_threads} thread(s)")
+
+    with Pool(num_threads) as p:
+        l = p.map(process_part, l_tasks)
+
 
     
