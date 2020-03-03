@@ -4,7 +4,7 @@ import numpy as np
 from mp4_frames import read_video
 
 from mp4_frames import get_part_dir
-from mp4_frames import get_output_dir
+from mp4_frames import get_meta_dir
 
 from mp4_frames import get_ready_data_dir
 from mp4_frames import read_metadata
@@ -21,6 +21,9 @@ import cv2
 from easy_face import create_diff_image
 from PIL import Image
 from multiprocessing import Pool
+
+import argparse
+from pathlib import Path
 
 
 ####################################################################################
@@ -68,6 +71,8 @@ def process_part(iPart):
     for entry in l_d:
 
         orig_path = entry[0]
+
+        print (str(orig_path))
 
         orig_video = read_video(part_dir / orig_path, 0)
 
@@ -178,28 +183,30 @@ def process_part(iPart):
                     iSample = iSample + 1
 
 
-
 ####################################################################################
 #
 #   __main__
 #
 
 if __name__ == '__main__':
-    outdir_test = get_output_dir()
-    assert outdir_test.is_dir()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--start", "-s", help="start offset chunk", required = True)
 
-    file_test = outdir_test / "test_out_cubes.txt"
-    nPing = file_test.write_text("ping")
-    assert nPing == 4
+    args = parser.parse_args()
 
-    l_tasks = list (range(50))
+    iStart = int (args.start)
 
-    num_threads = 1
+    meta_dir = get_meta_dir()
+    assert meta_dir.is_dir()
+    f = Path(meta_dir / "image_sampler_progress.txt").open('a')
+    l_tasks = list (range(iStart, 50))
 
-    # print(f"Launching on {num_threads} thread(s)")
-
-    with Pool(num_threads) as p:
-        l = p.map(process_part, l_tasks)
-
-
-    
+    for iTask in l_tasks:
+        print(f"Processing part {iTask}...")
+        process_part(iTask)
+        
+        f.write(f"done {iTask}\r\n")
+       
+        print(f"Processing part {iTask} done.")
+    """c"""   
+    f.close()

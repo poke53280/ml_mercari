@@ -187,7 +187,7 @@ idx_train = np.where(m_train)[0]
 np.random.shuffle(idx_train)
 
 
-num_max_files_per_run = 50
+num_max_files_per_run = 5000
 
 num_splits = int(1 + idx_train.shape[0] / num_max_files_per_run)
 
@@ -204,6 +204,7 @@ model = get_unet_resnet(input_shape=(img_size_target,img_size_target,3))
 
 #from keras.models import load_model
 #model = load_model(checkpoint_path)
+#add custom object function
 
 model.compile(loss=bce_dice_loss, optimizer='adam', metrics=[my_iou_metric])
 
