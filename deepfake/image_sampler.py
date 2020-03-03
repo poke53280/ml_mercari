@@ -77,7 +77,7 @@ def process_part(iPart):
 
         d_faces = find_spaced_out_faces_boxes(mtcnn_detector, orig_video, 12)
 
-        for zSample in range(40):
+        for zSample in range(16):
 
             z_sample = np.random.choice(range(0, z_max))
 
@@ -111,13 +111,13 @@ def process_part(iPart):
             # Sample frame
 
             l_test_path = entry[1]
-            l_test_path.append(orig_path)
+            # l_test_path.append(orig_path)
 
             for path in l_test_path:
 
                 test_video = read_video(part_dir / path, 0)
 
-                for x in range(26):
+                for x in range(12):
 
                     filename = f"{orig_path[:-4]}_{path[:-4]}_{iSample}"
 

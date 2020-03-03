@@ -128,8 +128,7 @@ def load_to_series_rgb(l_x):
         # 0 - red
         # 1 - green
         # 2 - blue
-
-        data[:, :, 1] = 255
+        
         #plt.imshow(data)
         #plt.show()
 
@@ -139,15 +138,11 @@ def load_to_series_rgb(l_x):
         pData[:, :, 1] = (data[:, :, 0] - 116.779) / 57.12
         pData[:, :, 2] = (data[:, :, 0] - 103.939) / 57.375
 
-        pData.shape
-
         l_data.append(pData)
 
     sData = pd.Series(l_data)
     return sData
 
-
-# Split out on first name and mask...
 
 input_dir = get_ready_data_dir()
 
@@ -168,6 +163,8 @@ df = pd.DataFrame({'file': l_files, 'file_mask': l_files_mask, 'original': l_ori
 rValidationSplit = 0.1
 
 azOriginal = np.unique(df.original)
+
+# Todo seed
 np.random.shuffle(azOriginal)
 
 num_originals = azOriginal.shape[0]
@@ -175,40 +172,56 @@ num_originals = azOriginal.shape[0]
 num_valid = int(1 + (rValidationSplit * num_originals))
 num_train = num_originals - num_valid
 
-
 azTest  = azOriginal[:num_valid]
+azTrain = azOriginal[num_valid:]
 
-rFilesPerOriginal = len(l_files) / num_originals
+m_train = df.original.isin(azTrain)
+m_test  = df.original.isin(azTest)
 
-num_max_files_per_run = 2000
+assert (m_train ^ m_test).all()
 
-num_originals_per_chunk = num_max_files_per_run / rFilesPerOriginal
 
-nSplits = int ( 1 + num_originals / num_originals_per_chunk)    
+idx_train = np.where(m_train)[0]
 
-l_azTrain = np.array_split(azOriginal[num_valid:], nSplits)
+# Todo: seed
+np.random.shuffle(idx_train)
 
-l_azTrain = [x for x in l_azTrain if len(x) > 0]
 
+num_max_files_per_run = 50
+
+num_splits = int(1 + idx_train.shape[0] / num_max_files_per_run)
+
+l_idx_train = np.array_split(idx_train, num_splits)
+
+
+z_model_name = "my_keras"
+checkpoint_path = str(get_model_dir() / f"{z_model_name}.model")
 
 
 K.clear_session()
 
 model = get_unet_resnet(input_shape=(img_size_target,img_size_target,3))
+
+#from keras.models import load_model
+#model = load_model(checkpoint_path)
+
 model.compile(loss=bce_dice_loss, optimizer='adam', metrics=[my_iou_metric])
 
-model_checkpoint = ModelCheckpoint(str(get_model_dir() / "keras.model"),monitor='val_my_iou_metric', mode = 'max', save_best_only=True, verbose=1)
+model_checkpoint = ModelCheckpoint(checkpoint_path, monitor='val_my_iou_metric', mode = 'max', save_best_only = True, verbose = 1)
 
 reduce_lr = ReduceLROnPlateau(factor = 0.1, patience = 4, min_lr = 0.00001, verbose = 1)
 
 
-for iTrain, azTrain in enumerate(l_azTrain):
+for iTrain, idx_train in enumerate(l_idx_train):
 
-    print(f"{iTrain +1} / {len(l_azTrain)}")
+    print(f"{iTrain +1} / {len(l_idx_train)}")
 
+    m_train = np.zeros(shape = df.shape[0], dtype = np.bool)
+    m_train[idx_train] = True
 
-    m_train = df.original.isin(azTrain)
     m_test  = df.original.isin(azTest)
+
+    assert (~(m_train & m_test)).all()
 
     sDataTest = load_to_series_rgb(df.file[m_test])
     sMaskTest = load_to_series_grayscale(df.file_mask[m_test])
@@ -223,7 +236,7 @@ for iTrain, azTrain in enumerate(l_azTrain):
     sMask = pd.concat([sMaskTest, sMaskTrain], axis = 0, ignore_index = True)
 
 
-    anData = np.array(sData.map(upsample).tolist()).reshape(-1, img_size_target, img_size_target, 1)
+    anData = np.array(sData.map(upsample).tolist()).reshape(-1, img_size_target, img_size_target, 3)
     anMask = np.array(sMask.map(upsample).tolist()).reshape(-1, img_size_target, img_size_target, 1)
 
     sCoverage = sMask.map(np.sum) / pow(img_size_ori, 2)
@@ -239,14 +252,12 @@ for iTrain, azTrain in enumerate(l_azTrain):
     x_train = np.append(x_train, [np.fliplr(x) for x in x_train], axis=0)
     y_train = np.append(y_train, [np.fliplr(x) for x in y_train], axis=0)
 
-    x_train = np.repeat(x_train,3,axis=3)
-    x_valid = np.repeat(x_valid,3,axis=3)
-
-
     epochs = 1
     batch_size = 32
 
     history = model.fit(x_train, y_train, validation_data=[x_valid, y_valid], epochs=epochs, batch_size=batch_size,
                         callbacks=[model_checkpoint, reduce_lr],shuffle=True,verbose=1)
+
+
 
 

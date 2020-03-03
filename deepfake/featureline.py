@@ -245,7 +245,7 @@ def find_spaced_out_faces_boxes(mtcnn_detector, video, nSpace):
     y_max = video.shape[1]
     x_max = video.shape[2]
 
-    l_key_frames = list(np.linspace(0, z_max - 1, endpoint = True, num = z_max/nSpace).astype(np.int32))
+    l_key_frames = list(np.linspace(0, z_max - 1, endpoint = True, num = int(z_max/nSpace)).astype(np.int32))
 
     d = {}
 
