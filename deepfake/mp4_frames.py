@@ -526,7 +526,7 @@ def read_metadata(iPart):
         l_d.append((x, d[x]))
 
 
-    isOneFaceOnly = True
+    isOneFaceOnly = False
 
     if isOneFaceOnly:
 
@@ -705,7 +705,7 @@ def get_submission_dir():
 #   get_part_dir
 #
 
-def get_part_dir(iPart):
+def get_part_dir(iPart, isAssertExists = True):
 
 
     isLocal = os.name == 'nt'
@@ -722,9 +722,13 @@ def get_part_dir(iPart):
         pass
     else:
         print(str(s))
-        assert s.is_dir(), f"{s} not a directory"
+        if isAssertExists:
+            assert s.is_dir(), f"{s} not a directory"
 
     return s
+
+
+
 
 
 ####################################################################################

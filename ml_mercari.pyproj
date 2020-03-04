@@ -75,6 +75,9 @@
     <Compile Include="dae\__init__.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="deepfake\facecluster.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\face_detector.py" />
     <Compile Include="deepfake\dae_lstm.py" />
     <Compile Include="deepfake\easy_face.py">
@@ -117,6 +120,7 @@
     <Compile Include="deepfake\scriptkid.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="deepfake\sort_poc.py" />
     <Compile Include="deepfake\stage2_trainer.py">
       <SubType>Code</SubType>
     </Compile>
