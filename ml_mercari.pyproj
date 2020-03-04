@@ -102,6 +102,9 @@
     <Compile Include="deepfake\inception.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="deepfake\linev2.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\line_sampler.py" />
     <Compile Include="deepfake\mp4_frames.py" />
     <Compile Include="deepfake\NameScanner.py" />
@@ -118,6 +121,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="deepfake\tgs_model_funcs.py" />
+    <Compile Include="deepfake\tgs_predictor.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\tgs_trainer.py" />
     <Compile Include="deepfake\TrainIImages.py" />
     <Compile Include="deepfake\train_stage_0.py">

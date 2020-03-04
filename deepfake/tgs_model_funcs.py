@@ -32,7 +32,12 @@ from keras.losses import binary_crossentropy
 
 
 import numpy as np
+import pandas as pd
 
+
+
+from mp4_frames import get_ready_data_dir
+from keras.preprocessing.image import array_to_img, img_to_array, load_img
 
 def conv_block_simple(prevlayer, filters, prefix, strides=(1, 1)):
     conv = Conv2D(filters, (3, 3), padding="same", kernel_initializer="he_normal", strides=strides, name=prefix + "_conv")(prevlayer)
@@ -326,4 +331,68 @@ def weighted_bce_dice_loss(y_true, y_pred):
     weight *= (w0 / w1)
     loss = weighted_bce_loss(y_true, y_pred, weight) + dice_loss(y_true, y_pred)
     return loss
+
+def load_to_series_grayscale(l_x):
+
+    input_dir = get_ready_data_dir()
+
+    l_data = []
+    l_m = []
+
+
+    for x in l_x:
+        filename = input_dir / x
+        assert filename.is_file()
+
+        i = load_img(filename, color_mode = "grayscale")
+        
+
+        data = np.array(i)
+        data = 1.0 - (data / 255.0)
+        l_data.append(data)
+        l_m.append(True)
+
+    sValid = pd.Series(l_m)
+    sData = pd.Series(l_data)
+    return (sValid, sData)
+
+
+def load_to_series_rgb(l_x):
+
+    input_dir = get_ready_data_dir()
+
+    l_data = []
+    l_m = []
+
+    for x in l_x:
+        filename = input_dir / x
+        assert filename.is_file()
+
+        i = load_img(filename, color_mode = "rgb")
+
+        #plt.imshow(i)
+        #plt.show()
+
+        data = np.array(i)
+
+        # 0 - red
+        # 1 - green
+        # 2 - blue
+        
+        #plt.imshow(data)
+        #plt.show()
+
+        pData = np.zeros(data.shape, dtype = np.float32)
+
+        pData[:, :, 0] = (data[:, :, 0] - 123.68) / 58.393
+        pData[:, :, 1] = (data[:, :, 0] - 116.779) / 57.12
+        pData[:, :, 2] = (data[:, :, 0] - 103.939) / 57.375
+
+        l_data.append(pData)
+        l_m.append(True)
+
+
+    sValid = pd.Series(l_m)
+    sData = pd.Series(l_data)
+    return (sValid, sData)
 

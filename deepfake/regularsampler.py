@@ -248,7 +248,15 @@ def sample_video(mtcnn_detector, video_path, isDraw):
 
         length_vector = np.sqrt(vector.dot(vector))
    
+        plt.imshow(anSample)
+        plt.show()
+
         anSample = straighten_sample(anSample, length_vector)
+
+        plt.imshow(anSample)
+        plt.show()
+
+
 
         anSample = anSample.reshape(-1)
         l_sample.append(anSample)
