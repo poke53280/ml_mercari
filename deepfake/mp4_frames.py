@@ -721,7 +721,6 @@ def get_part_dir(iPart, isAssertExists = True):
     if s.is_dir():
         pass
     else:
-        print(str(s))
         if isAssertExists:
             assert s.is_dir(), f"{s} not a directory"
 

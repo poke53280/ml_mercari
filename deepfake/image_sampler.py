@@ -25,6 +25,8 @@ from multiprocessing import Pool
 import argparse
 from pathlib import Path
 
+import VideoManager
+
 
 ####################################################################################
 #
@@ -49,24 +51,36 @@ def adjust_box_1d(c, half_size, extent):
 #   process_part
 #
 
-def process_part(iPart):
+def process_part(iCluster):
 
     isDraw = False
 
     assert get_ready_data_dir().is_dir()
 
-    outputsize = 128
+    output_dir = get_ready_data_dir() / f"c_{iCluster}"
+
+    if output_dir.is_dir():
+        pass
+    else:
+        output_dir.mkdir()
+
+    assert output_dir.is_dir()
+
+    v = VideoManager.VideoManager()
+
+    l_d = v.get_cluster_metadata(iCluster)
+
+    outputsize = 128 + 64
 
     mtcnn_detector = MTCNNDetector()
 
-    W = 256
-    H = 1
+    orig_path = Path("C:\\Users\\T149900\\Downloads\\dfdc_train_part_07\\dfdc_train_part_7\\crnbqgwbmt.mp4")
+    orig_path.is_file()
 
-    part_dir = get_part_dir(iPart)
+    test_path = Path("C:\\Users\\T149900\\Downloads\\dfdc_train_part_07\\dfdc_train_part_7\\nwzwoxfcnl.mp4")
+    test_path.is_file()
 
-    l_d = read_metadata(iPart)
 
-    iSample = 0
 
     for entry in l_d:
 
@@ -74,113 +88,117 @@ def process_part(iPart):
 
         print (str(orig_path))
 
-        orig_video = read_video(part_dir / orig_path, 0)
+        try:
+            orig_video = read_video(orig_path, 0)
+        except Exception as err:
+            print(err)
+            continue
 
         z_max = orig_video.shape[0]
         y_max = orig_video.shape[1]
         x_max = orig_video.shape[2]
 
-        d_faces = find_spaced_out_faces_boxes(mtcnn_detector, orig_video, 12)
 
-        for zSample in range(16):
+        l_all = entry[1]
+        l_all.append(orig_path)
+        
 
-            z_sample = np.random.choice(range(0, z_max))
+        for test_path in l_all:
 
-            bb_min, bb_max = get_random_face_box_from_z(d_faces, z_sample, x_max, y_max, z_max)
+            print ("     " + str(test_path))
 
-            rDiagnonal = (bb_max - bb_min) * (bb_max - bb_min)
+            iSample = 0
+            filename_base = f"{test_path.stem}"
 
-            n_characteristic_face_size = np.sqrt(rDiagnonal[0] + rDiagnonal[1]).astype(np.int32)
+            try:
+                test_video = read_video(test_path, 0)
+            except Exception as err:
+                print(err)
+                continue
 
-            image_real = orig_video[z_sample].copy()
+            is_identical_format = (test_video.shape[0] == z_max) and (test_video.shape[1] == y_max) and (test_video.shape[2] == x_max)
 
-            x_max = image_real.shape[1]
-            y_max = image_real.shape[0]
+            if not is_identical_format:
+                print("Not identical formats")
+                continue
 
-            sample_size = np.max([int(1.1 * outputsize), 1.1 * n_characteristic_face_size])
-            half_size = int (sample_size/2)
+            d_faces = find_spaced_out_faces_boxes(mtcnn_detector, test_video, 12)
 
-            center = 0.5 * (bb_min + bb_max)
-            center = center.astype(np.int32)
+            for i in range(25):
 
-            center_adjusted = np.array([adjust_box_1d(center[0], half_size, x_max), adjust_box_1d(center[1], half_size, y_max)])
+                z_sample = np.random.choice(range(0, z_max))
 
-            s_min = center_adjusted - half_size
-            s_max = center_adjusted + half_size
+                bb_min, bb_max = get_random_face_box_from_z(d_faces, z_sample, x_max, y_max, z_max)
 
-            if isDraw:
-                image_real = cv2.rectangle(image_real, (s_min[0], s_min[1]), (s_max[0], s_max[1]), (255,0,0), 5)
-                plt.imshow(image_real)
-                plt.show()
+                rDiagnonal = (bb_max - bb_min) * (bb_max - bb_min)
 
-            # Sample frame
+                n_characteristic_face_size = np.sqrt(rDiagnonal[0] + rDiagnonal[1]).astype(np.int32)
 
-            l_test_path = entry[1]
-            # l_test_path.append(orig_path)
+                image_real = orig_video[z_sample].copy()
+                image_test = test_video[z_sample].copy()
 
-            for path in l_test_path:
+                x_max = image_real.shape[1]
+                y_max = image_real.shape[0]
 
-                test_video = read_video(part_dir / path, 0)
+                sample_size = int(1.2 * n_characteristic_face_size)
+                half_size = int (sample_size/2)
 
-                for x in range(12):
+                center = 0.5 * (bb_min + bb_max)
+                center = center.astype(np.int32)
 
-                    filename = f"{orig_path[:-4]}_{path[:-4]}_{iSample}"
+                center_adjusted = np.array([adjust_box_1d(center[0], half_size, x_max), adjust_box_1d(center[1], half_size, y_max)])
 
-                    offset_min = s_min
-                    offset_max = s_max - outputsize
+                s_min = center_adjusted - half_size
+                s_max = center_adjusted + half_size
 
-                    offset_range = offset_max - offset_min
+                real_sample = image_real[s_min[1]:s_max[1], s_min[0]:s_max[0]].copy()
+                
+                
+                test_sample = image_test[s_min[1]:s_max[1], s_min[0]:s_max[0]].copy()
+               
+                image_3 = np.sum((real_sample-test_sample)**2,axis=2)
 
-                    offset_lo = np.array([offset_min[0] + np.random.choice(offset_range[0]), offset_min[1] + np.random.choice(offset_range[1])])
+                mask = image_3 > 300
 
-                    offste_hi = offset_lo + outputsize
+                empty_img = np.zeros((mask.shape[0], mask.shape[1], 3), np.uint8)
 
-                    sample_frame = np.random.choice(z_max)
+                empty_img[mask] = (255, 0, 0)
 
-                    real_sample = orig_video[sample_frame][offset_lo[1]:offste_hi[1], offset_lo[0]:offste_hi[0]].copy()
-                    test_sample = test_video[sample_frame][offset_lo[1]:offste_hi[1], offset_lo[0]:offste_hi[0]].copy()
-    
-                    image_3 = np.sum((real_sample-test_sample)**2,axis=2)
+                img_tmp = cv2.cvtColor(empty_img, cv2.COLOR_BGR2RGB)
 
-                    mask = image_3 > 300
+                kernel = np.ones((2,2),np.uint8)
 
-                    empty_img = np.zeros((mask.shape[1], mask.shape[0], 3), np.uint8)
-                    empty_img[mask] = (255, 0, 0)
+                img_tmp = cv2.dilate(img_tmp,kernel,iterations = 3)
 
-                    img_tmp = cv2.cvtColor(empty_img, cv2.COLOR_BGR2RGB)
+                img_tmp = cv2.erode(img_tmp,kernel,iterations = 3)
 
-                    kernel = np.ones((2,2),np.uint8)
+                erosion = cv2.cvtColor(img_tmp, cv2.COLOR_RGB2BGR)
+                erosion = cv2.resize(erosion, (outputsize, outputsize))
 
-                    img_tmp = cv2.dilate(img_tmp,kernel,iterations = 3)
-
-                    img_tmp = cv2.erode(img_tmp,kernel,iterations = 3)
-
-                    erosion = cv2.cvtColor(img_tmp, cv2.COLOR_RGB2BGR)
+                m = erosion == 0
+                m = m.all(axis = 2)
 
 
-                    im = Image.fromarray(test_sample)
-                    im.save(get_ready_data_dir() / (filename +".png"))
+                test_sample = cv2.resize(test_sample, (outputsize, outputsize))
 
-                    m = erosion == 0
 
-                    m = m.all(axis = 2)
+                im_mask = Image.fromarray(m)
+                im_test = Image.fromarray(test_sample)
 
-                    im = Image.fromarray(m)
-                    im.save(get_ready_data_dir() / (filename +"_mask.png"))
+                if isDraw:
+                    plt.imshow(im_test)
+                    plt.show()
 
-                    iSample = iSample + 1
+                    plt.imshow(im_mask)
+                    plt.show()
 
-                    filename = f"{orig_path[:-4]}_{orig_path[:-4]}_{iSample}"
+                filename = filename_base + f"_{iSample:003}"
 
-                    im = Image.fromarray(real_sample)
-                    im.save(get_ready_data_dir() / (filename +".png"))
+                im_test.save(output_dir / (filename + ".png"))
+                im_mask.save(output_dir / (filename + "_m.png"))
+                iSample = iSample + 1
 
-                    m = np.zeros((128, 128), dtype = np.bool)
-                    m[:] = True
-                    im = Image.fromarray(m)
-                    im.save(get_ready_data_dir() / (filename +"_mask.png"))
-
-                    iSample = iSample + 1
+            
 
 
 ####################################################################################
@@ -189,24 +207,24 @@ def process_part(iPart):
 #
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--start", "-s", help="start offset chunk", required = True)
+    
+    v = VideoManager.VideoManager()
 
-    args = parser.parse_args()
+    df = v._df
 
-    iStart = int (args.start)
+    l_tasks = list(np.unique(df.cluster))
 
-    meta_dir = get_meta_dir()
-    assert meta_dir.is_dir()
-    f = Path(meta_dir / "image_sampler_progress.txt").open('a')
-    l_tasks = list (range(iStart, 50))
+    num_threads = 2
 
-    for iTask in l_tasks:
-        print(f"Processing part {iTask}...")
-        process_part(iTask)
-        
-        f.write(f"done {iTask}\r\n")
-       
-        print(f"Processing part {iTask} done.")
-    """c"""   
-    f.close()
+    print(f"Launching on {num_threads} thread(s)")
+
+    with Pool(num_threads) as p:
+        l = p.map(process_part, l_tasks)
+
+
+
+
+
+
+
+

@@ -75,7 +75,10 @@
     <Compile Include="dae\__init__.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="deepfake\facecluster.py">
+    <Compile Include="deepfake\FaceRetriever.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="deepfake\VideoManager.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="deepfake\face_detector.py" />

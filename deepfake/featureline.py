@@ -251,7 +251,8 @@ def find_spaced_out_faces_boxes(mtcnn_detector, video, nSpace):
 
     for iKeyFrame in l_key_frames:
         l_faces_key_frame = mtcnn_detector.detect(video[iKeyFrame])
-        d[iKeyFrame] = l_faces_key_frame
+        if len(l_faces_key_frame) > 0:
+            d[iKeyFrame] = l_faces_key_frame
 
     return d
 
