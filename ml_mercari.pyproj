@@ -75,6 +75,9 @@
     <Compile Include="dae\__init__.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="deepfake\dask_cache_poc.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\FaceRetriever.py">
       <SubType>Code</SubType>
     </Compile>

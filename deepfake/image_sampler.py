@@ -214,7 +214,7 @@ if __name__ == '__main__':
 
     l_tasks = list(np.unique(df.cluster))
 
-    num_threads = 2
+    num_threads = 20
 
     print(f"Launching on {num_threads} thread(s)")
 

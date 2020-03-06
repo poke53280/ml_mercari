@@ -487,7 +487,8 @@ def read_metadata(iPart):
             if file_exists:
                 l_real_files.append(x)
             else:
-                print(f"Warning, missing original file {str(x)} in part {iPart}")
+                # print(f"Warning, missing original file {str(x)} in part {iPart}")
+                pass
 
         if zLabel == "FAKE":
 
@@ -500,7 +501,8 @@ def read_metadata(iPart):
                 l_fake_files.append(x)
                 l_original_files.append(original_file)
             else:
-                print(f"Warning, missing original file {str(original_file)} and/or fake file {str(x)} in part {iPart}")
+                # print(f"Warning, missing original file {str(original_file)} and/or fake file {str(x)} in part {iPart}")
+                pass
 
    
     d = {}
@@ -652,6 +654,15 @@ def get_meta_dir():
 
 def get_log_dir():
     return get_aux_dir("log_dir")
+
+
+####################################################################################
+#
+#   get_cache_dir
+#
+
+def get_cache_dir():
+    return get_aux_dir("cache_dir")
 
 
 ####################################################################################
