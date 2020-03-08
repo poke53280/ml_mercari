@@ -242,11 +242,25 @@ def sample_pair(mtcnn_detector, video_real_path, video_fake_path):
 
 def find_spaced_out_faces_boxes(mtcnn_detector, video, nSpace):
     z_max = video.shape[0]
-    y_max = video.shape[1]
-    x_max = video.shape[2]
 
     l_key_frames = list(np.linspace(0, z_max - 1, endpoint = True, num = int(z_max/nSpace)).astype(np.int32))
 
+    d = _get_face_boxes(mtcnn_detector, video, l_key_frames)
+
+    return d
+
+
+def find_all_face_boxes(mtcnn_detector, video):
+    z_max = video.shape[0]
+
+    l_key_frames = list(range(z_max))
+
+    d = _get_face_boxes(mtcnn_detector, video, l_key_frames)
+
+    return d
+
+
+def _get_face_boxes(mtcnn_detector, video, l_key_frames):
     d = {}
 
     for iKeyFrame in l_key_frames:
@@ -255,6 +269,8 @@ def find_spaced_out_faces_boxes(mtcnn_detector, video, nSpace):
             d[iKeyFrame] = l_faces_key_frame
 
     return d
+
+
 
 
 

@@ -75,7 +75,13 @@
     <Compile Include="dae\__init__.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="deepfake\cached.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\dask_cache_poc.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="deepfake\eda.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="deepfake\FaceRetriever.py">
@@ -126,7 +132,6 @@
     <Compile Include="deepfake\scriptkid.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="deepfake\sort_poc.py" />
     <Compile Include="deepfake\stage2_trainer.py">
       <SubType>Code</SubType>
     </Compile>
