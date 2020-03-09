@@ -29,7 +29,7 @@ v = VideoManager()
 
 df = v._df
 
-target = "aiodnwhjvu.mp4"
+target = "plrtfgcwau.mp4"
 
 
 # target = "wnhlvjdtfg.mp4"
@@ -112,18 +112,29 @@ for iFrame in range(video_fake.shape[0]):
     print(f"Sharpness {sharpness}")
 
 
-iFrame = 13
+# run ImageAligner
+
+l_data = []
 
 for iFrame in range(127):
-    im_test0 = Image.open(get_ready_data_dir() / f"test_{iFrame:003}.png")
-    im_test1 = Image.open(get_ready_data_dir() / f"test_{iFrame + 1:003}.png")
+    im_test0 = Image.open(get_ready_data_dir() / f"cut_test_{iFrame:003}.png")
+    im_test1 = Image.open(get_ready_data_dir() / f"cut_test_{iFrame + 1:003}.png")
 
     array0 = np.asarray(im_test0)
     array1 = np.asarray(im_test1)
 
     image_3 = np.sum((array1-array0)**2,axis=2)
 
-    print (np.mean(image_3))
+    l_data.append(np.mean(image_3))
+
+
+np.array(l_data).mean()
+np.array(l_data).std()
+
+
+
+
+
 
 im_A = Image.open(get_ready_data_dir() / f"test_004.png")
 im_B = Image.open(get_ready_data_dir() / f"test_005.png")

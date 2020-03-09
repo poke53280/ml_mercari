@@ -87,6 +87,9 @@
     <Compile Include="deepfake\FaceRetriever.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="deepfake\ImageAligner.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\VideoManager.py">
       <SubType>Code</SubType>
     </Compile>
