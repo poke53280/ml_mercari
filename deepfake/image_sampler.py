@@ -50,6 +50,7 @@ def adjust_box_1d(c, half_size, extent):
 #
 #   cut_frame
 #
+# outputsize <= 0 : No resize
 
 def cut_frame(bb_min, bb_max, orig_video, test_video, z_sample, outputsize, isDraw):
 
@@ -95,17 +96,23 @@ def cut_frame(bb_min, bb_max, orig_video, test_video, z_sample, outputsize, isDr
     img_tmp = cv2.erode(img_tmp,kernel,iterations = 3)
 
     erosion = cv2.cvtColor(img_tmp, cv2.COLOR_RGB2BGR)
-    erosion = cv2.resize(erosion, (outputsize, outputsize))
+
+    if outputsize > 0:
+        erosion = cv2.resize(erosion, (outputsize, outputsize))
 
     m = erosion == 0
     m = m.all(axis = 2)
 
+    if outputsize > 0:
+        test_sample = cv2.resize(test_sample, (outputsize, outputsize))
+        real_sample = cv2.resize(real_sample, (outputsize, outputsize))
 
-    test_sample = cv2.resize(test_sample, (outputsize, outputsize))
-
+    assert erosion.shape == test_sample.shape
+    assert erosion.shape == real_sample.shape
 
     im_mask = Image.fromarray(m)
     im_test = Image.fromarray(test_sample)
+    im_real = Image.fromarray(real_sample)
 
     if isDraw:
         plt.imshow(im_test)
@@ -114,7 +121,7 @@ def cut_frame(bb_min, bb_max, orig_video, test_video, z_sample, outputsize, isDr
         plt.imshow(im_mask)
         plt.show()
 
-    return (im_mask, im_test)
+    return (im_mask, im_real, im_test)
 
 
 ####################################################################################
@@ -128,7 +135,7 @@ def process_part(iCluster):
 
     assert get_ready_data_dir().is_dir()
 
-    output_dir = get_ready_data_dir() / f"c_{iCluster}"
+    output_dir = get_ready_data_dir() / f"c2_{iCluster}"
 
     if output_dir.is_dir():
         pass
@@ -193,20 +200,22 @@ def process_part(iCluster):
                 print("Not identical formats")
                 continue
 
-            d_faces = find_spaced_out_faces_boxes(mtcnn_detector, test_video, 12)
+            d_faces = find_spaced_out_faces_boxes(mtcnn_detector, test_video, 30)
 
-            for i in range(25):
+            for i in range(10):
 
                 z_sample = np.random.choice(range(0, z_max))
 
                 bb_min, bb_max = get_random_face_box_from_z(d_faces, z_sample, x_max, y_max, z_max)
 
-                im_mask, im_test = cut_frame(bb_min, bb_max, orig_video, test_video, z_sample, outputsize, False)
+                im_mask, im_real, im_test = cut_frame(bb_min, bb_max, orig_video, test_video, z_sample, -1, False)
                 
                 filename = filename_base + f"_{iSample:003}"
-                im_test.save(output_dir / (filename + ".png"))
+                im_test.save(output_dir / (filename + "_t.png"))
+                im_real.save(output_dir / (filename + "_r.png"))
                 im_mask.save(output_dir / (filename + "_m.png"))
                 iSample = iSample + 1
+
 
             
 

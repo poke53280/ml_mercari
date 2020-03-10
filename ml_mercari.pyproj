@@ -90,6 +90,12 @@
     <Compile Include="deepfake\ImageAligner.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="deepfake\InterpolateAttempt.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="deepfake\InterpolateModel.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\VideoManager.py">
       <SubType>Code</SubType>
     </Compile>

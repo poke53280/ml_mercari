@@ -16,7 +16,7 @@ from mp4_frames import read_video
 
 
 from image_sampler import cut_frame
-from featureline import find_all_face_boxes
+from featureline import _get_face_boxes
 
 
 from PIL import Image
@@ -51,6 +51,7 @@ file = video.file
 l_video_set = list(df[df.orig == original].file)
 
 
+num_frames = 32
 
 
 print(f"Video: {file} Cluster: {iCluster} Original: {original} Part: {part}")
@@ -61,16 +62,32 @@ input_dir = get_part_dir(part)
 assert (input_dir / file).is_file()
 assert (input_dir / original).is_file()
 
-video_real = read_video(input_dir / original, 128)
-video_fake = read_video(input_dir / file, 128)
-
-mtcnn_detector = MTCNNDetector()
-
-l_faces_fake = find_all_face_boxes(mtcnn_detector, video_fake[:128])
-
+video_real = read_video(input_dir / original, num_frames)
+video_fake = read_video(input_dir / file, num_frames)
 
 x_max = video_fake.shape[2]
 y_max = video_fake.shape[1]
+
+mtcnn_detector = MTCNNDetector()
+
+
+l_faces_fake = _get_face_boxes(mtcnn_detector, video_fake, [num_frames//2])
+
+if len (l_faces_fake) == 0:
+    #return
+
+l_faces_fake = l_faces_fake[num_frames//2]
+
+for face in l_faces_fake:
+    bb_min = np.array(face['bb_min'])
+    bb_max = np.array(face['bb_max'])
+
+
+
+
+
+
+
 
 
 for iFrame in range(video_fake.shape[0]):
@@ -97,19 +114,7 @@ for iFrame in range(video_fake.shape[0]):
 
     im_test.save(get_ready_data_dir() / f"test_{iFrame:003}.png")
     im_mask.save(get_ready_data_dir() / f"test_{iFrame:003}_m.png")
-
-
-    # def sharpness
-
-
-    im = im_mask.convert('L') # to grayscale
-    array = np.asarray(im, dtype=np.int32)
-
-    gy, gx = np.gradient(array)
-    gnorm = np.sqrt(gx**2 + gy**2)
-    sharpness = np.average(gnorm)
-
-    print(f"Sharpness {sharpness}")
+    
 
 
 # run ImageAligner
