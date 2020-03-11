@@ -81,6 +81,9 @@
     <Compile Include="deepfake\dask_cache_poc.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="deepfake\DataLoader.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\eda.py">
       <SubType>Code</SubType>
     </Compile>
@@ -96,7 +99,10 @@
     <Compile Include="deepfake\InterpolateModel.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="deepfake\VideoManager.py">
+    <Compile Include="deepfake\PolyErr.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="deepfake\VideoManagerImpl.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="deepfake\face_detector.py" />

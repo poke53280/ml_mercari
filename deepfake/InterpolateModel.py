@@ -1,7 +1,7 @@
 
 
 
-from mp4_frames import get_ready_data_dir
+
 import pandas as pd
 
 from keras.models import Sequential
@@ -11,6 +11,13 @@ from keras.layers import RepeatVector
 from keras.layers import TimeDistributed
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import roc_auc_score
+from DataLoader import load_clives
+from DataLoader import get_clive_files
+
+import random
+
+import numpy as np
+
 
 
 class SwapNoise:
@@ -63,15 +70,15 @@ def get_model(num_timesteps):
 
 
     model = Sequential()
-    model.add(LSTM(256, activation='relu', return_sequences=True, input_shape=(num_timesteps, 3)))
-    model.add(LSTM(128, activation='relu', return_sequences=True))
-    model.add(LSTM(12, activation='relu'))
+    model.add(LSTM(256, activation='relu', kernel_initializer='zeros',bias_initializer='zeros', return_sequences=True, input_shape=(num_timesteps, 3)))
+    model.add(LSTM(128, activation='relu', kernel_initializer='zeros',bias_initializer='zeros',return_sequences=True))
+    model.add(LSTM(12, activation='relu', kernel_initializer='zeros',bias_initializer='zeros'))
 
     model.add(RepeatVector(num_timesteps))
 
-    model.add(LSTM(12, activation='relu', return_sequences=True))
-    model.add(LSTM(128, activation='relu', return_sequences=True))
-    model.add(LSTM(256, activation='relu', return_sequences=True))
+    model.add(LSTM(12, activation='relu', kernel_initializer='zeros',bias_initializer='zeros', return_sequences=True))
+    model.add(LSTM(128, activation='relu', kernel_initializer='zeros',bias_initializer='zeros', return_sequences=True))
+    model.add(LSTM(256, activation='relu', kernel_initializer='zeros',bias_initializer='zeros', return_sequences=True))
 
     model.add(TimeDistributed(Dense(3)))
     model.compile(optimizer='adam', loss='mse')
@@ -96,23 +103,14 @@ def reconstruction_error(model, data):
 
 
 
-input_dir = get_ready_data_dir()
-
 num_timesteps = 50
 
 model = get_model(num_timesteps)
 
 
-l_files = list (sorted(input_dir.iterdir()))
+l_files = get_clive_files()
 
-l_files = [x for x in l_files if "cline" in x.stem]
-
-# Todo: Take out a validation set.
-
-
-valid_path = l_files[0]
-
-df_valid = pd.read_pickle(valid_path)
+df_valid = load_clives(l_files[:4])
 
 anValidTest = np.stack(df_valid.test.values)
 anValidTest = preprocess_input(anValidTest)
@@ -121,27 +119,33 @@ anValidReal = np.stack(df_valid.real.values)
 anValidReal = preprocess_input(anValidReal)
 
 
+l_load_files = l_files[4:]
+
+
+
 s = SwapNoise()
 
-for x in range (4):
+for x in range (40):
 
-    # Todo: Alter
-    train_path = l_files[0]
+    l_train_files = random.sample(l_load_files, 17)
 
-    print(f"Training on {train_path}")
+    print(f"Training on {l_train_files}")
 
-    df = pd.read_pickle(train_path)
+    df = load_clives(l_train_files)
 
     anData = np.stack(df.test.values)
 
     anData = preprocess_input(anData)
+
+    np.random.shuffle(anData)
+
 
     y_train = anData.copy()
     X_train = anData.copy()
 
     X_train = s.add_swap_noise(X_train, y_train, 0.1, True)
 
-    model.fit(X_train, y_train, epochs=1, batch_size=256, verbose=1)
+    model.fit(X_train, y_train, epochs=1, batch_size=64, verbose=1)
 
 
     p_test = reconstruction_error(model, anValidTest)

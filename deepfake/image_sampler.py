@@ -1,5 +1,14 @@
 
 
+#File "image_sampler.py", line 209, in process_part
+#    bb_min, bb_max = get_random_face_box_from_z(d_faces, z_sample, x_max, y_max, z_max)
+#  File "/mnt/disks/tmp_mnt/data/code/featureline.py", line 285, in get_random_face_box_from_z
+#    assert z >= anKeys[0]
+#
+# + Fix assert in opencv
+#
+
+
 import numpy as np
 from mp4_frames import read_video
 

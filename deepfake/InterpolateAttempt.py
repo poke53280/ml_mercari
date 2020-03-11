@@ -5,6 +5,15 @@ from mp4_frames import get_ready_data_dir
 from PIL import Image
 from line_sampler import get_line
 
+from VideoManagerImpl import VideoManager
+
+import numpy as np
+import pandas as pd
+from multiprocessing import Pool
+
+
+
+
 
 ####################################################################################
 #
@@ -16,7 +25,11 @@ def line_sampler(iCluster):
 
     input_dir = get_ready_data_dir() / f"c2_{iCluster}"
 
-    assert input_dir.is_dir()
+    if input_dir.is_dir():
+        pass
+    else:
+        print(f"No data for cluster {iCluster}")
+        return
 
 
     l_files = list (sorted(input_dir.iterdir()))
@@ -135,7 +148,7 @@ def sample(mask_image, test_image, real_image, n_target_size):
 
 if __name__ == '__main__':
     
-    v = VideoManager.VideoManager()
+    v = VideoManager()
 
     df = v._df
 
