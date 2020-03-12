@@ -6,7 +6,7 @@
 #
 #
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+
 
 import os
 import pathlib
@@ -14,9 +14,7 @@ import numpy as np
 import pandas as pd
 import datetime
 
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
+
 
 from sklearn.metrics import mean_squared_error
 
@@ -28,41 +26,7 @@ from mp4_frames import get_chunk_dir
 
 
 
-####################################################################################
-#
-#   get_model
-#
 
-
-def get_model(num_timesteps):
-
-    encoder_input = keras.Input(shape=(num_timesteps, 3))
-
-    x = layers.Bidirectional(layers.LSTM(256, activation='relu', kernel_initializer='zeros',bias_initializer='zeros', return_sequences=True))(encoder_input)
-
-    x = layers.Bidirectional(layers.LSTM(256, activation='relu', kernel_initializer='zeros',bias_initializer='zeros', return_sequences=True)) (x)
-
-    encoder_output = layers.Bidirectional(layers.LSTM(12, activation='relu', kernel_initializer='zeros',bias_initializer='zeros',)) (x)
-
-    encoder = keras.Model(inputs=encoder_input, outputs=encoder_output, name='encoder')
-
-    encoder.summary()
-
-    x = layers.RepeatVector(num_timesteps)(encoder_output)
-
-    x = layers.Bidirectional(layers.LSTM(12, activation='relu', kernel_initializer='zeros',bias_initializer='zeros', return_sequences=True)) (x)
-
-    x = layers.Bidirectional(layers.LSTM(256, activation='relu', kernel_initializer='zeros',bias_initializer='zeros', return_sequences=True)) (x)
-
-    x = layers.Bidirectional(layers.LSTM(256, activation='relu', kernel_initializer='zeros',bias_initializer='zeros', return_sequences=True)) (x)
-
-    decoder_output = layers.TimeDistributed(layers.Dense(3, kernel_initializer='zeros',bias_initializer='zeros')) (x)
-
-    autoencoder  = keras.Model(inputs=encoder_input, outputs=decoder_output, name='autoencoder')
-
-    autoencoder.summary()
-
-    return autoencoder
 
 
 

@@ -99,6 +99,12 @@
     <Compile Include="deepfake\InterpolateModel.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="deepfake\Logger.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="deepfake\poc_fuzzy_merge.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="deepfake\PolyErr.py">
       <SubType>Code</SubType>
     </Compile>
