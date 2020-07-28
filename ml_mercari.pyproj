@@ -529,6 +529,9 @@
     <Compile Include="txt\crf.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="txt\merc_txt_attempt.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="txt\spacy_nlp.py">
       <SubType>Code</SubType>
     </Compile>

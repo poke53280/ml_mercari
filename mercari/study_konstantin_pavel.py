@@ -1,10 +1,10 @@
 
+
 # This is a copy from and study of :
 #  https://www.kaggle.com/lopuhin/mercari-golf-0-3875-cv-in-75-loc-1900-s
 #
 # by Konstantin Lopuhin and Pawel
 #
-
 
 import os; os.environ['OMP_NUM_THREADS'] = '1'
 from contextlib import contextmanager
