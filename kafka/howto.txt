@@ -1,0 +1,15 @@
+
+
+BROKER:
+
+Zookeeper
+    .\zkServer
+
+Kafka
+	.\bin\windows\kafka-server-start.bat .\config\server.properties
+
+PRODUCER:
+
+
+CONSUMER:
+

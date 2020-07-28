@@ -672,7 +672,7 @@ def get_cache_dir():
 
 def get_model_dir():
     if _is_kaggle():
-        p = pathlib.Path("/kaggle/input/models")
+        p = pathlib.Path("/kaggle/input/models-f")
         assert p.is_dir()
         return p
 

@@ -190,6 +190,55 @@ class ftrl_proximal(object):
             n[i] += g * g
 
 
+import numpy as np
+from sklearn.metrics import log_loss
+            
+p = np.array([0.5] * 4000)
+p[0] = 0.1
+p[1] = 0.9
+p[2] = 0.1
+
+
+y_t = np.random.choice(2, 4000)
+
+p = y_t.astype(float).copy()
+
+lo = 0.48
+hi = 0.52
+
+p[y_t == 0] = lo
+p[y_t == 1] = hi
+
+
+# all correct:
+log_loss(y_t.reshape(-1, 1), p.reshape(-1, 1))
+
+# wrong neg:
+idx_sample = np.random.choice(np.where(y_t == 0)[0], 935, replace = False)
+p[idx_sample] = hi
+
+# wrong pos:
+idx_sample = np.random.choice(np.where(y_t == 1)[0], 935, replace = False)
+p[idx_sample] = lo
+
+
+# 1.13311
+
+log_loss(y_t.reshape(-1, 1), p.reshape(-1, 1))
+# 1.204
+
+
+
+
+
+
+
+
+
+
+
+
+
 def logloss(p, y):
     ''' FUNCTION: Bounded logloss
 

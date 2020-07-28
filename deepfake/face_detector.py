@@ -15,10 +15,6 @@ from mp4_frames import get_part_dir
 from mp4_frames import read_metadata
 from mp4_frames import read_video
 
-from image_grid import GetGrid2DBB
-from image_grid import GetSubVolume2D
-from line_sampler import sample_cube
-
 
 import matplotlib.pyplot as plt
 import datetime

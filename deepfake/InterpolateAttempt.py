@@ -12,9 +12,6 @@ import pandas as pd
 from multiprocessing import Pool
 
 
-
-
-
 ####################################################################################
 #
 #   line_sampler
@@ -79,7 +76,9 @@ def line_sampler(iCluster):
         if width < 50:
             continue
 
-        for i in range(30):
+        num_samples_per_pair = 3000
+
+        for i in range(num_samples_per_pair):
 
             rAngle, rPix, rErrorRate, test_line, real_line = sample(mask_image, test_image, real_image, 50)
 

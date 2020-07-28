@@ -36,7 +36,6 @@ pd.set_option('display.max_rows', 500)
 # pd.set_option('display.min_rows', 100)
 
 
-
 np.set_printoptions(edgeitems=10)
 np.set_printoptions(linewidth=200)
 np.core.arrayprint._line_width = 480

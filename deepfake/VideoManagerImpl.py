@@ -61,7 +61,7 @@ class VideoManager:
         num_originals = np.unique(df.orig).shape[0]
         num_clusters = np.unique(df.cluster).shape[0]
 
-        print(f"num_files = {num_files}, num_originals = {num_originals}, num_clusters = {num_clusters}")
+        # print(f"num_files = {num_files}, num_originals = {num_originals}, num_clusters = {num_clusters}")
 
         self._df = df
 
