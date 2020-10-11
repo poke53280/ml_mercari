@@ -1,139 +1,285 @@
 
 
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
-from Crypto.Util.Padding import pad
-from Crypto.Util.Padding import unpad
+
+
+from Cryptodome.Cipher import AES
+from Cryptodome.Random import get_random_bytes
+from Cryptodome.Util.Padding import pad
+from Cryptodome.Util.Padding import unpad
 import numpy as np
 import base64
 import getpass
 
+import pandas as pd
+from pathlib import Path
+import hashlib
+import pickle
 
-# numpy array
+import string
+import random
+import array
 
-# 'Enter password'
+import re
 
-key = get_random_bytes(32)
-
-iv = get_random_bytes(16)
-
-
-# Encrypt array
-
-cipher = AES.new(key, AES.MODE_CBC, iv = iv)
-
-array_in = np.random.random_integers(0, 2**30, 300 * 1000 * 1000)
-
-dtype_0 = array_in.dtype
-
-array_in_bytes = array_in.tobytes()
-
-padded_bytes = pad(array_in_bytes, cipher.block_size)
-
-ct_bytes = cipher.encrypt(padded_bytes)
-
-ct_txt = base64.b64encode(ct_bytes).decode('utf-8')
-iv_txt = base64.b64encode(cipher.iv).decode('utf-8')
+# Never ever set this to anything but None
+g_PASSWORD = None
 
 
-# Array encrypted and encoded. Store.
-print(f"{ct_txt[:30]}...{ct_txt[-30:]}")
+# (8 * 32) / np.log2(num_ascii)
+
+#"=> 55 letters"
 
 
-# Back from encrypted string to decrypted array.
+def save_encrypted(df, zPassword, output_file):
 
-ct_bytes_out = base64.b64decode(ct_txt)
-iv_bytes_out = base64.b64decode(iv_txt)
-
+    key = hashlib.sha256(zPassword.encode()).digest()
 
 
-cipher2 = AES.new(key, AES.MODE_CBC, iv_bytes_out)
+    iv = get_random_bytes(16)
 
-back = cipher2.decrypt(ct_bytes_out)
+    # Encrypt array
+    cipher = AES.new(key, AES.MODE_CBC, iv = iv)
+
+    array_in_bytes = pickle.dumps(df)
+
+    padded_bytes = pad(array_in_bytes, cipher.block_size)
+
+    ct_bytes = cipher.encrypt(padded_bytes)
+
+    ct_txt = base64.b64encode(ct_bytes).decode('utf-8')
+    iv_txt = base64.b64encode(cipher.iv).decode('utf-8')
+
+    # Array encrypted and encoded. Store.
+    print(f"{ct_txt[:30]}...{ct_txt[-30:]}")
+
+    encrypted_data = [ct_txt, iv_txt]
+
+    pickle.dump(encrypted_data, open( output_file, "wb" ))
 
 
-unpadded_data = unpad(back, cipher.block_size)
+def load_encrypted(zPassword, input_file):
 
+    key = hashlib.sha256(zPassword.encode()).digest()
 
-q = np.frombuffer(unpadded_data, dtype = dtype_0)
+    assert input_file.is_file()
 
+    encrypted_data = pickle.load(open(input_file, "rb"))
 
-if (q == array_in).all():
-    print("Round trip success")
-else:
-    print("Round-trip failure")
+    ct_txt = encrypted_data[0]
+    iv_txt = encrypted_data[1]
+
+    ct_bytes_out = base64.b64decode(ct_txt)
+    iv_bytes_out = base64.b64decode(iv_txt)
+
+    cipher2 = AES.new(key, AES.MODE_CBC, iv_bytes_out)
+
+    back = cipher2.decrypt(ct_bytes_out)
+
+    unpadded_data = unpad(back, cipher2.block_size)
+
+    df = pickle.loads(unpadded_data)
+
+    return df
 
 """c"""
 
-
-
-########################################################################################
+####################################################################################
 #
-#   get_long_string
+#   generate_passchunk
 #
 
-def get_long_string():
+def generate_passchunk():
 
-    string_val = "x" * 10
-    string_val2 = string_val * 100
-    string_val3 = "aa" + string_val2 * 100
-    string_val4 = "yy" + string_val3 * 100
+    l = np.random.randint(ord('a'), ord('z') + 1, 8)
 
-    return "anders" + string_val4[:3] + " anders" + string_val4 + "b" + string_val4 + "xx" + string_val4
-"""c"""
+    passchunk = array.array('B', l).tobytes().decode("utf-8")
+
+    return passchunk
 
 
-
-########################################################################################
+####################################################################################
 #
-#   String
+#   check_input
 #
 
-key = get_random_bytes(16)
-cipher = AES.new(key, AES.MODE_CBC)
+def check_input(s):
+
+    if len (re.findall(r'[a-z]', s)) != len(s):
+        print("All chars must be A-Z")
+        return False
+
+    if len(s) != 9:
+        print("Input must be 9 characters long")
+        return False
+
+    return True
 
 
-string_in = get_long_string()
+####################################################################################
+#
+#   get_checksum_char
+#
 
-string_in_array = string_in.encode(encoding="utf-8")
+def get_checksum_char(passchunk):
+    assert len(passchunk) == 8
 
-r = base64.encodestring(string_in_array)
+    num_ascii = 1 + ord('z') - ord ('a')
 
-padded_data = pad(r, cipher.block_size)
+    hash_remainder = (hashlib.sha256(passchunk.encode()).digest())[0] % num_ascii
 
-txt_encrypted = cipher.encrypt(padded_data)
+    checksum_char = chr(ord('a') + hash_remainder)
 
-f = open("c:\\crypto_data\\output_string.bin", "wb")
+    assert checksum_char <= 'z'
+    assert checksum_char >= 'a'
 
-f.write(txt_encrypted)
-
-f.close()
-
-
-# ...
-
-
-f = open("c:\\crypto_data\\output_string.bin", "rb")
-
-from_file = f.read()
-
-f.close()
-
-cipher2 = AES.new(key, AES.MODE_CBC, cipher.iv)
+    return checksum_char
 
 
-back = cipher2.decrypt(from_file)
+####################################################################################
+#
+#   enter_password
+#
+
+def enter_password():
+
+    l_chunks = []
+    iChunk = 0
+
+    while iChunk < 7:
+
+        s = input(f"{iChunk + 1}/7: ")
+
+        s = s.lower()
+        s = s.replace(' ', '')
+
+        if s == 'abort':
+            break
+
+        isVerified = check_input(s)
+
+        if not isVerified:
+            continue
+
+        passchunk = s[:8]
+        checksum = s[8]
+
+        if get_checksum_char(passchunk) != checksum:
+            print("Checksum error")
+            continue
+
+        l_chunks.append(s)
+        iChunk = iChunk + 1
+
+    return l_chunks
 
 
-unpadded_data = unpad(back, cipher.block_size)
+####################################################################################
+#
+#   format_chunk_line
+#
 
-r = base64.decodestring(unpadded_data)
+def format_chunk_line(chunk, check):
+
+    assert len(chunk) == 8
+    assert len(check) == 1
+
+    line = chunk + check
+
+    line = line[0:3] + " " + line[3:6] + " " + line[6:]
+
+    line = line.upper()
+
+    return line
 
 
-s_txt_out = r.decode(encoding="utf-8")
+####################################################################################
+#
+#   generate_password_card
+#
+
+def generate_password_card():
+
+    l_line = []
+
+    for iLine in range(7):
+
+        chunk = generate_passchunk()
+        check = get_checksum_char(chunk)
+        zLine = f"{iLine + 1}:" + format_chunk_line(chunk, check)
+
+        l_line.append(zLine)
+
+    return l_line
 
 
-s_txt_out == string_in
+####################################################################################
+#
+#   print_password_card
+#
+
+def print_password_card(l_line):
+
+    for iLine in range(len(l_line)):
+        print(l_line[iLine])
+
+
+
+####################################################################################
+#
+#   get_password_from_chunks
+#
+
+def get_password_from_chunks(l_chunks):
+
+    l = [x[:8] for x in l_chunks]
+
+    zPassword = "".join(l)
+
+    assert len(zPassword) == 56
+
+    return zPassword
+
+
+
+
+# 1:RJN OAG TLU
+# 2:XLV GLB ZBQ
+# 3:MXM IYX XSI
+# 4:NPX ZYT NGD
+# 5:EQY VUP IMA
+# 6:KJO TQL XZL
+# 7:AAS VKS QQO
+
+
+
+
+
+if __name__ == '__main__':
+
+#l_line = generate_password_card()
+# print_password_card(l_line)
+    print("Case insensitive. Omit or include spaces at will. Give up/end password entering by 'ABORT' + Enter")
+    l_chunks = enter_password()
+
+    g_PASSWORD = get_password_from_chunks(l_chunks)
+
+    #filepath = Path("C:\\Users\\T149900\\Downloads\\sp_count\\sp_count.pkl")
+
+    #assert filepath.is_file()
+
+    #df_0 = pd.read_pickle(filepath)
+
+
+    output_file = Path("C:\\Users\\T149900\\Downloads\\sp_count\\sp_count_encrypted.pkl")
+
+    #save_encrypted(df_0, g_PASSWORD, output_file)
+
+    df_1 = load_encrypted(g_PASSWORD, output_file)
+
+    print (df_1)
+
+    #assert df_0.equals(df_1)
+
 
 
 
